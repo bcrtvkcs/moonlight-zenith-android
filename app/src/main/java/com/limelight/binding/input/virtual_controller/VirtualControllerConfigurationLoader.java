@@ -316,6 +316,23 @@ public class VirtualControllerConfigurationLoader {
                     screenScale(START_BACK_WIDTH, height),
                     screenScale(START_BACK_HEIGHT, height)
             );
+            controller.addElement(createDigitalButton(
+                            VirtualControllerElement.EID_LSB,
+                            ControllerPacket.LS_CLK_FLAG, 0, 1, "L3", -1, controller, context),
+                    screenScale(TRIGGER_L_BASE_X, height),
+                    screenScale(L3_R3_BASE_Y, height),
+                    screenScale(TRIGGER_WIDTH, height),
+                    screenScale(TRIGGER_HEIGHT, height)
+            );
+
+            controller.addElement(createDigitalButton(
+                            VirtualControllerElement.EID_RSB,
+                            ControllerPacket.RS_CLK_FLAG, 0, 1, "R3", -1, controller, context),
+                    screenScale(TRIGGER_R_BASE_X + TRIGGER_DISTANCE, height) + rightDisplacement,
+                    screenScale(L3_R3_BASE_Y, height),
+                    screenScale(TRIGGER_WIDTH, height),
+                    screenScale(TRIGGER_HEIGHT, height)
+            );
         }
         else {
             controller.addElement(createDigitalButton(

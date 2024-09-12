@@ -43,3 +43,6 @@ app/.externalNativeBuild/
 # NDK stuff
 .cxx/
 app/src/main/jni/moonlight-core/Build.txt
+
+# sign
+sign.jks
