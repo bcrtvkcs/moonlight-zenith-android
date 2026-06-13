@@ -45,7 +45,7 @@ public class KeyboardTranslator implements InputManager.InputDeviceListener {
     public static final int VK_SEMICOLON = 59;
     public static final int VK_SLASH = 47;
     public static final int VK_SPACE = 32;
-    public static final int VK_PRINTSCREEN = 154;
+    public static final int VK_PRINTSCREEN = 44;
     public static final int VK_TAB = 9;
     public static final int VK_LEFT = 37;
     public static final int VK_RIGHT = 39;
@@ -130,6 +130,10 @@ public class KeyboardTranslator implements InputManager.InputDeviceListener {
         int translated;
 
         // If a device ID was provided, look up the keyboard mapping
+        /* * [MODİFİKASYON 1: Android 13 QWERTY normalizasyonunu kapatmak için bu blok yoruma alındı.
+         * Böylece Türkçe klavye dahil cihazın kendi fiziksel tuş dizilimi ham olarak gidecek.] 
+         */
+        /*
         if (deviceId >= 0) {
             KeyboardMapping mapping = keyboardMappings.get(deviceId);
             if (mapping != null) {
@@ -141,6 +145,7 @@ public class KeyboardTranslator implements InputManager.InputDeviceListener {
                 }
             }
         }
+        */
         
         // This is a poor man's mapping between Android key codes
         // and Windows VK_* codes. For all defined VK_ codes, see:
@@ -168,7 +173,8 @@ public class KeyboardTranslator implements InputManager.InputDeviceListener {
                 break;
 
             case KeyEvent.KEYCODE_ALT_RIGHT:
-                translated = 0xA5;
+                // [MODİFİKASYON 2: Linux/Sunshine AltGr uyumluluğu için 0xA5 yerine VK_OEM_AX (0xE1) yapıldı]
+                translated = 0xE1;
                 break;
                 
             case KeyEvent.KEYCODE_BACKSLASH:
