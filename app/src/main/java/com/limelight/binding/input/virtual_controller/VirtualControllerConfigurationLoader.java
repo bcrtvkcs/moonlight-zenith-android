@@ -177,7 +177,7 @@ public class VirtualControllerConfigurationLoader {
     private static final int ANALOG_R_BASE_Y = 42;
     private static final int ANALOG_SIZE = 26;
 
-    private static final int L3_R3_BASE_Y = 75;
+    private static final int L3_R3_BASE_Y = 60;
 
     private static final int START_X = 83;
     private static final int BACK_X = 34;
