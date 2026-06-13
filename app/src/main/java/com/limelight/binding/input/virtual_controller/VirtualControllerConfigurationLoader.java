@@ -190,10 +190,13 @@ public class VirtualControllerConfigurationLoader {
         DisplayMetrics screen = context.getResources().getDisplayMetrics();
         PreferenceConfiguration config = PreferenceConfiguration.readPreferences(context);
 
-        // Displace controls on the right by this amount of pixels to account for different aspect ratios
-        int rightDisplacement = screen.widthPixels - screen.heightPixels * 16 / 9;
+        int widthPixels = Math.max(screen.widthPixels, screen.heightPixels);
+        int heightPixels = Math.min(screen.widthPixels, screen.heightPixels);
 
-        int height = screen.heightPixels;
+        // Displace controls on the right by this amount of pixels to account for different aspect ratios
+        int rightDisplacement = widthPixels - heightPixels * 16 / 9;
+
+        int height = heightPixels;
 
         // NOTE: Some of these getPercent() expressions seem like they can be combined
         // into a single call. Due to floating point rounding, this isn't actually possible.
