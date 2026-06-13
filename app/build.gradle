@@ -7,12 +7,38 @@ android {
 
     namespace 'com.limelight'
 
+def getCommitCount = { ->
+    try {
+        def stdout = new ByteArrayOutputStream()
+        exec {
+            commandLine 'git', 'rev-list', '--count', 'HEAD'
+            standardOutput = stdout
+        }
+        return Integer.parseInt(stdout.toString().trim())
+    } catch (Exception e) {
+        return 314
+    }
+}
+
+def getLatestTag = { ->
+    try {
+        def stdout = new ByteArrayOutputStream()
+        exec {
+            commandLine 'git', 'describe', '--tags', '--abbrev=0'
+            standardOutput = stdout
+        }
+        return stdout.toString().trim()
+    } catch (Exception e) {
+        return "v1.0.0-zenith"
+    }
+}
+
     defaultConfig {
         minSdk 21
         targetSdk 34
 
-        versionName "12.1"
-        versionCode = 314
+        versionName getLatestTag()
+        versionCode getCommitCount()
 
         // Generate native debug symbols to allow Google Play to symbolicate our native crashes
         ndk.debugSymbolLevel = 'FULL'
