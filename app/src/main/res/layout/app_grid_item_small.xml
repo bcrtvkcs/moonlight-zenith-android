@@ -3,13 +3,13 @@
     android:layout_width="100dp"
     android:layout_height="133dp"
     android:padding="5dp">
+
     <ImageView
         android:id="@+id/grid_image"
-        android:cropToPadding="false"
-        android:scaleType="fitXY"
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
-    </ImageView>
+        android:layout_height="match_parent"
+        android:cropToPadding="false"
+        android:scaleType="centerCrop"></ImageView>
     <ImageView
         android:id="@+id/grid_overlay"
         android:layout_centerHorizontal="true"

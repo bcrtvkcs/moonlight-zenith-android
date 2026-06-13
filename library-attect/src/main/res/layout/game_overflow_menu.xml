@@ -1,0 +1,449 @@
+<?xml version="1.0" encoding="utf-8"?>
+<merge xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <ImageView
+        android:id="@+id/floatButton"
+        android:layout_width="40dp"
+        android:layout_height="40dp" />
+
+    <FrameLayout
+        android:id="@+id/toolbar_overflow"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone"
+        tools:visibility="visible">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#9E000000"
+            android:divider="@drawable/over_flow_menu_vertical_divider"
+            android:orientation="vertical"
+            android:showDividers="middle">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:divider="@drawable/over_flow_menu_horizontal_divider"
+                android:orientation="horizontal"
+                android:showDividers="middle">
+
+                <RelativeLayout
+                    android:id="@+id/virtualKeyEsc"
+                    android:layout_width="0dp"
+                    android:layout_height="@dimen/game_overflow_menu_height"
+                    android:layout_weight="1">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_centerInParent="true"
+                        android:text="@string/virtual_key_esc"
+                        android:textColor="#FFFFFF" />
+                </RelativeLayout>
+
+                <RelativeLayout
+                    android:id="@+id/virtualKeyWin"
+                    android:layout_width="0dp"
+                    android:layout_height="@dimen/game_overflow_menu_height"
+                    android:layout_weight="1">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_centerInParent="true"
+                        android:text="@string/virtual_key_win"
+                        android:textColor="#FFFFFF" />
+                </RelativeLayout>
+
+                <RelativeLayout
+                    android:id="@+id/virtualKeySystemMenu"
+                    android:layout_width="0dp"
+                    android:layout_height="@dimen/game_overflow_menu_height"
+                    android:layout_weight="1">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_centerInParent="true"
+                        android:text="@string/virtual_key_system_menu"
+                        android:textColor="#FFFFFF" />
+                </RelativeLayout>
+
+                <RelativeLayout
+                    android:id="@+id/virtualMouseMiddleButton"
+                    android:layout_width="0dp"
+                    android:layout_height="@dimen/game_overflow_menu_height"
+                    android:layout_weight="1">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_centerInParent="true"
+                        android:text="@string/virtual_mouse_middle_key"
+                        android:textColor="#FFFFFF" />
+                </RelativeLayout>
+
+                <RelativeLayout
+                    android:id="@+id/onScreenGamePad"
+                    android:layout_width="0dp"
+                    android:layout_height="@dimen/game_overflow_menu_height"
+                    android:layout_weight="2"
+                    android:clickable="true"
+                    android:focusable="true">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_centerInParent="true"
+                        android:text="@string/on_screen_game_pad"
+                        android:textColor="#FFFFFF" />
+                </RelativeLayout>
+
+                <RelativeLayout
+                    android:id="@+id/touchScreenModeMenu"
+                    android:layout_width="0dp"
+                    android:layout_height="@dimen/game_overflow_menu_height"
+                    android:layout_weight="2"
+                    android:clickable="true"
+                    android:focusable="true">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_centerInParent="true"
+                        android:text="@string/input_touchscreen_mode"
+                        android:textColor="#FFFFFF" />
+                </RelativeLayout>
+
+                <RelativeLayout
+                    android:id="@+id/touchPadModeMenu"
+                    android:layout_width="0dp"
+                    android:layout_height="@dimen/game_overflow_menu_height"
+                    android:layout_weight="2"
+                    android:clickable="true"
+                    android:focusable="true">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_centerInParent="true"
+                        android:text="@string/input_touchpad_mode"
+                        android:textColor="#FFFFFF" />
+                </RelativeLayout>
+
+                <RelativeLayout
+                    android:id="@+id/toggleSoftKeyboardMenu"
+                    android:layout_width="0dp"
+                    android:layout_height="@dimen/game_overflow_menu_height"
+                    android:layout_weight="2"
+                    android:clickable="true"
+                    android:focusable="true">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_centerInParent="true"
+                        android:text="@string/toggle_soft_keyboard"
+                        android:textColor="#FFFFFF" />
+                </RelativeLayout>
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:divider="@drawable/over_flow_menu_horizontal_divider"
+                android:orientation="horizontal"
+                android:showDividers="middle">
+
+                <RelativeLayout
+                    android:id="@+id/virtualKeyExitProgram"
+                    android:layout_width="0dp"
+                    android:layout_height="@dimen/game_overflow_menu_height"
+                    android:layout_weight="1">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_centerInParent="true"
+                        android:text="@string/virtual_key_exit_program"
+                        android:textColor="#FFFFFF" />
+                </RelativeLayout>
+
+                <RelativeLayout
+                    android:id="@+id/virtualKeyScreenshot"
+                    android:layout_width="0dp"
+                    android:layout_height="@dimen/game_overflow_menu_height"
+                    android:layout_weight="1">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_centerInParent="true"
+                        android:text="@string/virtual_key_screenshot"
+                        android:textColor="#FFFFFF" />
+                </RelativeLayout>
+
+                <RelativeLayout
+                    android:id="@+id/virtualKeyTaskManager"
+                    android:layout_width="0dp"
+                    android:layout_height="@dimen/game_overflow_menu_height"
+                    android:layout_weight="1"
+                    tools:ignore="DuplicateIds">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_centerInParent="true"
+                        android:text="@string/virtual_key_taskmgr"
+                        android:textColor="#FFFFFF" />
+                </RelativeLayout>
+
+                <RelativeLayout
+                    android:id="@+id/virtualKeyExplorer"
+                    android:layout_width="0dp"
+                    android:layout_height="@dimen/game_overflow_menu_height"
+                    android:layout_weight="1"
+                    tools:ignore="DuplicateIds">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_centerInParent="true"
+                        android:text="@string/virtual_key_explorer"
+                        android:textColor="#FFFFFF" />
+                </RelativeLayout>
+
+                <RelativeLayout
+                    android:id="@+id/virtualKeyCopy"
+                    android:layout_width="0dp"
+                    android:layout_height="@dimen/game_overflow_menu_height"
+                    android:layout_weight="1">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_centerInParent="true"
+                        android:text="@string/virtual_key_copy"
+                        android:textColor="#FFFFFF" />
+                </RelativeLayout>
+
+                <RelativeLayout
+                    android:id="@+id/virtualKeyCut"
+                    android:layout_width="0dp"
+                    android:layout_height="@dimen/game_overflow_menu_height"
+                    android:layout_weight="1">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_centerInParent="true"
+                        android:text="@string/virtual_key_cut"
+                        android:textColor="#FFFFFF" />
+                </RelativeLayout>
+
+                <RelativeLayout
+                    android:id="@+id/virtualKeyPaste"
+                    android:layout_width="0dp"
+                    android:layout_height="@dimen/game_overflow_menu_height"
+                    android:layout_weight="1">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_centerInParent="true"
+                        android:text="@string/virtual_key_paste"
+                        android:textColor="#FFFFFF" />
+                </RelativeLayout>
+
+                <RelativeLayout
+                    android:id="@+id/virtualKeySelectAll"
+                    android:layout_width="0dp"
+                    android:layout_height="@dimen/game_overflow_menu_height"
+                    android:layout_weight="1">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_centerInParent="true"
+                        android:text="@string/virtual_key_select_all"
+                        android:textColor="#FFFFFF" />
+                </RelativeLayout>
+            </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:divider="@drawable/over_flow_menu_horizontal_divider"
+            android:orientation="horizontal"
+            android:showDividers="middle">
+            <RelativeLayout
+                android:id="@+id/virtualKeyShowDesktop"
+                android:layout_width="0dp"
+                android:layout_height="@dimen/game_overflow_menu_height"
+                android:layout_weight="1">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_centerInParent="true"
+                    android:text="@string/virtual_key_desktop"
+                    android:textColor="#FFFFFF" />
+            </RelativeLayout>
+            <RelativeLayout
+                android:id="@+id/virtualKeyTaskView"
+                android:layout_width="0dp"
+                android:layout_height="@dimen/game_overflow_menu_height"
+                android:layout_weight="1">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_centerInParent="true"
+                    android:text="@string/virtual_key_task_view"
+                    android:textColor="#FFFFFF" />
+            </RelativeLayout>
+            <RelativeLayout
+                android:id="@+id/virtualKeyNewDesktop"
+                android:layout_width="0dp"
+                android:layout_height="@dimen/game_overflow_menu_height"
+                android:layout_weight="1">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_centerInParent="true"
+                    android:text="@string/virtual_key_new_desktop"
+                    android:textColor="#FFFFFF" />
+            </RelativeLayout>
+            <RelativeLayout
+                android:id="@+id/virtualKeyDeleteDesktop"
+                android:layout_width="0dp"
+                android:layout_height="@dimen/game_overflow_menu_height"
+                android:layout_weight="1">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_centerInParent="true"
+                    android:text="@string/virtual_key_delete_desktop"
+                    android:textColor="#FFFFFF" />
+            </RelativeLayout>
+            <RelativeLayout
+                android:id="@+id/virtualKeyLeftDesktop"
+                android:layout_width="0dp"
+                android:layout_height="@dimen/game_overflow_menu_height"
+                android:layout_weight="1">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_centerInParent="true"
+                    android:text="@string/virtual_key_left_desktop"
+                    android:textColor="#FFFFFF" />
+            </RelativeLayout>
+            <RelativeLayout
+                android:id="@+id/virtualKeyRightDesktop"
+                android:layout_width="0dp"
+                android:layout_height="@dimen/game_overflow_menu_height"
+                android:layout_weight="1">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_centerInParent="true"
+                    android:text="@string/virtual_key_right_desktop"
+                    android:textColor="#FFFFFF" />
+            </RelativeLayout>
+        </LinearLayout>
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:baselineAligned="false"
+            android:divider="@drawable/over_flow_menu_horizontal_divider"
+            android:orientation="horizontal"
+            android:showDividers="middle">
+            <RelativeLayout
+                android:id="@+id/virtualKeyNvidiaOverflow"
+                android:layout_width="0dp"
+                android:layout_height="@dimen/game_overflow_menu_height"
+                android:layout_weight="1">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_centerInParent="true"
+                    android:text="@string/virtual_key_nvidia_overflow"
+                    android:textColor="#FFFFFF" />
+            </RelativeLayout>
+            <RelativeLayout
+                android:id="@+id/virtualKeyNvidiaScreenshot"
+                android:layout_width="0dp"
+                android:layout_height="@dimen/game_overflow_menu_height"
+                android:layout_weight="1">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_centerInParent="true"
+                    android:text="@string/virtual_key_nvidia_screenshot"
+                    android:textColor="#FFFFFF" />
+            </RelativeLayout>
+            <RelativeLayout
+                android:id="@+id/virtualKeyNvidiaPhotoMode"
+                android:layout_width="0dp"
+                android:layout_height="@dimen/game_overflow_menu_height"
+                android:layout_weight="1">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_centerInParent="true"
+                    android:text="@string/virtual_key_nvidia_photo_mode"
+                    android:textColor="#FFFFFF" />
+            </RelativeLayout>
+            <RelativeLayout
+                android:id="@+id/virtualKeyNvidiaGameFilter"
+                android:layout_width="0dp"
+                android:layout_height="@dimen/game_overflow_menu_height"
+                android:layout_weight="1">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_centerInParent="true"
+                    android:text="@string/virtual_key_nvidia_game_filter"
+                    android:textColor="#FFFFFF" />
+            </RelativeLayout>
+            <RelativeLayout
+                android:id="@+id/virtualKeyNvidiaInstantlyRelay"
+                android:layout_width="0dp"
+                android:layout_height="@dimen/game_overflow_menu_height"
+                android:layout_weight="1">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_centerInParent="true"
+                    android:text="@string/virtual_key_nvidia_instantly_relay"
+                    android:textColor="#FFFFFF" />
+            </RelativeLayout>
+            <RelativeLayout
+                android:id="@+id/virtualKeyNvidiaRecord"
+                android:layout_width="0dp"
+                android:layout_height="@dimen/game_overflow_menu_height"
+                android:layout_weight="1">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_centerInParent="true"
+                    android:text="@string/virtual_key_nvidia_record"
+                    android:textColor="#FFFFFF" />
+            </RelativeLayout>
+        </LinearLayout>
+        </LinearLayout>
+
+    </FrameLayout>
+</merge>

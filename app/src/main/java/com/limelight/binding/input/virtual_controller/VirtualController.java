@@ -118,6 +118,10 @@ public class VirtualController {
         buttonConfigure.setVisibility(View.VISIBLE);
     }
 
+    public boolean isShow(){
+        return buttonConfigure.getVisibility() == View.VISIBLE;
+    }
+
     public void removeElements() {
         for (VirtualControllerElement element : elements) {
             frame_layout.removeView(element);

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="on_screen_game_pad">OnScreenGamePad</string>
+    <string name="input_touchscreen_mode">TouchScreen Mode</string>
+    <string name="input_touchpad_mode">TouchPad Mode</string>
+    <string name="toggle_soft_keyboard">Toggle Keyboard</string>
+    <string name="virtual_key_esc">ESC</string>
+    <string name="virtual_key_win">WIN</string>
+    <string name="virtual_key_taskmgr">Task Manager</string>
+    <string name="virtual_key_exit_program">Alt+F4</string>
+    <string name="virtual_key_screenshot">Take Screenshot</string>
+    <string name="virtual_key_explorer">Explorer</string>
+    <string name="virtual_key_system_menu">System Menu</string>
+    <string name="virtual_key_copy">Copy</string>
+    <string name="virtual_key_cut">Cut</string>
+    <string name="virtual_key_paste">Paste</string>
+    <string name="virtual_key_select_all">Select All</string>
+    <string name="virtual_key_desktop">Show Desktop</string>
+    <string name="virtual_key_task_view">Task View</string>
+    <string name="virtual_key_new_desktop">New Desktop</string>
+    <string name="virtual_key_delete_desktop">Delete Desktop</string>
+    <string name="virtual_key_left_desktop">Left Desktop</string>
+    <string name="virtual_key_right_desktop">Right Desktop</string>
+    <string name="virtual_mouse_middle_key">Middle Mouse</string>
+    <string name="virtual_key_nvidia_overflow">Nvidia Menu</string>
+    <string name="virtual_key_nvidia_screenshot">Screenshot</string>
+    <string name="virtual_key_nvidia_photo_mode">Photo Mode</string>
+    <string name="virtual_key_nvidia_game_filter">Game Filter</string>
+    <string name="virtual_key_nvidia_instantly_relay">Instant Relay</string>
+    <string name="virtual_key_nvidia_record">Record</string>
+</resources>

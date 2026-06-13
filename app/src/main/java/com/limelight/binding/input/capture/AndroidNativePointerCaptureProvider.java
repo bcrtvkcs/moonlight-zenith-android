@@ -47,9 +47,9 @@ public class AndroidNativePointerCaptureProvider extends AndroidPointerIconCaptu
             // Only skip on non ChromeOS devices cause the ChromeOS pointer else
             // gets disabled removing relative mouse capabilities
             // on Chromebooks with touchscreens
-            if (device.supportsSource(InputDevice.SOURCE_TOUCHSCREEN) && !targetView.getContext().getPackageManager().hasSystemFeature("org.chromium.arc.device_management")) {
-                continue;
-            }
+//            if (device.supportsSource(InputDevice.SOURCE_TOUCHSCREEN) && !targetView.getContext().getPackageManager().hasSystemFeature("org.chromium.arc.device_management")) {
+//                continue;
+//            }
 
             if (device.supportsSource(InputDevice.SOURCE_MOUSE) ||
                     device.supportsSource(InputDevice.SOURCE_MOUSE_RELATIVE) ||
