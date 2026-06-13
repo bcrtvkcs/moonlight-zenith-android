@@ -8,7 +8,6 @@ import com.limelight.binding.input.KeyboardTranslator;
 import com.limelight.binding.input.capture.InputCaptureManager;
 import com.limelight.binding.input.capture.InputCaptureProvider;
 import com.limelight.binding.input.touch.AbsoluteTouchContext;
-import com.limelight.binding.input.touch.NativeTouchContext;
 import com.limelight.binding.input.touch.RelativeTouchContext;
 import com.limelight.binding.input.driver.UsbDriverService;
 import com.limelight.binding.input.evdev.EvdevListener;
@@ -87,11 +86,7 @@ import java.lang.reflect.Method;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
-// import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Locale;
-import java.util.Objects;
 
 import kotlin.Unit;
 import studio.attect.limelight.GameAttectActivity;
@@ -106,7 +101,7 @@ public class Game extends GameAttectActivity implements SurfaceHolder.Callback,
 
     // Only 2 touches are supported
     private final TouchContext[] touchContextMap = new TouchContext[2];
-    private long multiFingerDownTime = 0;
+    private long threeFingerDownTime = 0;
 
     private static final int REFERENCE_HORIZ_RES = 1280;
     private static final int REFERENCE_VERT_RES = 720;
@@ -117,7 +112,7 @@ public class Game extends GameAttectActivity implements SurfaceHolder.Callback,
     private static final int STYLUS_UP_DEAD_ZONE_DELAY = 150;
     private static final int STYLUS_UP_DEAD_ZONE_RADIUS = 50;
 
-    private static final int MULTI_FINGER_TAP_THRESHOLD = 300;
+    private static final int THREE_FINGER_TAP_THRESHOLD = 300;
 
     private ControllerHandler controllerHandler;
     private KeyboardTranslator keyboardTranslator;
@@ -162,7 +157,6 @@ public class Game extends GameAttectActivity implements SurfaceHolder.Callback,
 
     private WifiManager.WifiLock highPerfWifiLock;
     private WifiManager.WifiLock lowLatencyWifiLock;
-    private Map<Integer, NativeTouchContext.Pointer> nativeTouchPointerMap = new HashMap<>();
 
     private boolean connectedToUsbDriverService = false;
     private ServiceConnection usbDriverServiceConnection = new ServiceConnection() {
@@ -230,17 +224,6 @@ public class Game extends GameAttectActivity implements SurfaceHolder.Callback,
         // Read the stream preferences
         prefConfig = PreferenceConfiguration.readPreferences(this);
         tombstonePrefs = Game.this.getSharedPreferences("DecoderTombstone", 0);
-        // Set flat region size for long press jitter elimination.
-        NativeTouchContext.INTIAL_ZONE_PIXELS = prefConfig.longPressflatRegionPixels;
-        NativeTouchContext.ENABLE_ENHANCED_TOUCH = prefConfig.enableEnhancedTouch;
-        if(prefConfig.enhancedTouchOnWhichSide){
-            NativeTouchContext.ENHANCED_TOUCH_ON_RIGHT = -1;
-        }else{
-            NativeTouchContext.ENHANCED_TOUCH_ON_RIGHT = 1;
-        }
-        NativeTouchContext.ENHANCED_TOUCH_ZONE_DIVIDER = prefConfig.enhanceTouchZoneDivider * 0.01f;
-        NativeTouchContext.POINTER_VELOCITY_FACTOR = prefConfig.pointerVelocityFactor * 0.01f;
-        // NativeTouchContext.POINTER_FIXED_X_VELOCITY = prefConfig.pointerFixedXVelocity;
 
         // Enter landscape unless we're on a square screen
         setPreferredOrientationForCurrentDisplay();
@@ -1613,25 +1596,8 @@ public class Game extends GameAttectActivity implements SurfaceHolder.Callback,
 
 
     private float[] getStreamViewRelativeNormalizedXY(View view, MotionEvent event, int pointerIndex) {
-        float normalizedX;
-        float normalizedY;
-        if(prefConfig.enableEnhancedTouch){
-            // Coords are replaced by NativeTouchContext here.
-            NativeTouchContext.Pointer pointer = nativeTouchPointerMap.get(event.getPointerId(pointerIndex));
-            if(pointer != null) {
-                float targetCoords[] = pointer.XYCoordSelector(); // decides to passthrough or manipulate coords.
-                normalizedX = targetCoords[0];
-                normalizedY = targetCoords[1];
-            }
-            else{
-                normalizedX = 0f; //in this case (pointer == null), pointers are already all up.
-                normalizedY = 0f;
-            }
-        }
-        else{
-            normalizedX = event.getX(pointerIndex);
-            normalizedY = event.getY(pointerIndex);
-        }
+        float normalizedX = event.getX(pointerIndex);
+        float normalizedY = event.getY(pointerIndex);
 
 
         // For the containing background view, we must subtract the origin
@@ -1841,19 +1807,9 @@ public class Game extends GameAttectActivity implements SurfaceHolder.Callback,
         }
         if (event.getActionMasked() == MotionEvent.ACTION_MOVE) {
             // Move events may impact all active pointers
-            if(prefConfig.enableEnhancedTouch) {
-                for (int i = 0; i < event.getPointerCount(); i++) {
-                    Objects.requireNonNull(nativeTouchPointerMap.get(event.getPointerId(i))).updatePointerCoords(event, i); // update pointer coords in the map.
-                    if (!sendTouchEventForPointer(view, event, eventType, i)) {
-                        return false;
-                    }
-                }
-            }
-            else{
-                for (int i = 0; i < event.getPointerCount(); i++) {
-                    if (!sendTouchEventForPointer(view, event, eventType, i)) {
-                        return false;
-                    }
+            for (int i = 0; i < event.getPointerCount(); i++) {
+                if (!sendTouchEventForPointer(view, event, eventType, i)) {
+                    return false;
                 }
             }
             return true;
@@ -1863,42 +1819,12 @@ public class Game extends GameAttectActivity implements SurfaceHolder.Callback,
                     0, 0, 0, 0, 0,
                     MoonBridge.LI_ROT_UNKNOWN) != MoonBridge.LI_ERR_UNSUPPORTED;
         } else {
-            switch(event.getActionMasked()) {
-                case MotionEvent.ACTION_POINTER_DOWN:
-                multiFingerTapChecker(event);
-                case MotionEvent.ACTION_DOWN: // first & following finger down.
-                    if(prefConfig.enableEnhancedTouch) {
-                        NativeTouchContext.Pointer pointer = new NativeTouchContext.Pointer(event);
-                        nativeTouchPointerMap.put(pointer.getPointerId(), pointer);
-                    }
-                    break;
-                case MotionEvent.ACTION_UP: // all fingers up
-                    if(event.getEventTime() - multiFingerDownTime < MULTI_FINGER_TAP_THRESHOLD) {
-                        toggleKeyboard();
-                    }
-                case MotionEvent.ACTION_POINTER_UP:
-                    if(prefConfig.enableEnhancedTouch) {
-                        nativeTouchPointerMap.remove(event.getPointerId(event.getActionIndex()));
-                    }
-                    break;
-            }
             // Up, Down, and Hover events are specific to the action index
             return sendTouchEventForPointer(view, event, eventType, event.getActionIndex());
         }
     }
 
-    private void multiFingerTapChecker (MotionEvent event) {
-        if (event.getPointerCount() == prefConfig.nativeTouchFingersToToggleKeyboard) {
-            // number of fingers to tap is defined by prefConfig.nativeTouchFingersToToggleKeyboard, configurable from 3 to 10, and -1(disabled) in menu.
 
-            // Cancel the first and second touches to avoid
-            // erroneous events
-            // for (TouchContext aTouchContext : touchContextMap) {
-            //    aTouchContext.cancelTouch();
-            // }
-            multiFingerDownTime = event.getEventTime();
-        }
-    }
 
     // Returns true if the event was consumed
     // NB: View is only present if called from a view callback
@@ -2098,10 +2024,6 @@ public class Game extends GameAttectActivity implements SurfaceHolder.Callback,
             }
             // This case is for fingers
             else {
-                if (getNativeTouchEventMode() && !prefConfig.touchscreenTrackpad && trySendTouchEvent(view, event)) {
-                    return true;
-                }
-
                 if (virtualController != null &&
                         (virtualController.getControllerMode() == VirtualController.ControllerMode.MoveButtons ||
                                 virtualController.getControllerMode() == VirtualController.ControllerMode.ResizeButtons)) {
@@ -2129,7 +2051,7 @@ public class Game extends GameAttectActivity implements SurfaceHolder.Callback,
                 if (event.getActionMasked() == MotionEvent.ACTION_POINTER_DOWN &&
                         event.getPointerCount() == 3) {
                     // Three fingers down
-                    multiFingerDownTime = event.getEventTime();
+                    threeFingerDownTime = event.getEventTime();
 
                     // Cancel the first and second touches to avoid
                     // erroneous events
@@ -2168,7 +2090,7 @@ public class Game extends GameAttectActivity implements SurfaceHolder.Callback,
                         if (event.getPointerCount() == 1 &&
                                 (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU || (event.getFlags() & MotionEvent.FLAG_CANCELED) == 0)) {
                             // All fingers up
-                            if (event.getEventTime() - multiFingerDownTime < MULTI_FINGER_TAP_THRESHOLD) {
+                            if (event.getEventTime() - threeFingerDownTime < THREE_FINGER_TAP_THRESHOLD) {
                                 // This is a 3 finger tap to bring up the keyboard
                                 toggleKeyboard();
                                 return true;
@@ -2306,10 +2228,7 @@ public class Game extends GameAttectActivity implements SurfaceHolder.Callback,
             // Tell the OS not to buffer input events for us
             //
             // NB: This is still needed even when we call the newer requestUnbufferedDispatch()!
-            // Add a configuration to allow view.requestUnbufferedDispatch to be disabled.
-            if(!prefConfig.syncTouchEventWithDisplay) {
-                view.requestUnbufferedDispatch(event);
-            }
+            view.requestUnbufferedDispatch(event);
         }
         return handleMotionEvent(view, event); 
     }

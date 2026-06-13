@@ -12,7 +12,6 @@ Moonlight Zenith is an enhanced fork of [Moonlight Android](https://github.com/m
 - Enhanced and modernized by **Antigravity** (AI Assistant) in collaboration with **bcrtvkcs**.
 - Based on the brilliant open-source work of the original [Moonlight Android](#moonlight-android) team.
 - **Special thanks to the authors of the forks & commits we merged:**
-  - [TrueZhuangJia](https://github.com/TrueZhuangJia/moonlight-android-Enhanced-MultiTouch) for the Native Multi-Touch and sensitivity tweaks.
   - [athlan20](https://github.com/athlan20/moonlight-android-L3R3) for the L3/R3 button support.
   - [Attect](https://github.com/Attect/moonlight-android-Attect) for their foundational work and contributions to the Android branch.
 - Deep thanks to the [Sunshine](https://github.com/LizardByte/Sunshine) project for enabling this ecosystem.
