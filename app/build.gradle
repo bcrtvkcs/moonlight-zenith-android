@@ -52,10 +52,17 @@ def getLatestTag = { ->
 
     signingConfigs {
         release {
-            storeFile file("keystore.jks")
-            storePassword "moonlight123"
-            keyAlias "moonlight"
-            keyPassword "moonlight123"
+            def keystorePropertiesFile = rootProject.file("local.properties")
+            if (keystorePropertiesFile.exists()) {
+                def keystoreProperties = new Properties()
+                keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+                if (keystoreProperties.containsKey('keystore.file')) {
+                    storeFile file(keystoreProperties['keystore.file'])
+                    storePassword keystoreProperties['keystore.password']
+                    keyAlias keystoreProperties['keystore.alias']
+                    keyPassword keystoreProperties['keystore.alias_password']
+                }
+            }
         }
     }
 
