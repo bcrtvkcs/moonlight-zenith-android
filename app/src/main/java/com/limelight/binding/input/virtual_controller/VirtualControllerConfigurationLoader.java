@@ -177,17 +177,13 @@ public class VirtualControllerConfigurationLoader {
     private static final int ANALOG_R_BASE_Y = 42;
     private static final int ANALOG_SIZE = 26;
 
-    private static final int L3_R3_BASE_Y = 60;
+    private static final int L3_R3_BASE_Y = 75;
 
     private static final int START_X = 83;
     private static final int BACK_X = 34;
     private static final int START_BACK_Y = 64;
     private static final int START_BACK_WIDTH = 12;
     private static final int START_BACK_HEIGHT = 7;
-
-    // Make the Guide Menu be in the center of START and BACK menu
-    private static final int GUIDE_X = START_X-BACK_X;
-    private static final int GUIDE_Y = START_BACK_Y;
 
     public static void createDefaultLayout(final VirtualController controller, final Context context) {
 
@@ -357,8 +353,8 @@ public class VirtualControllerConfigurationLoader {
         if(config.showGuideButton){
             controller.addElement(createDigitalButton(VirtualControllerElement.EID_GDB,
                             ControllerPacket.SPECIAL_BUTTON_FLAG, 0, 1, "GUIDE", -1, controller, context),
-                    screenScale(GUIDE_X, height)+ rightDisplacement,
-                    screenScale(GUIDE_Y, height),
+                    (screenScale(BACK_X, height) + screenScale(START_X, height) + rightDisplacement) / 2 - screenScale(START_BACK_WIDTH, height) / 2,
+                    screenScale(START_BACK_Y, height),
                     screenScale(START_BACK_WIDTH, height),
                     screenScale(START_BACK_HEIGHT, height)
             );

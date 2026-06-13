@@ -1375,6 +1375,30 @@ public class Game extends GameAttectActivity implements SurfaceHolder.Callback,
                 return false;
             }
 
+            android.content.SharedPreferences prefs = android.preference.PreferenceManager.getDefaultSharedPreferences(this);
+            String hostLayout = prefs.getString("list_host_keyboard_layout", "auto");
+
+            int unicodeChar = event.getUnicodeChar();
+            if ((unicodeChar & KeyCharacterMap.COMBINING_ACCENT) == 0 && (unicodeChar & KeyCharacterMap.COMBINING_ACCENT_MASK) != 0) {
+                unicodeChar = unicodeChar & KeyCharacterMap.COMBINING_ACCENT_MASK;
+                com.limelight.binding.input.HostKeyboardLayoutTranslator.TranslationResult override = 
+                    com.limelight.binding.input.HostKeyboardLayoutTranslator.translate(hostLayout, unicodeChar);
+
+                if (override != null) {
+                    // Eat repeat down events
+                    if (event.getRepeatCount() > 0) {
+                        return true;
+                    }
+                    byte modifier = getModifierState(event);
+                    if (override.requiresShift) {
+                        modifier = (byte) (modifier | com.limelight.nvstream.input.KeyboardPacket.MODIFIER_SHIFT);
+                    }
+                    short translatedVk = (short) (0x8000 | override.vkCode);
+                    conn.sendKeyboardInput(translatedVk, com.limelight.nvstream.input.KeyboardPacket.KEY_DOWN, modifier, (byte) 0);
+                    return true;
+                }
+            }
+
             // We'll send it as a raw key event if we have a key mapping, otherwise we'll send it
             // as UTF-8 text (if it's a printable character).
             short translated = keyboardTranslator.translate(event.getKeyCode(), event.getDeviceId());
@@ -1384,9 +1408,8 @@ public class Game extends GameAttectActivity implements SurfaceHolder.Callback,
                 //
                 // NB: We need to be sure this happens before the getRepeatCount() check because
                 // UTF-8 events don't auto-repeat on the host side.
-                int unicodeChar = event.getUnicodeChar();
-                if ((unicodeChar & KeyCharacterMap.COMBINING_ACCENT) == 0 && (unicodeChar & KeyCharacterMap.COMBINING_ACCENT_MASK) != 0) {
-                    conn.sendUtf8Text("" + (char) unicodeChar);
+                if ((event.getUnicodeChar() & KeyCharacterMap.COMBINING_ACCENT) == 0 && (event.getUnicodeChar() & KeyCharacterMap.COMBINING_ACCENT_MASK) != 0) {
+                    conn.sendUtf8Text("" + (char) (event.getUnicodeChar() & KeyCharacterMap.COMBINING_ACCENT_MASK));
                     return true;
                 }
 
@@ -1454,12 +1477,31 @@ public class Game extends GameAttectActivity implements SurfaceHolder.Callback,
                 return false;
             }
 
+            android.content.SharedPreferences prefs = android.preference.PreferenceManager.getDefaultSharedPreferences(this);
+            String hostLayout = prefs.getString("list_host_keyboard_layout", "auto");
+
+            int unicodeChar = event.getUnicodeChar();
+            if ((unicodeChar & KeyCharacterMap.COMBINING_ACCENT) == 0 && (unicodeChar & KeyCharacterMap.COMBINING_ACCENT_MASK) != 0) {
+                unicodeChar = unicodeChar & KeyCharacterMap.COMBINING_ACCENT_MASK;
+                com.limelight.binding.input.HostKeyboardLayoutTranslator.TranslationResult override = 
+                    com.limelight.binding.input.HostKeyboardLayoutTranslator.translate(hostLayout, unicodeChar);
+
+                if (override != null) {
+                    byte modifier = getModifierState(event);
+                    if (override.requiresShift) {
+                        modifier = (byte) (modifier | com.limelight.nvstream.input.KeyboardPacket.MODIFIER_SHIFT);
+                    }
+                    short translatedVk = (short) (0x8000 | override.vkCode);
+                    conn.sendKeyboardInput(translatedVk, com.limelight.nvstream.input.KeyboardPacket.KEY_UP, modifier, (byte) 0);
+                    return true;
+                }
+            }
+
             short translated = keyboardTranslator.translate(event.getKeyCode(), event.getDeviceId());
             if (translated == 0) {
                 // If we sent this event as UTF-8 on key down, also report that it was handled
                 // when we get the key up event for it.
-                int unicodeChar = event.getUnicodeChar();
-                return (unicodeChar & KeyCharacterMap.COMBINING_ACCENT) == 0 && (unicodeChar & KeyCharacterMap.COMBINING_ACCENT_MASK) != 0;
+                return (event.getUnicodeChar() & KeyCharacterMap.COMBINING_ACCENT) == 0 && (event.getUnicodeChar() & KeyCharacterMap.COMBINING_ACCENT_MASK) != 0;
             }
 
             conn.sendKeyboardInput(translated, KeyboardPacket.KEY_UP, getModifierState(event),
@@ -1487,7 +1529,30 @@ public class Game extends GameAttectActivity implements SurfaceHolder.Callback,
             return false;
         }
 
-        conn.sendUtf8Text(event.getCharacters());
+        android.content.SharedPreferences prefs = android.preference.PreferenceManager.getDefaultSharedPreferences(this);
+        String hostLayout = prefs.getString("list_host_keyboard_layout", "auto");
+
+        String chars = event.getCharacters();
+        for (int i = 0; i < chars.length(); i++) {
+            int c = chars.codePointAt(i);
+            com.limelight.binding.input.HostKeyboardLayoutTranslator.TranslationResult override = 
+                com.limelight.binding.input.HostKeyboardLayoutTranslator.translate(hostLayout, c);
+
+            if (override != null) {
+                byte modifier = getModifierState(event);
+                if (override.requiresShift) {
+                    modifier = (byte) (modifier | com.limelight.nvstream.input.KeyboardPacket.MODIFIER_SHIFT);
+                }
+                short translatedVk = (short) (0x8000 | override.vkCode);
+
+                conn.sendKeyboardInput(translatedVk, com.limelight.nvstream.input.KeyboardPacket.KEY_DOWN, modifier, (byte) 0);
+                
+                // Immediately send UP
+                conn.sendKeyboardInput(translatedVk, com.limelight.nvstream.input.KeyboardPacket.KEY_UP, modifier, (byte) 0);
+            } else {
+                conn.sendUtf8Text("" + (char) c);
+            }
+        }
         return true;
     }
 

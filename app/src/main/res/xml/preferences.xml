@@ -157,6 +157,13 @@
             android:summary="@string/summary_seekbar_keyboard_toggle_fingers_native_touch"
             android:text="@string/suffix_seekbar_keyboard_toggle_fingers_native_touch"
             android:title="@string/title_seekbar_keyboard_toggle_fingers_native_touch" />
+        <ListPreference
+            android:key="list_host_keyboard_layout"
+            android:title="@string/title_list_host_keyboard_layout"
+            android:summary="@string/summary_list_host_keyboard_layout"
+            android:entries="@array/host_keyboard_layout_names"
+            android:entryValues="@array/host_keyboard_layout_values"
+            android:defaultValue="auto" />
         <CheckBoxPreference
             android:key="checkbox_mouse_nav_buttons"
             android:title="@string/title_checkbox_mouse_nav_buttons"

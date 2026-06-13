@@ -1,36 +1,26 @@
-# 首个实现多点触控 灵敏度调节 (触点移速调节) 的 Moonlight分支. <br>
-# The first Moonlight fork to implement multi-touch sensitivity tweak (touch point velocity tweak)
-# I'm currently working on my moonlight-iOS fork, with too much deviations from the original version:
-https://github.com/Moonlight-the-Fried-Fish/moonlight-ios-NativeMultiTouchPassthrough
+# Moonlight Zenith
 
+Moonlight Zenith is an enhanced fork of [Moonlight Android](https://github.com/moonlight-stream/moonlight-android) focused on bringing a robust and bulletproof keyboard typing experience across multiple languages and layouts.
 
-# Features of this fork:
+## What's New in Zenith?
+- **Host PC Keyboard Layout Selector**: Choose between Auto, Turkish (QWERTY), German (QWERTZ), French (AZERTY), Spanish (QWERTY) and Italian (QWERTY) right from the Input settings.
+- **Live Update**: Changed your keyboard layout in the settings? It applies instantly during gameplay without needing to restart the stream!
+- **Bulletproof Physical Key Injection**: Bypasses the problematic UTF-8 text injection (which caused `u15f` or `Ctrl+Shift+U` bugs on Linux/Sunshine) and translates characters dynamically to their precise hardware-level Virtual-Key (`VK_`) codes on standard ISO/European layouts.
+- **Accurate Modifier Handling**: Flawless handling of `VK_SHIFT` state for accented and dead keys (like `ı`, `İ`, `ç`, `ö`, `ß`, `é` etc.), meaning you no longer have to press Space after a special character to make it register!
 
-允许调整触点在右分屏或分屏的移速， 对调节米家游戏视角转动的灵敏度尤其有用。
-This is a fork with some manipulation on native multi-touch pointer coordinaties, allows pointer to move faster or slower on specified enhanced touch zone.
-Maybe useful for tweaking view rotation sensitivity in some games.
-<br><br>
+## Credits
+- Enhanced and modernized by **Antigravity** (AI Assistant) in collaboration with **bcrtvkcs**.
+- Based on the brilliant open-source work of the original [Moonlight Android](#moonlight-android) team.
+- **Special thanks to the authors of the forks & commits we merged:**
+  - [TrueZhuangJia](https://github.com/TrueZhuangJia/moonlight-android-Enhanced-MultiTouch) for the Native Multi-Touch and sensitivity tweaks.
+  - [athlan20](https://github.com/athlan20/moonlight-android-L3R3) for the L3/R3 button support.
+  - [Attect](https://github.com/Attect/moonlight-android-Attect) for their foundational work and contributions to the Android branch.
+- Deep thanks to the [Sunshine](https://github.com/LizardByte/Sunshine) project for enabling this ecosystem.
 
-![image](https://github.com/TrueZhuangJia/moonlight-android-Enhanced-MultiTouch/assets/78474576/3bd8efeb-89ab-477d-b501-22f25cdb8fc6)
-![image](https://github.com/TrueZhuangJia/moonlight-android-Enhanced-MultiTouch/assets/78474576/0d58b391-71ef-48be-82f8-6fef1649e2eb)
-
-
-恢复原版moonlight多指敲击屏幕唤醒本地键盘的方式， 同时允许设置敲击手指数量 <br>
-Configurable local keyboard toggle: <br>
-![image](https://github.com/TrueZhuangJia/moonlight-android-Enhanced-MultiTouch/assets/78474576/416a2960-f0a7-4245-ac62-d8fb53ec4ca7)
-![image](https://github.com/TrueZhuangJia/moonlight-android-Enhanced-MultiTouch/assets/78474576/a0edaf21-a174-448e-832c-da2d171cefea)
-
-
-还有两个的功能， 使用中你可能未必能感觉到有区别：<br>
-And some additional features like flat region to eliminate long press jitter:<br>
-![image](https://github.com/TrueZhuangJia/moonlight-android-Enhanced-MultiTouch/assets/78474576/0594b3ef-e381-4efc-bc2b-db8f209db272)
-![image](https://github.com/TrueZhuangJia/moonlight-android-Enhanced-MultiTouch/assets/78474576/98534adc-48ad-4433-8d7c-e60b88c13466)
-
-
-触控与显示同步的话，可能有助理于视角旋转时画面的流畅性。
-
+---
 
 # Moonlight Android
+
 
 [![AppVeyor Build Status](https://ci.appveyor.com/api/projects/status/232a8tadrrn8jv0k/branch/master?svg=true)](https://ci.appveyor.com/project/cgutman/moonlight-android/branch/master)
 [![Translation Status](https://hosted.weblate.org/widgets/moonlight/-/moonlight-android/svg-badge.svg)](https://hosted.weblate.org/projects/moonlight/moonlight-android/)

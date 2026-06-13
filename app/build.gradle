@@ -24,6 +24,15 @@ android {
         buildConfig = true
     }
 
+    signingConfigs {
+        release {
+            storeFile file("keystore.jks")
+            storePassword "moonlight123"
+            keyAlias "moonlight"
+            keyPassword "moonlight123"
+        }
+    }
+
     productFlavors {
         root {
             // Android O has native mouse capture, so don't show the rooted
@@ -82,8 +91,8 @@ android {
     buildTypes {
         debug {
             applicationIdSuffix ".debug"
-            resValue "string", "app_label", "Moonlight-搓屏砖家版"
-            resValue "string", "app_label_root", "Moonlight-搓屏砖家版"
+            resValue "string", "app_label", "Moonlight Zenith"
+            resValue "string", "app_label_root", "Moonlight Zenith"
 
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
@@ -119,9 +128,11 @@ android {
             // is to please change the applicationId before you publish.
             //
             // TL;DR: Leave the following line alone!
-            applicationIdSuffix ".unofficial"
-            resValue "string", "app_label", "Moonlight"
-            resValue "string", "app_label_root", "Moonlight (Root)"
+            applicationIdSuffix ".zenith"
+            resValue "string", "app_label", "Moonlight Zenith"
+            resValue "string", "app_label_root", "Moonlight Zenith"
+
+            signingConfig signingConfigs.release
 
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'

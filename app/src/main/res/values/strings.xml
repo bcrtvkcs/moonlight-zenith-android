@@ -94,6 +94,15 @@
     <string name="error_code_prefix">Error code:</string>
 
     <!-- General strings -->
+    <string name="title_list_host_keyboard_layout">Host PC Keyboard Layout</string>
+    <string name="summary_list_host_keyboard_layout">Select the keyboard layout of your remote PC</string>
+    <string name="host_keyboard_layout_auto">Auto / Generic (Default)</string>
+    <string name="host_keyboard_layout_tr">Turkish (QWERTY)</string>
+    <string name="host_keyboard_layout_de">German (QWERTZ)</string>
+    <string name="host_keyboard_layout_fr">French (AZERTY)</string>
+    <string name="host_keyboard_layout_es">Spanish (QWERTY)</string>
+    <string name="host_keyboard_layout_it">Italian (QWERTY)</string>
+
     <string name="ip_hint">IP address of host PC</string>
     <string name="searching_pc">Searching for host PCs on your local network…\n\n
         Ensure Sunshine is running on your host PC or GameStream is enabled in the GeForce Experience SHIELD settings.</string>
