@@ -155,25 +155,25 @@ public class VirtualControllerConfigurationLoader {
     }
 
 
-    private static final int TRIGGER_L_BASE_X = 2;
-    private static final int TRIGGER_R_BASE_X = 94;
+    private static final int TRIGGER_L_BASE_X = 8;
+    private static final int TRIGGER_R_BASE_X = 88;
     private static final int TRIGGER_DISTANCE = 22;
     private static final int TRIGGER_BASE_Y = 31;
     private static final int TRIGGER_WIDTH = 10;
     private static final int TRIGGER_HEIGHT = 8;
 
     // Face buttons are defined based on the Y button (button number 9)
-    private static final int BUTTON_BASE_X = 104;
+    private static final int BUTTON_BASE_X = 99;
     private static final int BUTTON_BASE_Y = 7;
     private static final int BUTTON_SIZE = 9;
 
-    private static final int DPAD_BASE_X = 4;
+    private static final int DPAD_BASE_X = 12;
     private static final int DPAD_BASE_Y = 39;
     private static final int DPAD_SIZE = 26;
 
-    private static final int ANALOG_L_BASE_X = 6;
+    private static final int ANALOG_L_BASE_X = 12;
     private static final int ANALOG_L_BASE_Y = 7;
-    private static final int ANALOG_R_BASE_X = 94;
+    private static final int ANALOG_R_BASE_X = 91;
     private static final int ANALOG_R_BASE_Y = 41;
     private static final int ANALOG_SIZE = 24;
 
