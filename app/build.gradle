@@ -78,7 +78,7 @@ def getLatestTag = { ->
                 }
             }
 
-            applicationId "com.limelight.zenith.root"
+            applicationId "com.limelight.root"
             dimension "root"
             buildConfigField "boolean", "ROOT_BUILD", "true"
         }
@@ -90,7 +90,7 @@ def getLatestTag = { ->
                 }
             }
 
-            applicationId "com.limelight.zenith"
+            applicationId "com.limelight"
             dimension "root"
             buildConfigField "boolean", "ROOT_BUILD", "false"
         }
