@@ -1833,12 +1833,19 @@ public class Game extends GameAttectActivity implements SurfaceHolder.Callback,
     }
 
     private boolean trySendTouchEvent(View view, MotionEvent event) {
+        float xOffset = 0.f;
+        float yOffset = 0.f;
+        if (view != streamView && !prefConfig.touchscreenTrackpad) {
+            xOffset = -streamView.getX();
+            yOffset = -streamView.getY();
+        }
+
         if (prefConfig.nativeTouchLongPress) {
             int actionMasked = event.getActionMasked();
             if (actionMasked == MotionEvent.ACTION_DOWN || actionMasked == MotionEvent.ACTION_POINTER_DOWN) {
                 if (event.getPointerCount() == 1) {
-                    nativeTouchDownX = (int) event.getX(0);
-                    nativeTouchDownY = (int) event.getY(0);
+                    nativeTouchDownX = (int) (event.getX(0) + xOffset);
+                    nativeTouchDownY = (int) (event.getY(0) + yOffset);
                     nativeTouchPointerId = event.getPointerId(0);
                     nativeTouchLongPressFired = false;
                     nativeTouchHandler.removeCallbacks(nativeLongPressRunnable);
@@ -1848,8 +1855,8 @@ public class Game extends GameAttectActivity implements SurfaceHolder.Callback,
                 }
             } else if (actionMasked == MotionEvent.ACTION_MOVE) {
                 if (event.getPointerCount() == 1 && nativeTouchPointerId == event.getPointerId(0)) {
-                    int dx = (int) event.getX(0) - nativeTouchDownX;
-                    int dy = (int) event.getY(0) - nativeTouchDownY;
+                    int dx = (int) (event.getX(0) + xOffset) - nativeTouchDownX;
+                    int dy = (int) (event.getY(0) + yOffset) - nativeTouchDownY;
                     if (dx * dx + dy * dy > NATIVE_LONG_PRESS_DISTANCE_THRESHOLD * NATIVE_LONG_PRESS_DISTANCE_THRESHOLD) {
                         nativeTouchHandler.removeCallbacks(nativeLongPressRunnable);
                     }
