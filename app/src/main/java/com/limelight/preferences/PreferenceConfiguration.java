@@ -69,6 +69,12 @@ public class PreferenceConfiguration {
     private static final String GAMEPAD_MOTION_SENSORS_PREF_STRING = "checkbox_gamepad_motion_sensors";
     private static final String GAMEPAD_MOTION_FALLBACK_PREF_STRING = "checkbox_gamepad_motion_fallback";
 
+    private static final String NATIVE_TOUCH_LONG_PRESS_PREF_STRING = "checkbox_native_touch_long_press";
+    private static final String NATIVE_TOUCH_LONG_PRESS_DURATION_PREF_STRING = "list_native_touch_long_press_duration";
+    
+    private static final boolean DEFAULT_NATIVE_TOUCH_LONG_PRESS = true;
+    private static final int DEFAULT_NATIVE_TOUCH_LONG_PRESS_DURATION = 500;
+
     static final String DEFAULT_RESOLUTION = "1280x720";
     static final String DEFAULT_FPS = "60";
     private static final boolean DEFAULT_STRETCH = false;
@@ -145,6 +151,8 @@ public class PreferenceConfiguration {
     public boolean vibrateOsc;
     public boolean vibrateFallbackToDevice;
     public int vibrateFallbackToDeviceStrength;
+    public boolean nativeTouchLongPress;
+    public int nativeTouchLongPressDuration;
     public boolean touchscreenTrackpad;
     public MoonBridge.AudioConfiguration audioConfiguration;
     public int framePacing;
@@ -592,6 +600,8 @@ public class PreferenceConfiguration {
         config.vibrateFallbackToDevice = prefs.getBoolean(VIBRATE_FALLBACK_PREF_STRING, DEFAULT_VIBRATE_FALLBACK);
         config.vibrateFallbackToDeviceStrength = prefs.getInt(VIBRATE_FALLBACK_STRENGTH_PREF_STRING, DEFAULT_VIBRATE_FALLBACK_STRENGTH);
         config.flipFaceButtons = prefs.getBoolean(FLIP_FACE_BUTTONS_PREF_STRING, DEFAULT_FLIP_FACE_BUTTONS);
+        config.nativeTouchLongPress = prefs.getBoolean(NATIVE_TOUCH_LONG_PRESS_PREF_STRING, DEFAULT_NATIVE_TOUCH_LONG_PRESS);
+        config.nativeTouchLongPressDuration = Integer.parseInt(prefs.getString(NATIVE_TOUCH_LONG_PRESS_DURATION_PREF_STRING, String.valueOf(DEFAULT_NATIVE_TOUCH_LONG_PRESS_DURATION)));
         config.touchscreenTrackpad = prefs.getBoolean(TOUCHSCREEN_TRACKPAD_PREF_STRING, DEFAULT_TOUCHSCREEN_TRACKPAD);
         config.enableLatencyToast = prefs.getBoolean(LATENCY_TOAST_PREF_STRING, DEFAULT_LATENCY_TOAST);
         config.absoluteMouseMode = prefs.getBoolean(ABSOLUTE_MOUSE_MODE_PREF_STRING, DEFAULT_ABSOLUTE_MOUSE_MODE);

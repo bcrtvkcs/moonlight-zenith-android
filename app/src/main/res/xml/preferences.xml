@@ -135,6 +135,20 @@
             android:summary="@string/summary_checkbox_touchscreen_trackpad"
             android:defaultValue="true" />
 
+        <CheckBoxPreference
+            android:key="checkbox_native_touch_long_press"
+            android:title="@string/title_checkbox_native_touch_long_press"
+            android:summary="@string/summary_checkbox_native_touch_long_press"
+            android:defaultValue="true" />
+
+        <ListPreference
+            android:key="list_native_touch_long_press_duration"
+            android:title="@string/title_list_native_touch_long_press_duration"
+            android:summary="@string/summary_list_native_touch_long_press_duration"
+            android:entries="@array/native_touch_long_press_duration_names"
+            android:entryValues="@array/native_touch_long_press_duration_values"
+            android:defaultValue="500" />
+
         <ListPreference
             android:key="list_host_keyboard_layout"
             android:title="@string/title_list_host_keyboard_layout"

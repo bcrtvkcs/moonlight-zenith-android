@@ -309,4 +309,8 @@
     <string name="analogscroll_none">None (both sticks move the mouse)</string>
     <string name="analogscroll_right">Right analog stick</string>
     <string name="analogscroll_left">Left analog stick</string>
+    <string name="title_checkbox_native_touch_long_press">Native Touch Long-Press Right-Click</string>
+    <string name="summary_checkbox_native_touch_long_press">Triggers a right-click after a long press in native touch mode. Disable to pass long presses directly to the host OS.</string>
+    <string name="title_list_native_touch_long_press_duration">Long-Press Duration</string>
+    <string name="summary_list_native_touch_long_press_duration">Time required for a long press to register as a right-click.</string>
 </resources>

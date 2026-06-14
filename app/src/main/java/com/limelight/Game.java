@@ -59,6 +59,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
 import android.util.Log;
 import android.util.Rational;
 import android.util.Log;
@@ -146,6 +147,28 @@ public class Game extends GameAttectActivity implements SurfaceHolder.Callback,
     private long lastAbsTouchDownTime = 0;
     private float lastAbsTouchUpX, lastAbsTouchUpY;
     private float lastAbsTouchDownX, lastAbsTouchDownY;
+
+    private final Handler nativeTouchHandler = new Handler(Looper.getMainLooper());
+    private boolean nativeTouchLongPressFired = false;
+    private int nativeTouchDownX = 0;
+    private int nativeTouchDownY = 0;
+    private int nativeTouchPointerId = -1;
+    private static final int NATIVE_LONG_PRESS_DISTANCE_THRESHOLD = 30;
+
+    private final Runnable nativeLongPressRunnable = new Runnable() {
+        @Override
+        public void run() {
+            nativeTouchLongPressFired = true;
+            if (conn != null) {
+                // Cancel the ongoing touch on the host side
+                conn.sendTouchEvent(MoonBridge.LI_TOUCH_EVENT_CANCEL_ALL, 0, 0, 0, 0, 0, 0, MoonBridge.LI_ROT_UNKNOWN);
+                
+                // Send right click
+                conn.sendMouseButtonDown(MouseButtonPacket.BUTTON_RIGHT);
+                conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_RIGHT);
+            }
+        }
+    };
 
     private boolean isHidingOverlays;
     private TextView notificationOverlayView;
@@ -1069,6 +1092,10 @@ public class Game extends GameAttectActivity implements SurfaceHolder.Callback,
 
         // Destroy the capture provider
         inputCaptureProvider.destroy();
+        
+        if (nativeTouchHandler != null) {
+            nativeTouchHandler.removeCallbacksAndMessages(null);
+        }
     }
 
     @Override
@@ -1801,6 +1828,39 @@ public class Game extends GameAttectActivity implements SurfaceHolder.Callback,
     }
 
     private boolean trySendTouchEvent(View view, MotionEvent event) {
+        if (prefConfig.nativeTouchLongPress) {
+            int actionMasked = event.getActionMasked();
+            if (actionMasked == MotionEvent.ACTION_DOWN || actionMasked == MotionEvent.ACTION_POINTER_DOWN) {
+                if (event.getPointerCount() == 1) {
+                    nativeTouchDownX = (int) event.getX(0);
+                    nativeTouchDownY = (int) event.getY(0);
+                    nativeTouchPointerId = event.getPointerId(0);
+                    nativeTouchLongPressFired = false;
+                    nativeTouchHandler.removeCallbacks(nativeLongPressRunnable);
+                    nativeTouchHandler.postDelayed(nativeLongPressRunnable, prefConfig.nativeTouchLongPressDuration);
+                } else {
+                    nativeTouchHandler.removeCallbacks(nativeLongPressRunnable);
+                }
+            } else if (actionMasked == MotionEvent.ACTION_MOVE) {
+                if (event.getPointerCount() == 1 && nativeTouchPointerId == event.getPointerId(0)) {
+                    int dx = (int) event.getX(0) - nativeTouchDownX;
+                    int dy = (int) event.getY(0) - nativeTouchDownY;
+                    if (dx * dx + dy * dy > NATIVE_LONG_PRESS_DISTANCE_THRESHOLD * NATIVE_LONG_PRESS_DISTANCE_THRESHOLD) {
+                        nativeTouchHandler.removeCallbacks(nativeLongPressRunnable);
+                    }
+                }
+            } else if (actionMasked == MotionEvent.ACTION_UP || actionMasked == MotionEvent.ACTION_POINTER_UP || actionMasked == MotionEvent.ACTION_CANCEL) {
+                nativeTouchHandler.removeCallbacks(nativeLongPressRunnable);
+            }
+
+            if (nativeTouchLongPressFired) {
+                if (actionMasked == MotionEvent.ACTION_UP || actionMasked == MotionEvent.ACTION_POINTER_UP || actionMasked == MotionEvent.ACTION_CANCEL) {
+                    nativeTouchLongPressFired = false; // Reset on finger lift
+                }
+                return true; // Consume event without sending it to PC
+            }
+        }
+
         byte eventType = getLiTouchTypeFromEvent(event);
         if (eventType < 0) {
             return false;

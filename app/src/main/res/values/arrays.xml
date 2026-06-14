@@ -148,4 +148,16 @@
         <item>es_ES</item>
         <item>it_IT</item>
     </string-array>
+    <string-array name="native_touch_long_press_duration_names">
+        <item>300ms</item>
+        <item>500ms (Default)</item>
+        <item>800ms</item>
+        <item>1000ms</item>
+    </string-array>
+    <string-array name="native_touch_long_press_duration_values" translatable="false">
+        <item>300</item>
+        <item>500</item>
+        <item>800</item>
+        <item>1000</item>
+    </string-array>
 </resources>
