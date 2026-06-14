@@ -570,6 +570,15 @@ public class Game extends GameAttectActivity implements SurfaceHolder.Callback,
                     return Unit.INSTANCE;
                 }, (enable) -> {
                     prefConfig.touchscreenTrackpad = enable;
+                    for (int i = 0; i < touchContextMap.length; i++) {
+                        if (!prefConfig.touchscreenTrackpad) {
+                            touchContextMap[i] = new AbsoluteTouchContext(conn, i, streamView);
+                        } else {
+                            touchContextMap[i] = new RelativeTouchContext(conn, i,
+                                    REFERENCE_HORIZ_RES, REFERENCE_VERT_RES,
+                                    streamView, prefConfig);
+                        }
+                    }
                     return Unit.INSTANCE;
                 }, (keyCode, deviceId) -> keyboardTranslator.translate(keyCode, deviceId), (translatedKeyCode, keyDirection, modifierState, flags) -> {
                     conn.sendKeyboardInput(translatedKeyCode, keyDirection, modifierState, flags);
