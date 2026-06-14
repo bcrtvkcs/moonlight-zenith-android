@@ -162,7 +162,12 @@ public class Game extends GameAttectActivity implements SurfaceHolder.Callback,
             if (conn != null) {
                 // Cancel the ongoing touch on the host side
                 conn.sendTouchEvent(MoonBridge.LI_TOUCH_EVENT_CANCEL_ALL, 0, 0, 0, 0, 0, 0, MoonBridge.LI_ROT_UNKNOWN);
-                
+
+                // Move mouse to the long press coordinates
+                if (streamView != null) {
+                    conn.sendMousePosition((short) nativeTouchDownX, (short) nativeTouchDownY, (short) streamView.getWidth(), (short) streamView.getHeight());
+                }
+
                 // Send right click
                 conn.sendMouseButtonDown(MouseButtonPacket.BUTTON_RIGHT);
                 conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_RIGHT);
