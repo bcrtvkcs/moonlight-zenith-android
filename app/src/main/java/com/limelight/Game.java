@@ -2106,7 +2106,7 @@ public class Game extends GameAttectActivity implements SurfaceHolder.Callback,
                 // If this is the parent view, we'll offset our coordinates to appear as if they
                 // are relative to the StreamView like our StreamView touch events are.
                 float xOffset, yOffset;
-                if (view != streamView && !prefConfig.touchscreenTrackpad) {
+                if (view != streamView && (!prefConfig.touchscreenTrackpad || prefConfig.absoluteMouseMode)) {
                     xOffset = -streamView.getX();
                     yOffset = -streamView.getY();
                 } else {
