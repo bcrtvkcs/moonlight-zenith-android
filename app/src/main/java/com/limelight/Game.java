@@ -592,8 +592,12 @@ public class Game extends GameAttectActivity implements SurfaceHolder.Callback,
                 }, () -> {
                     if (virtualController.isShow()) {
                         virtualController.hide();
+                        prefConfig.onscreenController = false;
+                        controllerHandler.notifyOscVisibilityChanged(false);
                     } else {
                         virtualController.show();
+                        prefConfig.onscreenController = true;
+                        controllerHandler.notifyOscVisibilityChanged(true);
                     }
                     return Unit.INSTANCE;
                 }

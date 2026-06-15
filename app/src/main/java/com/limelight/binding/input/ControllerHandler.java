@@ -2804,6 +2804,16 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
         sendControllerInputPacket(defaultContext);
     }
 
+    public void notifyOscVisibilityChanged(boolean isVisible) {
+        if (isVisible) {
+            conn.sendControllerArrivalEvent((byte)defaultContext.controllerNumber, getActiveControllerMask(),
+                    MoonBridge.LI_CTYPE_UNKNOWN, 0, (byte)0);
+            reportOscState(0, (short)0, (short)0, (short)0, (short)0, (byte)0, (byte)0);
+        } else {
+            reportOscState(0, (short)0, (short)0, (short)0, (short)0, (byte)0, (byte)0);
+        }
+    }
+
     @Override
     public void reportControllerState(int controllerId, int buttonFlags,
                                       float leftStickX, float leftStickY,
