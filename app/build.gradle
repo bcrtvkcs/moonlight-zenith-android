@@ -125,9 +125,9 @@ def getLatestTag = { ->
 
     buildTypes {
         debug {
-            applicationIdSuffix ".debug"
-            resValue "string", "app_label", "Moonlight Zenith (Debug)"
-            resValue "string", "app_label_root", "Moonlight Zenith (Root Debug)"
+            applicationIdSuffix ".zenith"
+            resValue "string", "app_label", "Moonlight Zenith"
+            resValue "string", "app_label_root", "Moonlight Zenith"
 
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
