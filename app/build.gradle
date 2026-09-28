@@ -7,30 +7,50 @@ android {
 
     namespace 'com.limelight'
 
+def getGitCommand = { ->
+    def gitCmd = "git"
+    def isWindows = System.getProperty("os.name").toLowerCase().contains("windows")
+    if (isWindows) {
+        def possiblePaths = [
+            "git",
+            "C:\\Program Files\\Git\\cmd\\git.exe",
+            "C:\\Program Files\\Git\\bin\\git.exe",
+            System.getenv("LOCALAPPDATA") + "\\Programs\\Git\\cmd\\git.exe"
+        ]
+        for (path in possiblePaths) {
+            if (path == "git" || new File(path).exists()) {
+                gitCmd = path
+                break
+            }
+        }
+    }
+    return gitCmd
+}
+
 def getCommitCount = { ->
     try {
-        def stdout = new ByteArrayOutputStream()
-        exec {
-            commandLine 'git', 'rev-list', '--count', 'HEAD'
-            standardOutput = stdout
+        def proc = new ProcessBuilder([getGitCommand(), "rev-list", "--count", "HEAD"]).directory(project.rootDir).start()
+        def stdout = proc.inputStream.text.trim()
+        proc.waitFor()
+        if (proc.exitValue() == 0 && !stdout.isEmpty()) {
+            return Integer.parseInt(stdout)
         }
-        return Integer.parseInt(stdout.toString().trim())
-    } catch (Exception e) {
-        return 314
+    } catch (Exception ignored) {
     }
+    return 314
 }
 
 def getLatestTag = { ->
     try {
-        def stdout = new ByteArrayOutputStream()
-        exec {
-            commandLine 'git', 'describe', '--tags', '--abbrev=0'
-            standardOutput = stdout
+        def proc = new ProcessBuilder([getGitCommand(), "describe", "--tags", "--match=*zenith*", "--abbrev=0"]).directory(project.rootDir).start()
+        def stdout = proc.inputStream.text.trim()
+        proc.waitFor()
+        if (proc.exitValue() == 0 && !stdout.isEmpty()) {
+            return stdout
         }
-        return stdout.toString().trim()
-    } catch (Exception e) {
-        return "v1.0.0-zenith"
+    } catch (Exception ignored) {
     }
+    return "v1.0.0-zenith"
 }
 
     defaultConfig {
