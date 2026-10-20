@@ -1437,9 +1437,16 @@ public class Game extends GameAttectActivity implements SurfaceHolder.Callback,
                     if (event.getRepeatCount() > 0) {
                         return true;
                     }
-                    byte modifier = getModifierState(event);
+                    byte modifier = (byte) (getModifierState(event) & ~com.limelight.nvstream.input.KeyboardPacket.MODIFIER_ALT);
                     if (override.requiresShift) {
                         modifier = (byte) (modifier | com.limelight.nvstream.input.KeyboardPacket.MODIFIER_SHIFT);
+                    }
+                    // Android's Virtual.kcm synthesizes Alt+C for 'ç' and Shift+Alt+C for 'Ç',
+                    // which sends an Alt KEY_DOWN to the host before this event. Release Alt on
+                    // the host first so the host doesn't see Alt+VK (which suppresses character input).
+                    if (event.isAltPressed()) {
+                        conn.sendKeyboardInput((short) 0x80a4, com.limelight.nvstream.input.KeyboardPacket.KEY_UP, modifier, (byte) 0);
+                        conn.sendKeyboardInput((short) 0x80a5, com.limelight.nvstream.input.KeyboardPacket.KEY_UP, modifier, (byte) 0);
                     }
                     short translatedVk = (short) (0x8000 | override.vkCode);
                     conn.sendKeyboardInput(translatedVk, com.limelight.nvstream.input.KeyboardPacket.KEY_DOWN, modifier, (byte) 0);
@@ -1535,7 +1542,7 @@ public class Game extends GameAttectActivity implements SurfaceHolder.Callback,
                     com.limelight.binding.input.HostKeyboardLayoutTranslator.translate(hostLayout, unicodeChar);
 
                 if (override != null) {
-                    byte modifier = getModifierState(event);
+                    byte modifier = (byte) (getModifierState(event) & ~com.limelight.nvstream.input.KeyboardPacket.MODIFIER_ALT);
                     if (override.requiresShift) {
                         modifier = (byte) (modifier | com.limelight.nvstream.input.KeyboardPacket.MODIFIER_SHIFT);
                     }
