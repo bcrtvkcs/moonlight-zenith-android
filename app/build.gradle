@@ -149,6 +149,8 @@ def getLatestTag = { ->
             resValue "string", "app_label", "Moonlight Zenith"
             resValue "string", "app_label_root", "Moonlight Zenith"
 
+            signingConfig signingConfigs.release
+
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
