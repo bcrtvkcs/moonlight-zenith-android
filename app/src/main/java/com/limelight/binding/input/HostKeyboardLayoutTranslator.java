@@ -33,22 +33,22 @@ public class HostKeyboardLayoutTranslator {
                 case 'Ğ': vk = 0xDB; shift = true; break;
                 case 'ü': vk = 0xDD; break; // VK_OEM_6
                 case 'Ü': vk = 0xDD; shift = true; break;
-                case 'ç': vk = 0xDC; break; // VK_OEM_5
-                case 'Ç': vk = 0xDC; shift = true; break;
-                case 'ö': vk = 0xBC; break; // VK_OEM_COMMA
+                case 'ç': vk = 0xBE; break; // VK_OEM_PERIOD (US '.' -> Scancode 0x34 -> TR-Q 'ç')
+                case 'Ç': vk = 0xBE; shift = true; break;
+                case 'ö': vk = 0xBC; break; // VK_OEM_COMMA (US ',' -> Scancode 0x33 -> TR-Q 'ö')
                 case 'Ö': vk = 0xBC; shift = true; break;
                 
                 // Turkish Punctuation
-                case '.': vk = 0xBF; break; // VK_OEM_2
+                case '.': vk = 0xBF; break; // VK_OEM_2 (US '/' -> Scancode 0x35 -> TR-Q '.')
                 case ':': vk = 0xBF; shift = true; break;
-                case ',': vk = 0xC0; break; // VK_OEM_3
-                case ';': vk = 0xC0; shift = true; break;
+                case ',': vk = 0xDC; break; // VK_OEM_5 (US '\' -> Scancode 0x2B -> TR-Q ',')
+                case ';': vk = 0xDC; shift = true; break;
                 case '*': vk = 0xBD; break; // VK_OEM_MINUS
                 case '?': vk = 0xBD; shift = true; break;
                 case '-': vk = 0xBB; break; // VK_OEM_PLUS
                 case '_': vk = 0xBB; shift = true; break;
-                case '"': vk = 0xDF; break; // VK_OEM_8
-                case 'é': vk = 0xDF; shift = true; break;
+                case '"': vk = 0xC0; break; // VK_OEM_3 (US '`' -> Scancode 0x29 -> TR-Q '"')
+                case 'é': vk = 0xC0; shift = true; break;
                 case '<': vk = 0xE2; break; // VK_OEM_102
                 case '>': vk = 0xE2; shift = true; break;
             }

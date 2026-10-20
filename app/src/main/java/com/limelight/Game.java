@@ -1413,6 +1413,17 @@ public class Game extends GameAttectActivity implements SurfaceHolder.Callback,
 
         // Try the keyboard handler if it wasn't handled as a game controller
         if (!handled) {
+            android.content.SharedPreferences prefs = android.preference.PreferenceManager.getDefaultSharedPreferences(this);
+            String hostLayout = prefs.getString("list_host_keyboard_layout", "auto");
+
+            // Android's Virtual.kcm synthesizes KEYCODE_ALT_LEFT + KEYCODE_C for 'ç'/'Ç'.
+            // Swallow synthetic Alt events from virtual keyboards before they reach the host,
+            // preventing Alt+Key shortcuts or standalone Alt menu-bar activation on Windows.
+            if (!"auto".equals(hostLayout) && event.getDeviceId() <= 0 &&
+                    (event.getKeyCode() == KeyEvent.KEYCODE_ALT_LEFT || event.getKeyCode() == KeyEvent.KEYCODE_ALT_RIGHT)) {
+                return true;
+            }
+
             // Let this method take duplicate key down events
             if (handleSpecialKeys(event.getKeyCode(), true)) {
                 return true;
@@ -1422,9 +1433,6 @@ public class Game extends GameAttectActivity implements SurfaceHolder.Callback,
             if (!grabbedInput) {
                 return false;
             }
-
-            android.content.SharedPreferences prefs = android.preference.PreferenceManager.getDefaultSharedPreferences(this);
-            String hostLayout = prefs.getString("list_host_keyboard_layout", "auto");
 
             int unicodeChar = event.getUnicodeChar();
             if ((unicodeChar & KeyCharacterMap.COMBINING_ACCENT) == 0 && (unicodeChar & KeyCharacterMap.COMBINING_ACCENT_MASK) != 0) {
@@ -1440,13 +1448,6 @@ public class Game extends GameAttectActivity implements SurfaceHolder.Callback,
                     byte modifier = (byte) (getModifierState(event) & ~com.limelight.nvstream.input.KeyboardPacket.MODIFIER_ALT);
                     if (override.requiresShift) {
                         modifier = (byte) (modifier | com.limelight.nvstream.input.KeyboardPacket.MODIFIER_SHIFT);
-                    }
-                    // Android's Virtual.kcm synthesizes Alt+C for 'ç' and Shift+Alt+C for 'Ç',
-                    // which sends an Alt KEY_DOWN to the host before this event. Release Alt on
-                    // the host first so the host doesn't see Alt+VK (which suppresses character input).
-                    if (event.isAltPressed()) {
-                        conn.sendKeyboardInput((short) 0x80a4, com.limelight.nvstream.input.KeyboardPacket.KEY_UP, modifier, (byte) 0);
-                        conn.sendKeyboardInput((short) 0x80a5, com.limelight.nvstream.input.KeyboardPacket.KEY_UP, modifier, (byte) 0);
                     }
                     short translatedVk = (short) (0x8000 | override.vkCode);
                     conn.sendKeyboardInput(translatedVk, com.limelight.nvstream.input.KeyboardPacket.KEY_DOWN, modifier, (byte) 0);
@@ -1523,6 +1524,14 @@ public class Game extends GameAttectActivity implements SurfaceHolder.Callback,
 
         // Try the keyboard handler if it wasn't handled as a game controller
         if (!handled) {
+            android.content.SharedPreferences prefs = android.preference.PreferenceManager.getDefaultSharedPreferences(this);
+            String hostLayout = prefs.getString("list_host_keyboard_layout", "auto");
+
+            if (!"auto".equals(hostLayout) && event.getDeviceId() <= 0 &&
+                    (event.getKeyCode() == KeyEvent.KEYCODE_ALT_LEFT || event.getKeyCode() == KeyEvent.KEYCODE_ALT_RIGHT)) {
+                return true;
+            }
+
             if (handleSpecialKeys(event.getKeyCode(), false)) {
                 return true;
             }
@@ -1531,9 +1540,6 @@ public class Game extends GameAttectActivity implements SurfaceHolder.Callback,
             if (!grabbedInput) {
                 return false;
             }
-
-            android.content.SharedPreferences prefs = android.preference.PreferenceManager.getDefaultSharedPreferences(this);
-            String hostLayout = prefs.getString("list_host_keyboard_layout", "auto");
 
             int unicodeChar = event.getUnicodeChar();
             if ((unicodeChar & KeyCharacterMap.COMBINING_ACCENT) == 0 && (unicodeChar & KeyCharacterMap.COMBINING_ACCENT_MASK) != 0) {
