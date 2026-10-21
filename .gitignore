@@ -50,3 +50,6 @@ sign.jks
 
 # Windows shortcuts
 *.lnk
+
+# Andorid .nomedia Tag
+.nomedia
