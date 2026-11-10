@@ -4,6 +4,39 @@ All notable changes to **Moonlight Zenith Android** are documented in this file.
 
 ---
 
+## [v2.0.0-zenith] - 2026-11-11
+
+### 🎨 Material Design 3 (Material You) Complete UI Overhaul (`df94739d`)
+- **Feat (Material Design 3 Theme Architecture & 3-Mode Theme Engine):**
+  - Migrated the entire application from legacy Android 4.x Holo/DeviceDefault themes to **Material Design 3 (`com.google.android.material:material:1.12.0` & `androidx.appcompat:appcompat:1.7.0`)** across all screens, menus, dialogs, cards, switches, and overlays (`Theme.Moonlight.M3`, `Theme.Moonlight.M3.Stream`).
+  - Added a configurable **Material 3 Theme Selector** (`list_theme_mode`) in `StreamSettings` (`UiHelper.applyTheme`) with three theme modes:
+    - **Material You (`dynamic`):** Android 12+ (`API 31+`) dynamic wallpaper color extraction via `DynamicColors.applyToActivityIfAvailable`.
+    - **Zenith Indigo (`zenith`):** Custom Material 3 Dark palette featuring Indigo/Violet primary accents (`#BAC3FF`) and layered tonal surface containers (`#121318`, `#1E1F26`, `#292A32`).
+    - **Zenith AMOLED (`amoled`):** Pure black (`#000000`) background theme tailored for OLED screens with deep tonal cards.
+- **Feat (Redesigned PC Grid & App Grid Screens with Symmetric Cards & Centered Visuals):**
+  - Redesigned `PcView` (`activity_pc_view.xml`, portrait & landscape) and `AppView` (`activity_app_view.xml`) with Material 3 top app bars, tonal icon buttons (`materialIconButtonFilledTonalStyle`) for Back, Help, and Settings actions, a left-aligned `ExtendedFloatingActionButton` (`manuallyAddPc`) for manually adding a PC, and an elevated M3 empty-state discovery card with `CircularProgressIndicator`.
+  - Unified the outer `MaterialCardView` dimensions (`174dp` height, `22dp` corner radius), grid column width (`160dp`), spacing (`14dp`), and symmetric horizontal padding (`16dp` start/end) across `pc_grid_item.xml`, `app_grid_item.xml`, `pc_grid_view.xml`, and `app_grid_view.xml` so PC and App cards share identical outer geometry and balanced screen margins.
+  - Added `CenterContentImageView` (`com.limelight.ui.CenterContentImageView`) for `AppView` cards (`app_grid_item.xml`, `app_grid_item_small.xml`) to automatically detect foreground visual bounds (such as Sunshine's default **Desktop** and **Steam** box art icons and labels) and center them mathematically both vertically and horizontally inside the card rectangle while preserving full-bleed cover art cropping.
+  - Added a `ViewHolder` pattern to `GenericGridAdapter` to eliminate repeated `findViewById` lookups during grid scrolling.
+- **Feat (Swipeable Tabbed Settings Screen & Borderless M3 Preference Components):**
+  - Redesigned `StreamSettings` (`activity_stream_settings.xml`, `StreamSettings.java`) from a single long scrolling page into a **Material 3 Scrollable Pill TabBar (`TabLayout` + `m3_tab_pill_indicator.xml`) and Swipeable `ViewPager2`** (`TabLayoutMediator`), allowing users to switch between settings categories either by swiping horizontally anywhere on the page surface or by tapping/focusing the pill tabs.
+  - Built custom borderless Material 3 preference components (`m3_preference_item.xml`, `m3_preference_row_bg.xml`) with zero list dividers (`android:listDivider="@null"`) and zero card stroke lines:
+    - **`M3SwitchPreference`:** Uses `MaterialSwitch` (`m3_preference_widget_switch.xml`) with a fixed `24dp` checkmark/cross thumb icon (`m3_switch_thumb_icon.xml`) and `cachedView` reuse to eliminate layout inflation and animation stutter during scrolling.
+    - **`M3ListPreference`:** Displays the active value in a tonal pill badge (`m3_value_badge_bg.xml`) and opens a custom Material 3 single-choice dialog (`m3_dialog_single_choice_item.xml`) that highlights the currently selected option with a `MaterialRadioButton`, tonal container fill (`colorSecondaryContainer`), and trailing check icon (`ic_m3_check.xml`).
+    - **`SeekBarPreference` & `ConfirmDeleteOscPreference`:** Migrated to `MaterialAlertDialogBuilder` with a custom M3 slider dialog (`m3_dialog_slider.xml`), live value badge updates, and `cachedView` reuse.
+  - Removed the `android:dependency="checkbox_show_onscreen_controls"` lock from On-Screen Controls sub-settings (`checkbox_vibrate_osc`, `checkbox_only_show_L3R3`, `checkbox_show_guide_button`, `seekbar_osc_opacity`) so they remain freely configurable even when always-on OSC is disabled (such as when toggling OSC mid-stream via the floating menu), added uniform disabled-row opacity (`0.42f`) for dependent preferences, and added missing Turkish translations (`title_show_guide_button`, `summary_show_guide_button`).
+- **Feat (Adaptive Context Menus, Add Computer Screen & M3 Dialogs):**
+  - Created `M3MenuHelper` (`m3_menu_sheet.xml`, `m3_menu_row.xml`) to replace legacy context menus in `PcView` and `AppView` with an **M3 Modal Bottom Sheet** (`BottomSheetDialog`) on touch devices and a **Centered Material 3 Dialog** on TV / D-pad setups, featuring header status badges, semantic icons (`ic_m3_*`), primary action pills, and destructive action styling (`colorErrorContainer`).
+  - Redesigned `AddComputerManually` (`activity_add_computer_manually.xml`) with a Material 3 top bar, outlined `TextInputLayout` / `TextInputEditText` address field, and full-width filled `MaterialButton`.
+  - Migrated `Dialog` and `SpinnerDialog` (`m3_dialog_spinner.xml`) to `MaterialAlertDialogBuilder` and Material 3 `CircularProgressIndicator`.
+- **Feat (In-Stream Floating Menu, HUD Overlays & Sensor-Driven Landscape Orientation):**
+  - Redesigned the in-game Attect floating ball and overflow menu (`game_overflow_menu.xml`, `m3_float_button_bg.xml`, `m3_overflow_chip_bg.xml`, `m3_overflow_primary_chip_bg.xml`) and streaming performance/notification HUD overlays (`activity_game.xml`, `m3_perf_overlay_bg.xml`) with Material 3 dark glassmorphic pill surfaces.
+  - **Sensor-Driven Landscape / Reverse-Landscape Switching (`checkbox_sensor_landscape`):** Updated `Game.setPreferredOrientationForCurrentDisplay()` to use `ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE` (enabled by default and configurable in `StreamSettings` under Basic Settings), enabling automatic real-time switching between normal landscape and reverse landscape via the device's physical orientation sensor while connecting and streaming—even when Android's system auto-rotate setting is turned off.
+- **Chore (`.gitignore`)** (`9ce823fc`):
+  - Added Android `.nomedia` tag to `.gitignore`.
+
+---
+
 ## [v1.1.0-zenith] - 2026-10-20
 
 ### 🆕 Moonlight Zenith Improvements & Fixes
