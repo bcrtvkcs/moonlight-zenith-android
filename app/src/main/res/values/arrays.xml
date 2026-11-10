@@ -166,4 +166,14 @@
         <item>800</item>
         <item>1000</item>
     </string-array>
+    <string-array name="theme_mode_names">
+        <item>@string/theme_mode_dynamic</item>
+        <item>@string/theme_mode_zenith</item>
+        <item>@string/theme_mode_amoled</item>
+    </string-array>
+    <string-array name="theme_mode_values" translatable="false">
+        <item>dynamic</item>
+        <item>zenith</item>
+        <item>amoled</item>
+    </string-array>
 </resources>

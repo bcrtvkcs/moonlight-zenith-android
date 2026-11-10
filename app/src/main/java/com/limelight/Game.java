@@ -607,6 +607,9 @@ public class Game extends GameAttectActivity implements SurfaceHolder.Callback,
 
     private void setPreferredOrientationForCurrentDisplay() {
         Display display = getWindowManager().getDefaultDisplay();
+        int landscapeOrientation = prefConfig.sensorLandscape
+                ? ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+                : ActivityInfo.SCREEN_ORIENTATION_USER_LANDSCAPE;
 
         // For semi-square displays, we use more complex logic to determine which orientation to use (if any)
         if (PreferenceConfiguration.isSquarishScreen(display)) {
@@ -627,16 +630,20 @@ public class Game extends GameAttectActivity implements SurfaceHolder.Callback,
             }
 
             if (desiredOrientation == Configuration.ORIENTATION_LANDSCAPE) {
-                setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_USER_LANDSCAPE);
+                setRequestedOrientation(landscapeOrientation);
             } else if (desiredOrientation == Configuration.ORIENTATION_PORTRAIT) {
-                setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT);
+                setRequestedOrientation(prefConfig.sensorLandscape
+                        ? ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT
+                        : ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT);
             } else {
                 // If we don't have a reason to lock to portrait or landscape, allow any orientation
-                setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_FULL_USER);
+                setRequestedOrientation(prefConfig.sensorLandscape
+                        ? ActivityInfo.SCREEN_ORIENTATION_FULL_SENSOR
+                        : ActivityInfo.SCREEN_ORIENTATION_FULL_USER);
             }
         } else {
             // For regular displays, we always request landscape
-            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_USER_LANDSCAPE);
+            setRequestedOrientation(landscapeOrientation);
         }
     }
 

@@ -3,10 +3,12 @@ package com.limelight.utils;
 import java.util.ArrayList;
 
 import android.app.Activity;
-import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.widget.Button;
 
+import androidx.appcompat.app.AlertDialog;
+
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.limelight.R;
 
 public class Dialog implements Runnable {
@@ -31,7 +33,7 @@ public class Dialog implements Runnable {
     {
         synchronized (rundownDialogs) {
             for (Dialog d : rundownDialogs) {
-                if (d.alert.isShowing()) {
+                if (d.alert != null && d.alert.isShowing()) {
                     d.alert.dismiss();
                 }
             }
@@ -63,44 +65,47 @@ public class Dialog implements Runnable {
         if (activity.isFinishing())
             return;
 
-        alert = new AlertDialog.Builder(activity).create();
+        alert = new MaterialAlertDialogBuilder(activity)
+                .setTitle(title)
+                .setMessage(message)
+                .setCancelable(false)
+                .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        synchronized (rundownDialogs) {
+                            rundownDialogs.remove(Dialog.this);
+                            alert.dismiss();
+                        }
 
-        alert.setTitle(title);
-        alert.setMessage(message);
-        alert.setCancelable(false);
+                        runOnDismiss.run();
+                    }
+                })
+                .setNeutralButton(R.string.help, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        synchronized (rundownDialogs) {
+                            rundownDialogs.remove(Dialog.this);
+                            alert.dismiss();
+                        }
+
+                        runOnDismiss.run();
+
+                        HelpLauncher.launchTroubleshooting(activity);
+                    }
+                })
+                .create();
+
         alert.setCanceledOnTouchOutside(false);
- 
-        alert.setButton(AlertDialog.BUTTON_POSITIVE, activity.getResources().getText(android.R.string.ok), new DialogInterface.OnClickListener() {
-              public void onClick(DialogInterface dialog, int which) {
-                  synchronized (rundownDialogs) {
-                      rundownDialogs.remove(Dialog.this);
-                      alert.dismiss();
-                  }
-
-                  runOnDismiss.run();
-              }
-        });
-        alert.setButton(AlertDialog.BUTTON_NEUTRAL, activity.getResources().getText(R.string.help), new DialogInterface.OnClickListener() {
-            public void onClick(DialogInterface dialog, int which) {
-                synchronized (rundownDialogs) {
-                    rundownDialogs.remove(Dialog.this);
-                    alert.dismiss();
-                }
-
-                runOnDismiss.run();
-
-                HelpLauncher.launchTroubleshooting(activity);
-            }
-        });
-        alert.setOnShowListener(new DialogInterface.OnShowListener(){
-
+        alert.setOnShowListener(new DialogInterface.OnShowListener() {
             @Override
             public void onShow(DialogInterface dialog) {
                 // Set focus to the OK button by default
                 Button button = alert.getButton(AlertDialog.BUTTON_POSITIVE);
-                button.setFocusable(true);
-                button.setFocusableInTouchMode(true);
-                button.requestFocus();
+                if (button != null) {
+                    button.setFocusable(true);
+                    button.setFocusableInTouchMode(true);
+                    button.requestFocus();
+                }
             }
         });
 
@@ -109,5 +114,4 @@ public class Dialog implements Runnable {
             alert.show();
         }
     }
-
 }

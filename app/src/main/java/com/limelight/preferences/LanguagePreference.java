@@ -1,16 +1,14 @@
 package com.limelight.preferences;
 
-import android.annotation.TargetApi;
 import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Build;
-import android.preference.ListPreference;
 import android.provider.Settings;
 import android.util.AttributeSet;
 
-public class LanguagePreference extends ListPreference {
+public class LanguagePreference extends M3ListPreference {
     public LanguagePreference(Context context, AttributeSet attrs, int defStyleAttr, int defStyleRes) {
         super(context, attrs, defStyleAttr, defStyleRes);
     }
@@ -39,11 +37,11 @@ public class LanguagePreference extends ListPreference {
                 return;
             } catch (ActivityNotFoundException e) {
                 // App locale settings should be present on all Android 13 devices,
-                // but if not, we'll launch the old language chooser.
+                // but if not, we'll launch the Material 3 language chooser.
             }
         }
 
-        // If we don't have native app locale settings, launch the normal dialog
+        // Launch the Material 3 single-choice dialog
         super.onClick();
     }
 }

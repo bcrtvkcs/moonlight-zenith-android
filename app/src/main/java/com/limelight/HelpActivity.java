@@ -10,6 +10,7 @@ import android.window.OnBackInvokedCallback;
 import android.window.OnBackInvokedDispatcher;
 
 import com.limelight.utils.SpinnerDialog;
+import com.limelight.utils.UiHelper;
 
 public class HelpActivity extends Activity {
 
@@ -22,6 +23,7 @@ public class HelpActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        UiHelper.applyMaterial3Theme(this);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             onBackInvokedCallback = new OnBackInvokedCallback() {

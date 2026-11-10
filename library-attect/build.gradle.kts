@@ -25,6 +25,8 @@ android {
 }
 
 dependencies {
+    api("com.google.android.material:material:1.12.0")
+    api("androidx.appcompat:appcompat:1.7.0")
     api("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1")
     api("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
     testImplementation("junit:junit:4.13.2")

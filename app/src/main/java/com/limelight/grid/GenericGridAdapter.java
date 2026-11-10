@@ -19,6 +19,14 @@ public abstract class GenericGridAdapter<T> extends BaseAdapter {
     final ArrayList<T> itemList = new ArrayList<>();
     private final LayoutInflater inflater;
 
+    private static class ViewHolder {
+        ImageView imgView;
+        ImageView overlayView;
+        TextView txtView;
+        ProgressBar prgView;
+        int layoutId;
+    }
+
     GenericGridAdapter(Context context, int layoutId) {
         this.context = context;
         this.layoutId = layoutId;
@@ -58,16 +66,21 @@ public abstract class GenericGridAdapter<T> extends BaseAdapter {
 
     @Override
     public View getView(int i, View convertView, ViewGroup viewGroup) {
-        if (convertView == null) {
+        ViewHolder holder;
+        if (convertView == null || !(convertView.getTag() instanceof ViewHolder) || ((ViewHolder) convertView.getTag()).layoutId != layoutId) {
             convertView = inflater.inflate(layoutId, viewGroup, false);
+            holder = new ViewHolder();
+            holder.layoutId = layoutId;
+            holder.imgView = convertView.findViewById(R.id.grid_image);
+            holder.overlayView = convertView.findViewById(R.id.grid_overlay);
+            holder.txtView = convertView.findViewById(R.id.grid_text);
+            holder.prgView = convertView.findViewById(R.id.grid_spinner);
+            convertView.setTag(holder);
+        } else {
+            holder = (ViewHolder) convertView.getTag();
         }
 
-        ImageView imgView = convertView.findViewById(R.id.grid_image);
-        ImageView overlayView = convertView.findViewById(R.id.grid_overlay);
-        TextView txtView = convertView.findViewById(R.id.grid_text);
-        ProgressBar prgView = convertView.findViewById(R.id.grid_spinner);
-
-        populateView(convertView, imgView, prgView, txtView, overlayView, itemList.get(i));
+        populateView(convertView, holder.imgView, holder.prgView, holder.txtView, holder.overlayView, itemList.get(i));
 
         return convertView;
     }

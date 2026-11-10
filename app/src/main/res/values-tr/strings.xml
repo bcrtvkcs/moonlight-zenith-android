@@ -272,4 +272,13 @@
 \nNot: Bu seçeneğin etkinleştirilmesi, oyun kumandanızın ana bilgisayarda PlayStation denetleyicisi olarak görünmesine neden olabilir.</string>
     <string name="title_enable_perf_overlay">Akış sırasında performans istatistiklerini göster</string>
     <string name="summary_enable_perf_overlay">Akış sırasında gerçek zamanlı akış performansı bilgilerini görüntüleyin</string>
+    <string name="title_theme_mode">Material 3 Tema ve Renkler</string>
+    <string name="summary_theme_mode">Material You dinamik duvar kağıdı renkleri veya özel Zenith temaları arasında seçim yapın</string>
+    <string name="theme_mode_dynamic">Material You (Dinamik Duvar Kağıdı Rengi)</string>
+    <string name="theme_mode_zenith">Zenith İndigo (Özel M3 Koyu Tema)</string>
+    <string name="theme_mode_amoled">Zenith AMOLED (Saf Siyah)</string>
+    <string name="title_checkbox_sensor_landscape">Yatay ekran yönünü sensörle otomatik döndür</string>
+    <string name="summary_checkbox_sensor_landscape">Sistem otomatik döndürme kapalı olsa bile bağlanırken ve yayın sırasında yatay ile ters yatay yön arasında anlık geçiş yapar</string>
+    <string name="title_show_guide_button">Rehber (Guide) düğmesini göster</string>
+    <string name="summary_show_guide_button">Ekranda ana menü (Guide) düğmesini göster</string>
 </resources>

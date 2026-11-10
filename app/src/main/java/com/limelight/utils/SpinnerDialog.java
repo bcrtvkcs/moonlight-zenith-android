@@ -4,15 +4,23 @@ import java.util.ArrayList;
 import java.util.Iterator;
 
 import android.app.Activity;
-import android.app.ProgressDialog;
 import android.content.DialogInterface;
 import android.content.DialogInterface.OnCancelListener;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.widget.TextView;
 
-public class SpinnerDialog implements Runnable,OnCancelListener {
+import androidx.appcompat.app.AlertDialog;
+
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.limelight.R;
+
+public class SpinnerDialog implements Runnable, OnCancelListener {
     private final String title;
-    private final String message;
+    private String message;
     private final Activity activity;
-    private ProgressDialog progress;
+    private AlertDialog progressDialog;
+    private TextView messageTextView;
     private final boolean finish;
 
     private static final ArrayList<SpinnerDialog> rundownDialogs = new ArrayList<>();
@@ -22,7 +30,7 @@ public class SpinnerDialog implements Runnable,OnCancelListener {
         this.activity = activity;
         this.title = title;
         this.message = message;
-        this.progress = null;
+        this.progressDialog = null;
         this.finish = finish;
     }
 
@@ -41,8 +49,8 @@ public class SpinnerDialog implements Runnable,OnCancelListener {
                 SpinnerDialog dialog = i.next();
                 if (dialog.activity == activity) {
                     i.remove();
-                    if (dialog.progress.isShowing()) {
-                        dialog.progress.dismiss();
+                    if (dialog.progressDialog != null && dialog.progressDialog.isShowing()) {
+                        dialog.progressDialog.dismiss();
                     }
                 }
             }
@@ -51,58 +59,62 @@ public class SpinnerDialog implements Runnable,OnCancelListener {
 
     public void dismiss()
     {
-        // Running again with progress != null will destroy it
+        // Running again with progressDialog != null will destroy it
         activity.runOnUiThread(this);
     }
 
     public void setMessage(final String message)
     {
+        this.message = message;
         activity.runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                progress.setMessage(message);
+                if (messageTextView != null) {
+                    messageTextView.setText(message);
+                }
             }
         });
     }
 
     @Override
     public void run() {
-
         // If we're dying, don't bother doing anything
         if (activity.isFinishing()) {
             return;
         }
 
-        if (progress == null)
+        if (progressDialog == null)
         {
-            progress = new ProgressDialog(activity);
-
-            progress.setTitle(title);
-            progress.setMessage(message);
-            progress.setProgressStyle(ProgressDialog.STYLE_SPINNER);
-            progress.setOnCancelListener(this);
-
-            // If we want to finish the activity when this is killed, make it cancellable
-            if (finish)
-            {
-                progress.setCancelable(true);
-                progress.setCanceledOnTouchOutside(false);
+            View contentView = LayoutInflater.from(activity).inflate(R.layout.m3_dialog_spinner, null, false);
+            messageTextView = contentView.findViewById(R.id.m3_spinner_message);
+            if (messageTextView != null) {
+                messageTextView.setText(message);
             }
-            else
-            {
-                progress.setCancelable(false);
+
+            MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(activity)
+                    .setTitle(title)
+                    .setView(contentView)
+                    .setOnCancelListener(this);
+
+            if (finish) {
+                builder.setCancelable(true);
+            } else {
+                builder.setCancelable(false);
             }
+
+            progressDialog = builder.create();
+            progressDialog.setCanceledOnTouchOutside(false);
 
             synchronized (rundownDialogs) {
                 rundownDialogs.add(this);
-                progress.show();
+                progressDialog.show();
             }
         }
         else
         {
             synchronized (rundownDialogs) {
-                if (rundownDialogs.remove(this) && progress.isShowing()) {
-                    progress.dismiss();
+                if (rundownDialogs.remove(this) && progressDialog.isShowing()) {
+                    progressDialog.dismiss();
                 }
             }
         }

@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Moonlight Zenith Material Design 3 Color Scheme (Dark Default) -->
+    <color name="m3_primary">#BAC3FF</color>
+    <color name="m3_on_primary">#172678</color>
+    <color name="m3_primary_container">#303E90</color>
+    <color name="m3_on_primary_container">#DEE0FF</color>
+
+    <color name="m3_secondary">#C4C5DD</color>
+    <color name="m3_on_secondary">#2D2F42</color>
+    <color name="m3_secondary_container">#434659</color>
+    <color name="m3_on_secondary_container">#E0E1F9</color>
+
+    <color name="m3_tertiary">#E6BAD7</color>
+    <color name="m3_on_tertiary">#45263D</color>
+    <color name="m3_tertiary_container">#5E3C54</color>
+    <color name="m3_on_tertiary_container">#FFD7F0</color>
+
+    <color name="m3_error">#FFB4AB</color>
+    <color name="m3_on_error">#690005</color>
+    <color name="m3_error_container">#93000A</color>
+    <color name="m3_on_error_container">#FFDAD6</color>
+
+    <color name="m3_background">#11131A</color>
+    <color name="m3_on_background">#E3E1EC</color>
+    <color name="m3_surface">#11131A</color>
+    <color name="m3_on_surface">#E3E1EC</color>
+    <color name="m3_surface_variant">#45464F</color>
+    <color name="m3_on_surface_variant">#C6C5D0</color>
+
+    <color name="m3_surface_container_lowest">#0C0E14</color>
+    <color name="m3_surface_container_low">#191B23</color>
+    <color name="m3_surface_container">#1D1F28</color>
+    <color name="m3_surface_container_high">#282A33</color>
+    <color name="m3_surface_container_highest">#33343E</color>
+
+    <color name="m3_outline">#90909A</color>
+    <color name="m3_outline_variant">#45464F</color>
+
+    <!-- Status & Semantic Accents -->
+    <color name="m3_status_online">#6DD58C</color>
+    <color name="m3_status_online_container">#0F5223</color>
+    <color name="m3_status_offline">#8E9099</color>
+    <color name="m3_scrim">#99000000</color>
+</resources>

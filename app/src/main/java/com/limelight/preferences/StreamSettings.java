@@ -26,7 +26,16 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowInsets;
+import android.widget.FrameLayout;
+import android.widget.ListView;
+import android.widget.TextView;
 
+import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.RecyclerView;
+import androidx.viewpager2.widget.ViewPager2;
+
+import com.google.android.material.tabs.TabLayout;
+import com.google.android.material.tabs.TabLayoutMediator;
 import com.limelight.LimeLog;
 import com.limelight.PcView;
 import com.limelight.R;
@@ -34,23 +43,125 @@ import com.limelight.binding.video.MediaCodecHelper;
 import com.limelight.utils.Dialog;
 import com.limelight.utils.UiHelper;
 
-import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 public class StreamSettings extends Activity {
+    public static final String EXTRA_CATEGORY_KEY = "com.limelight.preferences.EXTRA_CATEGORY_KEY";
+
     private PreferenceConfiguration previousPrefs;
     private int previousDisplayPixelCount;
+    private String currentCategoryKey = "category_basic_settings";
+    private TabLayout settingsTabLayout;
+    private TextView settingsTitleText;
+    private SettingsFragment activeFragment;
+    private TabLayoutMediator tabLayoutMediator;
 
     // HACK for Android 9
     static DisplayCutout displayCutoutP;
+
+    public static class CategoryTab {
+        public final String key;
+        public final CharSequence title;
+        public final PreferenceScreen screen;
+
+        public CategoryTab(String key, CharSequence title, PreferenceScreen screen) {
+            this.key = key;
+            this.title = title;
+            this.screen = screen;
+        }
+    }
+
+    String getCurrentCategoryKey() {
+        return currentCategoryKey;
+    }
+
+    void onCategoriesLoaded(final List<CategoryTab> categories, SettingsFragment fragment, final ViewPager2 viewPager) {
+        this.activeFragment = fragment;
+        if (categories == null || categories.isEmpty() || settingsTabLayout == null || viewPager == null) {
+            return;
+        }
+
+        int selectedIndex = 0;
+        boolean found = false;
+        for (int i = 0; i < categories.size(); i++) {
+            if (categories.get(i).key.equals(currentCategoryKey)) {
+                selectedIndex = i;
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            currentCategoryKey = categories.get(0).key;
+        }
+
+        if (tabLayoutMediator != null) {
+            tabLayoutMediator.detach();
+            tabLayoutMediator = null;
+        }
+
+        viewPager.setCurrentItem(selectedIndex, false);
+
+        tabLayoutMediator = new TabLayoutMediator(settingsTabLayout, viewPager, true, true,
+                new TabLayoutMediator.TabConfigurationStrategy() {
+                    @Override
+                    public void onConfigureTab(@NonNull final TabLayout.Tab tab, int position) {
+                        CategoryTab cat = categories.get(position);
+                        tab.setText(cat.title);
+                        tab.setTag(cat);
+                        if (tab.view != null) {
+                            tab.view.setFocusable(true);
+                            tab.view.setOnFocusChangeListener(new View.OnFocusChangeListener() {
+                                @Override
+                                public void onFocusChange(View v, boolean hasFocus) {
+                                    if (hasFocus && !tab.isSelected()) {
+                                        tab.select();
+                                    }
+                                }
+                            });
+                        }
+                    }
+                });
+        tabLayoutMediator.attach();
+
+        viewPager.registerOnPageChangeCallback(new ViewPager2.OnPageChangeCallback() {
+            @Override
+            public void onPageSelected(int position) {
+                if (position >= 0 && position < categories.size()) {
+                    CategoryTab cat = categories.get(position);
+                    currentCategoryKey = cat.key;
+                    if (settingsTitleText != null) {
+                        settingsTitleText.setText(cat.title);
+                    }
+                }
+            }
+        });
+
+        if (settingsTitleText != null) {
+            settingsTitleText.setText(categories.get(selectedIndex).title);
+        }
+
+        final int scrollTargetIndex = selectedIndex;
+        settingsTabLayout.post(new Runnable() {
+            @Override
+            public void run() {
+                if (settingsTabLayout != null && scrollTargetIndex < settingsTabLayout.getTabCount()) {
+                    settingsTabLayout.setScrollPosition(scrollTargetIndex, 0f, true);
+                }
+            }
+        });
+    }
 
     void reloadSettings() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             Display.Mode mode = getWindowManager().getDefaultDisplay().getMode();
             previousDisplayPixelCount = mode.getPhysicalWidth() * mode.getPhysicalHeight();
         }
+        SettingsFragment fragment = new SettingsFragment();
+        activeFragment = fragment;
         getFragmentManager().beginTransaction().replace(
-                R.id.stream_settings, new SettingsFragment()
+                R.id.stream_settings, fragment
         ).commitAllowingStateLoss();
     }
 
@@ -58,13 +169,40 @@ public class StreamSettings extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        if (savedInstanceState != null) {
+            currentCategoryKey = savedInstanceState.getString(EXTRA_CATEGORY_KEY, "category_basic_settings");
+        } else if (getIntent() != null && getIntent().hasExtra(EXTRA_CATEGORY_KEY)) {
+            String extraKey = getIntent().getStringExtra(EXTRA_CATEGORY_KEY);
+            if (extraKey != null && !extraKey.isEmpty()) {
+                currentCategoryKey = extraKey;
+            }
+        }
+
         previousPrefs = PreferenceConfiguration.readPreferences(this);
 
         UiHelper.setLocale(this);
 
         setContentView(R.layout.activity_stream_settings);
+        settingsTitleText = findViewById(R.id.settingsTitleText);
+        settingsTabLayout = findViewById(R.id.settingsTabLayout);
+
+        View backButton = findViewById(R.id.settingsBackButton);
+        if (backButton != null) {
+            backButton.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    onBackPressed();
+                }
+            });
+        }
 
         UiHelper.notifyNewRootView(this);
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putString(EXTRA_CATEGORY_KEY, currentCategoryKey);
     }
 
     @Override
@@ -124,6 +262,62 @@ public class StreamSettings extends Activity {
     public static class SettingsFragment extends PreferenceFragment {
         private int nativeResolutionStartIndex = Integer.MAX_VALUE;
         private boolean nativeFramerateShown = false;
+        private final List<CategoryTab> categoryList = new ArrayList<>();
+        private SeekBarPreference bitratePref;
+        private ViewPager2 settingsViewPager;
+
+        private static class CategoryPageViewHolder extends RecyclerView.ViewHolder {
+            final ListView listView;
+
+            CategoryPageViewHolder(@NonNull ListView itemView) {
+                super(itemView);
+                this.listView = itemView;
+            }
+        }
+
+        private class CategoryPagerAdapter extends RecyclerView.Adapter<CategoryPageViewHolder> {
+            @NonNull
+            @Override
+            public CategoryPageViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+                ListView pageList = new ListView(parent.getContext());
+                pageList.setLayoutParams(new ViewGroup.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT));
+                configureListView(pageList);
+                return new CategoryPageViewHolder(pageList);
+            }
+
+            @Override
+            public void onBindViewHolder(@NonNull CategoryPageViewHolder holder, int position) {
+                configureListView(holder.listView);
+                PreferenceScreen catScreen = categoryList.get(position).screen;
+                holder.listView.setAdapter(catScreen.getRootAdapter());
+                holder.listView.setOnItemClickListener(catScreen);
+            }
+
+            @Override
+            public int getItemCount() {
+                return categoryList.size();
+            }
+        }
+
+        private void configureListView(ListView list) {
+            if (list == null || !isAdded()) {
+                return;
+            }
+            float density = getResources().getDisplayMetrics().density;
+            int hPad = (int) (16 * density + 0.5f);
+            int tPad = (int) (4 * density + 0.5f);
+            int bPad = (int) (24 * density + 0.5f);
+            list.setDivider(null);
+            list.setDividerHeight(0);
+            list.setSelector(android.R.color.transparent);
+            list.setCacheColorHint(android.graphics.Color.TRANSPARENT);
+            list.setScrollingCacheEnabled(false);
+            list.setAnimationCacheEnabled(false);
+            list.setPadding(hPad, tPad, hPad, bPad);
+            list.setClipToPadding(false);
+        }
 
         private void setValue(String preferenceKey, String value) {
             ListPreference pref = (ListPreference) findPreference(preferenceKey);
@@ -257,17 +451,55 @@ public class StreamSettings extends Activity {
                 fps = prefs.getString(PreferenceConfiguration.FPS_PREF_STRING, PreferenceConfiguration.DEFAULT_FPS);
             }
 
+            int newBitrate = PreferenceConfiguration.getDefaultBitrate(res, fps);
             prefs.edit()
-                    .putInt(PreferenceConfiguration.BITRATE_PREF_STRING,
-                            PreferenceConfiguration.getDefaultBitrate(res, fps))
+                    .putInt(PreferenceConfiguration.BITRATE_PREF_STRING, newBitrate)
                     .apply();
+            if (bitratePref != null) {
+                bitratePref.setProgress(newBitrate);
+            }
         }
 
         @Override
         public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-            View view = super.onCreateView(inflater, container, savedInstanceState);
-            UiHelper.applyStatusBarPadding(view);
-            return view;
+            Context context = getActivity();
+            FrameLayout root = new FrameLayout(context);
+            root.setLayoutParams(new ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT));
+
+            // Hidden ListView required by PreferenceFragment.ensureList() to bind root PreferenceScreen
+            ListView hiddenList = new ListView(context);
+            hiddenList.setId(android.R.id.list);
+            hiddenList.setVisibility(View.GONE);
+            root.addView(hiddenList, new FrameLayout.LayoutParams(0, 0));
+
+            // Swipeable ViewPager2 hosting one ListView per settings category tab
+            settingsViewPager = new ViewPager2(context);
+            settingsViewPager.setLayoutParams(new FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT));
+            settingsViewPager.setAdapter(new CategoryPagerAdapter());
+            root.addView(settingsViewPager);
+
+            UiHelper.applyStatusBarPadding(root);
+
+            Activity act = getActivity();
+            if (act instanceof StreamSettings) {
+                ((StreamSettings) act).onCategoriesLoaded(categoryList, this, settingsViewPager);
+            }
+
+            return root;
+        }
+
+        @Override
+        public void onViewCreated(View view, Bundle savedInstanceState) {
+            super.onViewCreated(view, savedInstanceState);
+        }
+
+        @Override
+        public void onActivityCreated(Bundle savedInstanceState) {
+            super.onActivityCreated(savedInstanceState);
         }
 
         @Override
@@ -275,6 +507,32 @@ public class StreamSettings extends Activity {
             super.onCreate(savedInstanceState);
 
             addPreferencesFromResource(R.xml.preferences);
+            Preference themePref = findPreference(PreferenceConfiguration.THEME_MODE_PREF_STRING);
+            if (themePref != null) {
+                themePref.setOnPreferenceChangeListener(new Preference.OnPreferenceChangeListener() {
+                    @Override
+                    public boolean onPreferenceChange(Preference preference, Object newValue) {
+                        new Handler().postDelayed(new Runnable() {
+                            @Override
+                            public void run() {
+                                Activity act = SettingsFragment.this.getActivity();
+                                if (act != null && !act.isFinishing()) {
+                                    String currentCat = (act instanceof StreamSettings)
+                                            ? ((StreamSettings) act).getCurrentCategoryKey()
+                                            : "category_ui_settings";
+                                    Intent intent = new Intent(act, PcView.class);
+                                    intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
+                                    act.startActivity(intent);
+                                    Intent settingsIntent = new Intent(act, StreamSettings.class);
+                                    settingsIntent.putExtra(EXTRA_CATEGORY_KEY, currentCat);
+                                    act.startActivity(settingsIntent);
+                                }
+                            }
+                        }, 150);
+                        return true;
+                    }
+                });
+            }
             PreferenceScreen screen = getPreferenceScreen();
 
             // hide on-screen controls category on non touch screen devices
@@ -667,6 +925,45 @@ public class StreamSettings extends Activity {
                     return true;
                 }
             });
+
+            bitratePref = (SeekBarPreference) findPreference(PreferenceConfiguration.BITRATE_PREF_STRING);
+
+            categoryList.clear();
+            for (int i = 0; i < screen.getPreferenceCount(); i++) {
+                Preference p = screen.getPreference(i);
+                if (p instanceof PreferenceCategory) {
+                    PreferenceCategory cat = (PreferenceCategory) p;
+                    String key = cat.getKey();
+                    if (key == null || key.isEmpty()) {
+                        key = "category_" + i;
+                    }
+                    List<Preference> children = new ArrayList<>();
+                    for (int j = 0; j < cat.getPreferenceCount(); j++) {
+                        Preference child = cat.getPreference(j);
+                        child.setOrder(j);
+                        children.add(child);
+                    }
+                    for (int j = cat.getPreferenceCount() - 1; j >= 0; j--) {
+                        cat.removePreference(cat.getPreference(j));
+                    }
+                    if (!children.isEmpty()) {
+                        PreferenceScreen catScreen = getPreferenceManager().createPreferenceScreen(getActivity());
+                        catScreen.setKey(key);
+                        catScreen.setTitle(cat.getTitle());
+                        for (Preference child : children) {
+                            catScreen.addPreference(child);
+                        }
+                        categoryList.add(new CategoryTab(key, cat.getTitle(), catScreen));
+                    }
+                }
+            }
+
+            for (int i = screen.getPreferenceCount() - 1; i >= 0; i--) {
+                screen.removePreference(screen.getPreference(i));
+            }
+            for (CategoryTab tab : categoryList) {
+                screen.addPreference(tab.screen);
+            }
         }
     }
 }

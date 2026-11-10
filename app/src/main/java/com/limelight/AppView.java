@@ -17,6 +17,8 @@ import com.limelight.ui.AdapterFragment;
 import com.limelight.ui.AdapterFragmentCallbacks;
 import com.limelight.utils.CacheHelper;
 import com.limelight.utils.Dialog;
+import com.limelight.utils.M3MenuHelper;
+import java.util.ArrayList;
 import com.limelight.utils.ServerHelper;
 import com.limelight.utils.ShortcutHelper;
 import com.limelight.utils.SpinnerDialog;
@@ -313,6 +315,15 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
         TextView label = findViewById(R.id.appListText);
         setTitle(computerName);
         label.setText(computerName);
+        View backButton = findViewById(R.id.appBackButton);
+        if (backButton != null) {
+            backButton.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    finish();
+                }
+            });
+        }
 
         // Bind to the computer manager service
         bindService(new Intent(this, ComputerManagerService.class), serviceConnection,
@@ -432,6 +443,130 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
     }
 
     @Override
+    public void onWindowFocusChanged(boolean hasFocus) {
+        super.onWindowFocusChanged(hasFocus);
+    }
+
+    private void showAppMenu(final AppObject selectedApp, final View targetView) {
+        if (selectedApp == null) {
+            return;
+        }
+
+        List<M3MenuHelper.MenuOption> options = new ArrayList<>();
+        if (lastRunningAppId != 0) {
+            if (lastRunningAppId == selectedApp.app.getAppId()) {
+                options.add(M3MenuHelper.MenuOption.primary(START_OR_RESUME_ID,
+                        getResources().getString(R.string.applist_menu_resume), R.drawable.ic_play));
+                options.add(M3MenuHelper.MenuOption.destructive(QUIT_ID,
+                        getResources().getString(R.string.applist_menu_quit), R.drawable.ic_m3_stop));
+            } else {
+                options.add(M3MenuHelper.MenuOption.primary(START_WITH_QUIT,
+                        getResources().getString(R.string.applist_menu_quit_and_start), R.drawable.ic_play));
+            }
+        } else {
+            options.add(M3MenuHelper.MenuOption.primary(START_OR_RESUME_ID,
+                    getResources().getString(R.string.applist_menu_resume), R.drawable.ic_play));
+        }
+
+        if (lastRunningAppId != selectedApp.app.getAppId() || selectedApp.isHidden) {
+            options.add(M3MenuHelper.MenuOption.checkable(HIDE_APP_ID,
+                    getResources().getString(R.string.applist_menu_hide_app), R.drawable.ic_m3_visibility, selectedApp.isHidden));
+        }
+
+        options.add(M3MenuHelper.MenuOption.action(VIEW_DETAILS_ID,
+                getResources().getString(R.string.applist_menu_details), R.drawable.ic_m3_info));
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && targetView != null) {
+            ImageView appImageView = targetView.findViewById(R.id.grid_image);
+            if (appImageView != null && appImageView.getDrawable() instanceof BitmapDrawable) {
+                BitmapDrawable drawable = (BitmapDrawable) appImageView.getDrawable();
+                if (drawable.getBitmap() != null) {
+                    options.add(M3MenuHelper.MenuOption.action(CREATE_SHORTCUT_ID,
+                            getResources().getString(R.string.applist_menu_scut), R.drawable.ic_m3_shortcut));
+                }
+            }
+        }
+
+        String subtitle = computer != null ? computer.name : null;
+        int headerIcon = (lastRunningAppId == selectedApp.app.getAppId()) ? R.drawable.ic_play : R.drawable.ic_computer;
+
+        M3MenuHelper.showMenu(
+                this,
+                selectedApp.app.getAppName(),
+                subtitle,
+                headerIcon,
+                options,
+                new M3MenuHelper.OnMenuOptionSelectedListener() {
+                    @Override
+                    public void onOptionSelected(M3MenuHelper.MenuOption option) {
+                        handleAppMenuAction(option.id, selectedApp, targetView);
+                    }
+                },
+                null
+        );
+    }
+
+    private void handleAppMenuAction(int itemId, final AppObject app, final View targetView) {
+        switch (itemId) {
+            case START_WITH_QUIT:
+                UiHelper.displayQuitConfirmationDialog(this, new Runnable() {
+                    @Override
+                    public void run() {
+                        ServerHelper.doStart(AppView.this, app.app, computer, managerBinder);
+                    }
+                }, null);
+                break;
+
+            case START_OR_RESUME_ID:
+                ServerHelper.doStart(AppView.this, app.app, computer, managerBinder);
+                break;
+
+            case QUIT_ID:
+                UiHelper.displayQuitConfirmationDialog(this, new Runnable() {
+                    @Override
+                    public void run() {
+                        suspendGridUpdates = true;
+                        ServerHelper.doQuit(AppView.this, computer,
+                                app.app, managerBinder, new Runnable() {
+                            @Override
+                            public void run() {
+                                suspendGridUpdates = false;
+                                if (poller != null) {
+                                    poller.pollNow();
+                                }
+                            }
+                        });
+                    }
+                }, null);
+                break;
+
+            case VIEW_DETAILS_ID:
+                Dialog.displayDialog(AppView.this, getResources().getString(R.string.title_details), app.app.toString(), false);
+                break;
+
+            case HIDE_APP_ID:
+                if (app.isHidden) {
+                    hiddenAppIds.remove(app.app.getAppId());
+                } else {
+                    hiddenAppIds.add(app.app.getAppId());
+                }
+                updateHiddenApps(false);
+                break;
+
+            case CREATE_SHORTCUT_ID:
+                if (targetView != null) {
+                    ImageView appImageView = targetView.findViewById(R.id.grid_image);
+                    if (appImageView != null && appImageView.getDrawable() instanceof BitmapDrawable) {
+                        Bitmap appBits = ((BitmapDrawable) appImageView.getDrawable()).getBitmap();
+                        if (!shortcutHelper.createPinnedGameShortcut(computer, app.app, appBits)) {
+                            Toast.makeText(AppView.this, getResources().getString(R.string.unable_to_pin_shortcut), Toast.LENGTH_LONG).show();
+                        }
+                    }
+                }
+                break;
+        }
+    }
+
     public void onContextMenuClosed(Menu menu) {
     }
 
@@ -634,14 +769,21 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
 
                 // Only open the context menu if something is running, otherwise start it
                 if (lastRunningAppId != 0) {
-                    openContextMenu(arg1);
+                    showAppMenu(app, arg1);
                 } else {
                     ServerHelper.doStart(AppView.this, app.app, computer, managerBinder);
                 }
             }
         });
         UiHelper.applyStatusBarPadding(listView);
-        registerForContextMenu(listView);
+        listView.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
+            @Override
+            public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
+                AppObject app = (AppObject) appGridAdapter.getItem(position);
+                showAppMenu(app, view);
+                return true;
+            }
+        });
         listView.requestFocus();
     }
 

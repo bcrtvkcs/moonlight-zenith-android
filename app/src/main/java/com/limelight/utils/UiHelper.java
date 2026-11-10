@@ -1,7 +1,6 @@
 package com.limelight.utils;
 
 import android.app.Activity;
-import android.app.AlertDialog;
 import android.app.GameManager;
 import android.app.GameState;
 import android.app.LocaleManager;
@@ -17,7 +16,8 @@ import android.view.View;
 import android.view.WindowInsets;
 import android.view.WindowManager;
 
-import com.limelight.Game;
+import com.google.android.material.color.DynamicColors;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.limelight.R;
 import com.limelight.nvstream.http.ComputerDetails;
 import com.limelight.preferences.PreferenceConfiguration;
@@ -28,6 +28,17 @@ public class UiHelper {
 
     private static final int TV_VERTICAL_PADDING_DP = 15;
     private static final int TV_HORIZONTAL_PADDING_DP = 15;
+
+    public static void applyMaterial3Theme(Activity activity) {
+        String themeMode = PreferenceConfiguration.readPreferences(activity).themeMode;
+        if ("amoled".equals(themeMode)) {
+            activity.getTheme().applyStyle(R.style.ThemeOverlay_Moonlight_AMOLED, true);
+        } else if (!"zenith".equals(themeMode)) {
+            // Default: "dynamic" -> Apply Material You (Dynamic Colors) on Android 12+,
+            // falling back to the Zenith M3 palette on older Android versions.
+            DynamicColors.applyToActivityIfAvailable(activity);
+        }
+    }
 
     private static void setGameModeStatus(Context context, boolean streaming, boolean interruptible) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -70,6 +81,8 @@ public class UiHelper {
 
     public static void setLocale(Activity activity)
     {
+        applyMaterial3Theme(activity);
+
         String locale = PreferenceConfiguration.readPreferences(activity).language;
         if (!locale.equals(PreferenceConfiguration.DEFAULT_LANGUAGE)) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -113,6 +126,11 @@ public class UiHelper {
             });
             view.requestApplyInsets();
         }
+    }
+
+    public static boolean isTvMode(Context context) {
+        UiModeManager modeMgr = (UiModeManager) context.getSystemService(Context.UI_MODE_SERVICE);
+        return modeMgr != null && modeMgr.getCurrentModeType() == Configuration.UI_MODE_TYPE_TELEVISION;
     }
 
     public static void notifyNewRootView(final Activity activity)
@@ -230,8 +248,8 @@ public class UiHelper {
             }
         };
 
-        AlertDialog.Builder builder = new AlertDialog.Builder(parent);
-        builder.setMessage(parent.getResources().getString(R.string.applist_quit_confirmation))
+        new MaterialAlertDialogBuilder(parent)
+                .setMessage(parent.getResources().getString(R.string.applist_quit_confirmation))
                 .setPositiveButton(parent.getResources().getString(R.string.yes), dialogClickListener)
                 .setNegativeButton(parent.getResources().getString(R.string.no), dialogClickListener)
                 .show();
@@ -257,8 +275,8 @@ public class UiHelper {
             }
         };
 
-        AlertDialog.Builder builder = new AlertDialog.Builder(parent);
-        builder.setMessage(parent.getResources().getString(R.string.delete_pc_msg))
+        new MaterialAlertDialogBuilder(parent)
+                .setMessage(parent.getResources().getString(R.string.delete_pc_msg))
                 .setTitle(computer.name)
                 .setPositiveButton(parent.getResources().getString(R.string.yes), dialogClickListener)
                 .setNegativeButton(parent.getResources().getString(R.string.no), dialogClickListener)

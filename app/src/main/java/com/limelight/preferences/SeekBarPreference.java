@@ -1,22 +1,21 @@
 package com.limelight.preferences;
 
-import android.app.AlertDialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.os.Bundle;
 import android.preference.DialogPreference;
 import android.util.AttributeSet;
-import android.util.Log;
-import android.view.Gravity;
+import android.view.LayoutInflater;
 import android.view.View;
-import android.view.View.OnClickListener;
-import android.widget.Button;
-import android.widget.LinearLayout;
+import android.view.ViewGroup;
 import android.widget.SeekBar;
 import android.widget.TextView;
 
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.limelight.R;
+
 import java.util.Locale;
 
-// Based on a Stack Overflow example: http://stackoverflow.com/questions/1974193/slider-on-my-preferencescreen
 public class SeekBarPreference extends DialogPreference
 {
     private static final String ANDROID_SCHEMA_URL = "http://schemas.android.com/apk/res/android";
@@ -24,6 +23,7 @@ public class SeekBarPreference extends DialogPreference
 
     private SeekBar seekBar;
     private TextView valueText;
+    private View cachedView;
     private final Context context;
 
     private final String dialogMessage;
@@ -39,6 +39,9 @@ public class SeekBarPreference extends DialogPreference
     public SeekBarPreference(Context context, AttributeSet attrs) {
         super(context, attrs);
         this.context = context;
+        if (getLayoutResource() != R.layout.m3_preference_item) {
+            setLayoutResource(R.layout.m3_preference_item);
+        }
 
         // Read the message from XML
         int dialogMessageId = attrs.getAttributeResourceValue(ANDROID_SCHEMA_URL, "dialogMessage", 0);
@@ -67,32 +70,64 @@ public class SeekBarPreference extends DialogPreference
         keyStepSize = attrs.getAttributeIntValue(SEEKBAR_SCHEMA_URL, "keyStep", 0);
     }
 
+    private String formatValueText(int value) {
+        int roundedValue = ((value + (stepSize - 1)) / stepSize) * stepSize;
+        String t;
+        if (divisor != 1) {
+            float floatValue = roundedValue / (float) divisor;
+            t = String.format((Locale) null, "%.1f", floatValue);
+        } else {
+            t = String.valueOf(roundedValue);
+        }
+        return suffix == null ? t : t.concat(suffix.length() > 1 ? " " + suffix : suffix);
+    }
+
+    @Override
+    public View getView(View convertView, ViewGroup parent) {
+        if (convertView == null && cachedView != null && cachedView.getParent() == null) {
+            convertView = cachedView;
+        }
+        View v = super.getView(convertView, parent);
+        cachedView = v;
+        return v;
+    }
+
+    @Override
+    protected void onBindView(View view) {
+        super.onBindView(view);
+        view.setAlpha(isEnabled() ? 1.0f : 0.42f);
+        if (shouldPersist()) {
+            currentValue = getPersistedInt(defaultValue);
+        }
+        TextView badge = view.findViewById(R.id.m3_pref_value_badge);
+        if (badge != null) {
+            badge.setText(formatValueText(currentValue));
+            badge.setVisibility(View.VISIBLE);
+        }
+        view.jumpDrawablesToCurrentState();
+    }
+
     @Override
     protected View onCreateDialogView() {
+        View view = LayoutInflater.from(context).inflate(R.layout.m3_dialog_slider, null, false);
 
-        LinearLayout.LayoutParams params;
-        LinearLayout layout = new LinearLayout(context);
-        layout.setOrientation(LinearLayout.VERTICAL);
-        layout.setPadding(6, 6, 6, 6);
-
-        TextView splashText = new TextView(context);
-        splashText.setPadding(30, 10, 30, 10);
-        if (dialogMessage != null) {
+        TextView splashText = view.findViewById(R.id.m3_slider_message);
+        if (dialogMessage != null && !dialogMessage.isEmpty()) {
             splashText.setText(dialogMessage);
+            splashText.setVisibility(View.VISIBLE);
+        } else {
+            splashText.setVisibility(View.GONE);
         }
-        layout.addView(splashText);
 
-        valueText = new TextView(context);
-        valueText.setGravity(Gravity.CENTER_HORIZONTAL);
-        valueText.setTextSize(32);
-        // Default text for value; hides bug where OnSeekBarChangeListener isn't called when opacity is 0%
-        valueText.setText("0%");
-        params = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT);
-        layout.addView(valueText, params);
+        valueText = view.findViewById(R.id.m3_slider_value_text);
+        seekBar = view.findViewById(R.id.m3_slider_seekbar);
 
-        seekBar = new SeekBar(context);
+        if (shouldPersist()) {
+            currentValue = getPersistedInt(defaultValue);
+        }
+
+        valueText.setText(formatValueText(currentValue));
+
         seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int value, boolean b) {
@@ -107,15 +142,7 @@ public class SeekBarPreference extends DialogPreference
                     return;
                 }
 
-                String t;
-                if (divisor != 1) {
-                    float floatValue = roundedValue / (float)divisor;
-                    t = String.format((Locale)null, "%.1f", floatValue);
-                }
-                else {
-                    t = String.valueOf(value);
-                }
-                valueText.setText(suffix == null ? t : t.concat(suffix.length() > 1 ? " "+suffix : suffix));
+                valueText.setText(formatValueText(roundedValue));
             }
 
             @Override
@@ -125,19 +152,13 @@ public class SeekBarPreference extends DialogPreference
             public void onStopTrackingTouch(SeekBar seekBar) {}
         });
 
-        layout.addView(seekBar, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
-
-        if (shouldPersist()) {
-            currentValue = getPersistedInt(defaultValue);
-        }
-
         seekBar.setMax(maxValue);
         if (keyStepSize != 0) {
             seekBar.setKeyProgressIncrement(keyStepSize);
         }
         seekBar.setProgress(currentValue);
 
-        return layout;
+        return view;
     }
 
     @Override
@@ -167,27 +188,34 @@ public class SeekBarPreference extends DialogPreference
         if (seekBar != null) {
             seekBar.setProgress(progress);
         }
+        notifyChanged();
     }
+
     public int getProgress() {
         return currentValue;
     }
 
     @Override
     public void showDialog(Bundle state) {
-        super.showDialog(state);
+        View contentView = onCreateDialogView();
+        onBindDialogView(contentView);
 
-        Button positiveButton = ((AlertDialog) getDialog()).getButton(AlertDialog.BUTTON_POSITIVE);
-        positiveButton.setOnClickListener(new OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                if (shouldPersist()) {
-                    currentValue = seekBar.getProgress();
-                    persistInt(seekBar.getProgress());
-                    callChangeListener(seekBar.getProgress());
-                }
-
-                getDialog().dismiss();
-            }
-        });
+        new MaterialAlertDialogBuilder(context)
+                .setTitle(getTitle())
+                .setView(contentView)
+                .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface d, int which) {
+                        if (shouldPersist()) {
+                            currentValue = seekBar.getProgress();
+                            persistInt(seekBar.getProgress());
+                            callChangeListener(seekBar.getProgress());
+                            notifyChanged();
+                        }
+                        d.dismiss();
+                    }
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
     }
 }

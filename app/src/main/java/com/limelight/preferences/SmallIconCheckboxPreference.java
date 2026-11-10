@@ -2,10 +2,9 @@ package com.limelight.preferences;
 
 import android.content.Context;
 import android.content.res.TypedArray;
-import android.preference.CheckBoxPreference;
 import android.util.AttributeSet;
 
-public class SmallIconCheckboxPreference extends CheckBoxPreference {
+public class SmallIconCheckboxPreference extends M3SwitchPreference {
     public SmallIconCheckboxPreference(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
     }

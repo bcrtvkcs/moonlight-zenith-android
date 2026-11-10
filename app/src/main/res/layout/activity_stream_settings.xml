@@ -1,8 +1,77 @@
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:id="@+id/stream_settings"
+    android:orientation="vertical"
+    android:background="?attr/colorSurface"
     tools:context=".preferences.StreamSettings">
 
-</RelativeLayout>
+    <!-- Material Design 3 Top App Bar -->
+    <LinearLayout
+        android:id="@+id/m3_settings_top_bar"
+        android:layout_width="match_parent"
+        android:layout_height="68dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingStart="16dp"
+        android:paddingEnd="20dp">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/settingsBackButton"
+            style="?attr/materialIconButtonFilledTonalStyle"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:preferKeepClear="true"
+            app:icon="@drawable/ic_m3_back"
+            app:iconSize="22dp"
+            app:iconGravity="textStart"
+            app:iconPadding="0dp" />
+
+        <TextView
+            android:id="@+id/settingsTitleText"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="16dp"
+            android:preferKeepClear="true"
+            android:text="@string/category_basic_settings"
+            android:textAppearance="?attr/textAppearanceHeadlineSmall"
+            android:textStyle="bold"
+            android:textColor="?attr/colorOnSurface"
+            android:maxLines="1"
+            android:ellipsize="end" />
+
+    </LinearLayout>
+
+    <!-- Material Design 3 Scrollable Pill Category Tabs -->
+    <com.google.android.material.tabs.TabLayout
+        android:id="@+id/settingsTabLayout"
+        android:layout_width="match_parent"
+        android:layout_height="52dp"
+        android:layout_marginBottom="4dp"
+        android:background="@android:color/transparent"
+        app:tabMode="scrollable"
+        app:tabGravity="start"
+        app:tabContentStart="16dp"
+        app:tabPaddingStart="16dp"
+        app:tabPaddingEnd="16dp"
+        app:tabIndicator="@drawable/m3_tab_pill_indicator"
+        app:tabIndicatorGravity="stretch"
+        app:tabIndicatorAnimationMode="elastic"
+        app:tabIndicatorFullWidth="true"
+        app:tabIndicatorColor="?attr/colorSecondaryContainer"
+        app:tabSelectedTextColor="?attr/colorOnSecondaryContainer"
+        app:tabTextColor="?attr/colorOnSurfaceVariant"
+        app:tabTextAppearance="?attr/textAppearanceTitleSmall"
+        app:tabRippleColor="@android:color/transparent" />
+
+    <FrameLayout
+        android:id="@+id/stream_settings"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+</LinearLayout>

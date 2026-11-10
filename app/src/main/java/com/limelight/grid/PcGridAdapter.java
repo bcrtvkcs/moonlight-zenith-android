@@ -62,7 +62,7 @@ public class PcGridAdapter extends GenericGridAdapter<PcView.ComputerObject> {
             prgView.setVisibility(View.VISIBLE);
         }
         else {
-            prgView.setVisibility(View.INVISIBLE);
+            prgView.setVisibility(View.GONE);
         }
 
         txtView.setText(obj.details.name);
@@ -70,7 +70,21 @@ public class PcGridAdapter extends GenericGridAdapter<PcView.ComputerObject> {
             txtView.setAlpha(1.0f);
         }
         else {
-            txtView.setAlpha(0.4f);
+            txtView.setAlpha(0.45f);
+        }
+
+        TextView statusView = parentView.findViewById(R.id.grid_status_text);
+        if (statusView != null) {
+            if (obj.details.state == ComputerDetails.State.ONLINE) {
+                statusView.setText(R.string.pcview_menu_header_online);
+                statusView.setAlpha(0.85f);
+            } else if (obj.details.state == ComputerDetails.State.OFFLINE) {
+                statusView.setText(R.string.pcview_menu_header_offline);
+                statusView.setAlpha(0.5f);
+            } else {
+                statusView.setText(R.string.pcview_menu_header_unknown);
+                statusView.setAlpha(0.6f);
+            }
         }
 
         if (obj.details.state == ComputerDetails.State.OFFLINE) {
@@ -89,5 +103,7 @@ public class PcGridAdapter extends GenericGridAdapter<PcView.ComputerObject> {
         else {
             overlayView.setVisibility(View.GONE);
         }
+
+        parentView.jumpDrawablesToCurrentState();
     }
 }
