@@ -4,7 +4,7 @@
 
 ---
 
-## ✨ What's New in Moonlight Zenith?
+## ✨ What's in the box?
 
 ### 🎨 Material Design 3 (Material You) UI & Theme Engine
 - **Complete Material 3 Overhaul**: Modernized every screen (`PcView`, `AppView`, `StreamSettings`, `AddComputerManually`, `Game`), dialog, context menu, switch, slider, and HUD overlay using Material Design 3 components and tonal surfaces.
@@ -13,6 +13,15 @@
   - **Zenith Indigo**: Custom Material 3 Dark palette with Indigo/Violet primary accents (`#BAC3FF`) and layered tonal surface containers.
   - **Pure Black Background (AMOLED)**: An independent toggle right below the theme selector that applies a true `#000000` OLED black background to **either** Material You or Zenith Indigo.
 - **Soft Indigo-Tinted Moonlight Icon**: Retains the iconic Moonlight silhouette softly tinted with a refined slate-indigo (`#52597A`) and ice-indigo (`#EEF0FF`) palette across launcher, adaptive, TV banner, and shortcut icons.
+
+### 🎮 In-Stream Floating Menu, Sensor Landscape & Touch Enhancements
+- **Sensor-Driven Landscape Auto-Rotation**: Automatically switches between normal landscape and reverse landscape in real time using the device's physical orientation sensor while connecting and streaming—even when Android's system auto-rotate is turned off.
+- **Material 3 In-Stream Floating Menu (Attect)**: Glassmorphic M3 floating ball and quick-action panel that adapts to Material You / Zenith Indigo colors, offering one-tap access to `ESC`, `WIN`, `Alt+F4`, Task Manager, Copy/Cut/Paste, Virtual Desktops, Nvidia Overlay, On-Screen Gamepad hotplugging, TouchScreen/TouchPad mode switching, and keyboard toggle.
+- **Touch & On-Screen Controller Refinements**:
+  - Live mid-stream On-Screen Gamepad hotplug arrival events.
+  - Sub-pixel coordinate accumulation for smooth, precise TouchPad cursor movement.
+  - Configurable long-press right-click (`300ms`–`1000ms`) in Native Touch mode.
+  - Dedicated `L3`/`R3` buttons and symmetric on-screen controller clusters.
 
 ### 🗂️ Swipeable Tabbed Settings & Reorganized Categories
 - **Swipeable Pill TabBar (`TabLayout` + `ViewPager2`)**: Navigate settings categories effortlessly by swiping horizontally anywhere on the page or tapping the scrollable Material 3 pill tabs.
@@ -40,63 +49,15 @@
   - Synchronizes `VK_LSHIFT` (`0x80A0`) state with Android's virtual keyboard (`Virtual.kcm`) so unshifted host keys (like `"` on Turkish Q) never falsely trigger Shift (`é`) and shifted host keys (like `'` on Turkish Q) never fall back to US scancodes (`i`).
 - **AltGr Symbol Injection & Synthetic Alt Filtering**: Directly delivers AltGr symbols (`@`, `#`, `$`, `[`, `]`, `{`, `}`, `\`, `|`, `` ` ``, `~`) via UTF-8 while swallowing synthetic `Alt` events from Android soft keyboards so Windows never triggers unwanted `Alt` menu shortcuts.
 
-### 🎮 In-Stream Floating Menu, Sensor Landscape & Touch Enhancements
-- **Sensor-Driven Landscape Auto-Rotation**: Automatically switches between normal landscape and reverse landscape in real time using the device's physical orientation sensor while connecting and streaming—even when Android's system auto-rotate is turned off.
-- **Material 3 In-Stream Floating Menu (Attect)**: Glassmorphic M3 floating ball and quick-action panel that adapts to Material You / Zenith Indigo colors, offering one-tap access to `ESC`, `WIN`, `Alt+F4`, Task Manager, Copy/Cut/Paste, Virtual Desktops, Nvidia Overlay, On-Screen Gamepad hotplugging, TouchScreen/TouchPad mode switching, and keyboard toggle.
-- **Touch & On-Screen Controller Refinements**:
-  - Live mid-stream On-Screen Gamepad hotplug arrival events.
-  - Sub-pixel coordinate accumulation for smooth, precise TouchPad cursor movement.
-  - Configurable long-press right-click (`300ms`–`1000ms`) in Native Touch mode.
-  - Dedicated `L3`/`R3` buttons and symmetric on-screen controller clusters.
-
 ### 🌍 Comprehensive Localization
 - Complete translations for all Zenith features, settings categories, themes, and in-stream menus across **29 languages** (including English, Turkish, German, French, Spanish, Italian, Chinese, Japanese, Korean, Russian, Ukrainian, Polish, Portuguese, Dutch, and more).
 
 ---
 
 ## 🙏 Credits
-- Enhanced and modernized by [Google Antigravity](https://antigravity.google) in collaboration with [bcrtvkcs](https://github.com/bcrtvkcs).
-- Based on the brilliant open-source work of the original [Moonlight Android](#moonlight-android) team (synchronized up to upstream **v12.2**).
+- Enhanced and modernized by [Google Antigravity](https://antigravity.google) in collaboration with [me](https://github.com/bcrtvkcs).
+- Based on the brilliant open-source work of the original [Moonlight Android](#moonlight-android) team.
 - Special thanks to the authors of the forks & commits we integrated:
   - [athlan20](https://github.com/athlan20/moonlight-android-L3R3) for the L3/R3 button support.
   - [Attect](https://github.com/Attect/moonlight-android-Attect) for their foundational in-stream floating menu and touch contributions.
 - Deep thanks to the [Sunshine](https://github.com/LizardByte/Sunshine) project for enabling this ecosystem.
-
----
-
-# Moonlight Android
-
-
-[![AppVeyor Build Status](https://ci.appveyor.com/api/projects/status/232a8tadrrn8jv0k/branch/master?svg=true)](https://ci.appveyor.com/project/cgutman/moonlight-android/branch/master)
-[![Translation Status](https://hosted.weblate.org/widgets/moonlight/-/moonlight-android/svg-badge.svg)](https://hosted.weblate.org/projects/moonlight/moonlight-android/)
-
-[Moonlight for Android](https://moonlight-stream.org) is an open source client for NVIDIA GameStream and [Sunshine](https://github.com/LizardByte/Sunshine).
-
-Moonlight for Android will allow you to stream your full collection of games from your Windows PC to your Android device,
-whether in your own home or over the internet.
-
-Moonlight also has a [PC client](https://github.com/moonlight-stream/moonlight-qt) and [iOS/tvOS client](https://github.com/moonlight-stream/moonlight-ios).
-
-You can follow development on our [Discord server](https://moonlight-stream.org/discord) and help translate Moonlight into your language on [Weblate](https://hosted.weblate.org/projects/moonlight/moonlight-android/).
-
-## Downloads
-* [GitHub Releases (Moonlight Zenith APKs)](https://github.com/bcrtvkcs/moonlight-zenith-android/releases)
-* [Google Play Store (Upstream)](https://play.google.com/store/apps/details?id=com.limelight)
-* [Amazon App Store (Upstream)](https://www.amazon.com/gp/product/B00JK4MFN2)
-* [F-Droid (Upstream)](https://f-droid.org/packages/com.limelight)
-
-## Building
-* Install Android Studio and the Android NDK
-* Run ‘git submodule update --init --recursive’ from within moonlight-android/
-* In moonlight-android/, create a file called ‘local.properties’. Add an ‘ndk.dir=’ property to the local.properties file and set it equal to your NDK directory.
-* Build the APK using Android Studio or gradle
-
-## Authors
-
-* [Cameron Gutman](https://github.com/cgutman)  
-* [Diego Waxemberg](https://github.com/dwaxemberg)  
-* [Aaron Neyer](https://github.com/Aaronneyer)  
-* [Andrew Hennessy](https://github.com/yetanothername)
-
-Moonlight is the work of students at [Case Western](http://case.edu) and was
-started as a project at [MHacks](http://mhacks.org).
