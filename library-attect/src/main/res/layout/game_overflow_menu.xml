@@ -26,8 +26,8 @@
             app:cardCornerRadius="24dp"
             app:cardElevation="8dp"
             app:strokeWidth="1dp"
-            app:strokeColor="#45464F"
-            app:cardBackgroundColor="#F2191B23">
+            app:strokeColor="?attr/colorOutlineVariant"
+            app:cardBackgroundColor="?attr/colorSurfaceContainer">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -57,7 +57,7 @@
                             android:text="@string/virtual_key_esc"
                             android:textStyle="bold"
                             android:textSize="12sp"
-                            android:textColor="#DEE0FF" />
+                            android:textColor="?attr/colorOnSecondaryContainer" />
                     </RelativeLayout>
 
                     <RelativeLayout
@@ -75,7 +75,7 @@
                             android:text="@string/virtual_key_win"
                             android:textStyle="bold"
                             android:textSize="12sp"
-                            android:textColor="#DEE0FF" />
+                            android:textColor="?attr/colorOnSecondaryContainer" />
                     </RelativeLayout>
 
                     <RelativeLayout
@@ -92,7 +92,7 @@
                             android:layout_centerInParent="true"
                             android:text="@string/virtual_key_system_menu"
                             android:textSize="12sp"
-                            android:textColor="#E3E1EC" />
+                            android:textColor="?attr/colorOnSurface" />
                     </RelativeLayout>
 
                     <RelativeLayout
@@ -109,7 +109,7 @@
                             android:layout_centerInParent="true"
                             android:text="@string/virtual_mouse_middle_key"
                             android:textSize="12sp"
-                            android:textColor="#E3E1EC" />
+                            android:textColor="?attr/colorOnSurface" />
                     </RelativeLayout>
 
                     <RelativeLayout
@@ -129,7 +129,7 @@
                             android:text="@string/on_screen_game_pad"
                             android:textStyle="bold"
                             android:textSize="12sp"
-                            android:textColor="#DEE0FF" />
+                            android:textColor="?attr/colorOnSecondaryContainer" />
                     </RelativeLayout>
 
                     <RelativeLayout
@@ -149,7 +149,7 @@
                             android:text="@string/input_touchscreen_mode"
                             android:textStyle="bold"
                             android:textSize="12sp"
-                            android:textColor="#DEE0FF" />
+                            android:textColor="?attr/colorOnSecondaryContainer" />
                     </RelativeLayout>
 
                     <RelativeLayout
@@ -169,7 +169,7 @@
                             android:text="@string/input_touchpad_mode"
                             android:textStyle="bold"
                             android:textSize="12sp"
-                            android:textColor="#DEE0FF" />
+                            android:textColor="?attr/colorOnSecondaryContainer" />
                     </RelativeLayout>
 
                     <RelativeLayout
@@ -189,7 +189,7 @@
                             android:text="@string/toggle_soft_keyboard"
                             android:textStyle="bold"
                             android:textSize="12sp"
-                            android:textColor="#DEE0FF" />
+                            android:textColor="?attr/colorOnSecondaryContainer" />
                     </RelativeLayout>
                 </LinearLayout>
 
@@ -214,7 +214,7 @@
                             android:layout_centerInParent="true"
                             android:text="@string/virtual_key_exit_program"
                             android:textSize="12sp"
-                            android:textColor="#FFB4AB" />
+                            android:textColor="?attr/colorError" />
                     </RelativeLayout>
 
                     <RelativeLayout
@@ -231,7 +231,7 @@
                             android:layout_centerInParent="true"
                             android:text="@string/virtual_key_screenshot"
                             android:textSize="12sp"
-                            android:textColor="#E3E1EC" />
+                            android:textColor="?attr/colorOnSurface" />
                     </RelativeLayout>
 
                     <RelativeLayout
@@ -249,7 +249,7 @@
                             android:layout_centerInParent="true"
                             android:text="@string/virtual_key_taskmgr"
                             android:textSize="12sp"
-                            android:textColor="#E3E1EC" />
+                            android:textColor="?attr/colorOnSurface" />
                     </RelativeLayout>
 
                     <RelativeLayout
@@ -267,7 +267,7 @@
                             android:layout_centerInParent="true"
                             android:text="@string/virtual_key_explorer"
                             android:textSize="12sp"
-                            android:textColor="#E3E1EC" />
+                            android:textColor="?attr/colorOnSurface" />
                     </RelativeLayout>
 
                     <RelativeLayout
@@ -284,7 +284,7 @@
                             android:layout_centerInParent="true"
                             android:text="@string/virtual_key_copy"
                             android:textSize="12sp"
-                            android:textColor="#E3E1EC" />
+                            android:textColor="?attr/colorOnSurface" />
                     </RelativeLayout>
 
                     <RelativeLayout
@@ -301,7 +301,7 @@
                             android:layout_centerInParent="true"
                             android:text="@string/virtual_key_cut"
                             android:textSize="12sp"
-                            android:textColor="#E3E1EC" />
+                            android:textColor="?attr/colorOnSurface" />
                     </RelativeLayout>
 
                     <RelativeLayout
@@ -318,7 +318,7 @@
                             android:layout_centerInParent="true"
                             android:text="@string/virtual_key_paste"
                             android:textSize="12sp"
-                            android:textColor="#E3E1EC" />
+                            android:textColor="?attr/colorOnSurface" />
                     </RelativeLayout>
 
                     <RelativeLayout
@@ -335,7 +335,7 @@
                             android:layout_centerInParent="true"
                             android:text="@string/virtual_key_select_all"
                             android:textSize="12sp"
-                            android:textColor="#E3E1EC" />
+                            android:textColor="?attr/colorOnSurface" />
                     </RelativeLayout>
                 </LinearLayout>
 
@@ -360,7 +360,7 @@
                             android:layout_centerInParent="true"
                             android:text="@string/virtual_key_desktop"
                             android:textSize="12sp"
-                            android:textColor="#E3E1EC" />
+                            android:textColor="?attr/colorOnSurface" />
                     </RelativeLayout>
 
                     <RelativeLayout
@@ -377,7 +377,7 @@
                             android:layout_centerInParent="true"
                             android:text="@string/virtual_key_task_view"
                             android:textSize="12sp"
-                            android:textColor="#E3E1EC" />
+                            android:textColor="?attr/colorOnSurface" />
                     </RelativeLayout>
 
                     <RelativeLayout
@@ -394,7 +394,7 @@
                             android:layout_centerInParent="true"
                             android:text="@string/virtual_key_new_desktop"
                             android:textSize="12sp"
-                            android:textColor="#E3E1EC" />
+                            android:textColor="?attr/colorOnSurface" />
                     </RelativeLayout>
 
                     <RelativeLayout
@@ -411,7 +411,7 @@
                             android:layout_centerInParent="true"
                             android:text="@string/virtual_key_delete_desktop"
                             android:textSize="12sp"
-                            android:textColor="#E3E1EC" />
+                            android:textColor="?attr/colorOnSurface" />
                     </RelativeLayout>
 
                     <RelativeLayout
@@ -428,7 +428,7 @@
                             android:layout_centerInParent="true"
                             android:text="@string/virtual_key_left_desktop"
                             android:textSize="12sp"
-                            android:textColor="#E3E1EC" />
+                            android:textColor="?attr/colorOnSurface" />
                     </RelativeLayout>
 
                     <RelativeLayout
@@ -445,7 +445,7 @@
                             android:layout_centerInParent="true"
                             android:text="@string/virtual_key_right_desktop"
                             android:textSize="12sp"
-                            android:textColor="#E3E1EC" />
+                            android:textColor="?attr/colorOnSurface" />
                     </RelativeLayout>
                 </LinearLayout>
 
@@ -487,7 +487,7 @@
                             android:layout_centerInParent="true"
                             android:text="@string/virtual_key_nvidia_screenshot"
                             android:textSize="12sp"
-                            android:textColor="#E3E1EC" />
+                            android:textColor="?attr/colorOnSurface" />
                     </RelativeLayout>
 
                     <RelativeLayout
@@ -504,7 +504,7 @@
                             android:layout_centerInParent="true"
                             android:text="@string/virtual_key_nvidia_photo_mode"
                             android:textSize="12sp"
-                            android:textColor="#E3E1EC" />
+                            android:textColor="?attr/colorOnSurface" />
                     </RelativeLayout>
 
                     <RelativeLayout
@@ -521,7 +521,7 @@
                             android:layout_centerInParent="true"
                             android:text="@string/virtual_key_nvidia_game_filter"
                             android:textSize="12sp"
-                            android:textColor="#E3E1EC" />
+                            android:textColor="?attr/colorOnSurface" />
                     </RelativeLayout>
 
                     <RelativeLayout
@@ -538,7 +538,7 @@
                             android:layout_centerInParent="true"
                             android:text="@string/virtual_key_nvidia_instantly_relay"
                             android:textSize="12sp"
-                            android:textColor="#E3E1EC" />
+                            android:textColor="?attr/colorOnSurface" />
                     </RelativeLayout>
 
                     <RelativeLayout
@@ -555,7 +555,7 @@
                             android:layout_centerInParent="true"
                             android:text="@string/virtual_key_nvidia_record"
                             android:textSize="12sp"
-                            android:textColor="#E3E1EC" />
+                            android:textColor="?attr/colorOnSurface" />
                     </RelativeLayout>
                 </LinearLayout>
 

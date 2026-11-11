@@ -188,6 +188,7 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        UiHelper.setLocale(this);
 
         // Assume we're in the foreground when created to avoid a race
         // between binding to CMS and onResume()
@@ -876,16 +877,7 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
 
         if (existingEntry != null) {
             // Replace the information in the existing entry
-            ComputerDetails prev = existingEntry.details;
-            boolean uiChanged = prev.state != details.state ||
-                    prev.pairState != details.pairState ||
-                    prev.runningGameId != details.runningGameId ||
-                    prev.nvidiaServer != details.nvidiaServer ||
-                    (prev.name != null && !prev.name.equals(details.name));
             existingEntry.details = details;
-            if (!uiChanged) {
-                return;
-            }
         }
         else {
             // Add a new entry

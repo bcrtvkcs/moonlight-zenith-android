@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="on_screen_game_pad">Ekran Kumandası</string>
+    <string name="input_touchscreen_mode">Dokunmatik Mod</string>
+    <string name="input_touchpad_mode">Touchpad Modu</string>
+    <string name="toggle_soft_keyboard">Klavyeyi Aç/Kapat</string>
+    <string name="virtual_key_esc">ESC</string>
+    <string name="virtual_key_win">WIN</string>
+    <string name="virtual_key_taskmgr">Görev Yöneticisi</string>
+    <string name="virtual_key_exit_program">Alt+F4</string>
+    <string name="virtual_key_screenshot">Ekran Görüntüsü</string>
+    <string name="virtual_key_explorer">Dosya Gezgini</string>
+    <string name="virtual_key_system_menu">Sistem Menüsü</string>
+    <string name="virtual_key_copy">Kopyala</string>
+    <string name="virtual_key_cut">Kes</string>
+    <string name="virtual_key_paste">Yapıştır</string>
+    <string name="virtual_key_select_all">Tümünü Seç</string>
+    <string name="virtual_key_desktop">Masaüstünü Göster</string>
+    <string name="virtual_key_task_view">Görev Görünümü</string>
+    <string name="virtual_key_new_desktop">Yeni Masaüstü</string>
+    <string name="virtual_key_delete_desktop">Masaüstünü Kapat</string>
+    <string name="virtual_key_left_desktop">Sol Masaüstü</string>
+    <string name="virtual_key_right_desktop">Sağ Masaüstü</string>
+    <string name="virtual_mouse_middle_key">Orta Fare</string>
+    <string name="virtual_key_nvidia_overflow">Nvidia Menüsü</string>
+    <string name="virtual_key_nvidia_screenshot">Nvidia Görüntüsü</string>
+    <string name="virtual_key_nvidia_photo_mode">Fotoğraf Modu</string>
+    <string name="virtual_key_nvidia_game_filter">Oyun Filtresi</string>
+    <string name="virtual_key_nvidia_instantly_relay">Anında Tekrar</string>
+    <string name="virtual_key_nvidia_record">Kaydet</string>
+</resources>

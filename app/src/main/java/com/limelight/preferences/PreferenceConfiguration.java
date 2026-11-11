@@ -39,7 +39,9 @@ public class PreferenceConfiguration {
     private static final String OSC_OPACITY_PREF_STRING = "seekbar_osc_opacity";
     private static final String LANGUAGE_PREF_STRING = "list_languages";
     public static final String THEME_MODE_PREF_STRING = "list_theme_mode";
+    public static final String PURE_BLACK_THEME_PREF_STRING = "checkbox_pure_black_theme";
     public static final String DEFAULT_THEME_MODE = "dynamic";
+    private static final boolean DEFAULT_PURE_BLACK_THEME = false;
     private static final String SMALL_ICONS_PREF_STRING = "checkbox_small_icon_mode";
     private static final String MULTI_CONTROLLER_PREF_STRING = "checkbox_multi_controller";
     static final String AUDIO_CONFIG_PREF_STRING = "list_audio_config";
@@ -140,6 +142,7 @@ public class PreferenceConfiguration {
     public boolean stretchVideo, sensorLandscape, enableSops, playHostAudio, disableWarnings;
     public String language;
     public String themeMode;
+    public boolean pureBlackTheme;
     public boolean smallIconMode, multiController, usbDriver, flipFaceButtons;
     public boolean onscreenController;
     public boolean onlyL3R3;
@@ -582,7 +585,25 @@ public class PreferenceConfiguration {
         config.oscOpacity = prefs.getInt(OSC_OPACITY_PREF_STRING, DEFAULT_OPACITY);
 
         config.language = prefs.getString(LANGUAGE_PREF_STRING, DEFAULT_LANGUAGE);
-        config.themeMode = prefs.getString(THEME_MODE_PREF_STRING, DEFAULT_THEME_MODE);
+        String rawThemeMode = prefs.getString(THEME_MODE_PREF_STRING, DEFAULT_THEME_MODE);
+        if ("amoled".equals(rawThemeMode)) {
+            config.themeMode = "zenith";
+            config.pureBlackTheme = true;
+            prefs.edit()
+                    .putString(THEME_MODE_PREF_STRING, "zenith")
+                    .putBoolean(PURE_BLACK_THEME_PREF_STRING, true)
+                    .apply();
+        } else if ("dynamic_amoled".equals(rawThemeMode)) {
+            config.themeMode = "dynamic";
+            config.pureBlackTheme = true;
+            prefs.edit()
+                    .putString(THEME_MODE_PREF_STRING, "dynamic")
+                    .putBoolean(PURE_BLACK_THEME_PREF_STRING, true)
+                    .apply();
+        } else {
+            config.themeMode = rawThemeMode;
+            config.pureBlackTheme = prefs.getBoolean(PURE_BLACK_THEME_PREF_STRING, DEFAULT_PURE_BLACK_THEME);
+        }
 
         // Checkbox preferences
         config.disableWarnings = prefs.getBoolean(DISABLE_TOASTS_PREF_STRING, DEFAULT_DISABLE_TOASTS);

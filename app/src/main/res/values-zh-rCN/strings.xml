@@ -124,10 +124,6 @@
     <string name="category_input_settings">输入设置</string>
     <string name="title_checkbox_touchscreen_trackpad">将触控屏作为触控板使用</string>
     <string name="summary_checkbox_touchscreen_trackpad">如果启用，则将触控屏作为触控板使用。如果禁用，则启用多点触控模式</string>
-
-
-
-
     <string name="title_checkbox_multi_controller"> 自动检测手柄 </string>
     <string name="summary_checkbox_multi_controller"> 禁用此项所有手柄将视为一个手柄 </string>
     <string name="title_checkbox_vibrate_fallback"> 用设备震动模拟游戏震动效果 </string>
@@ -142,8 +138,6 @@
     <string name="summary_checkbox_mouse_emulation"> 长按开始键将手柄切换为鼠标模式 </string>
     <string name="title_checkbox_mouse_nav_buttons"> 启用前进后退鼠标键 </string>
     <string name="summary_checkbox_mouse_nav_buttons"> 在一些支持不佳的设备上启用此项可能会使其右键失效 </string>
-
-
     <string name="title_checkbox_flip_face_buttons"> 反转技能键 </string>
     <string name="summary_checkbox_flip_face_buttons"> 为手柄和虚拟手柄调转A/B和X/Y技能键 </string>
     <string name="category_on_screen_controls_settings"> 屏幕控制按钮设置 </string>
@@ -290,4 +284,29 @@
     <string name="summary_analog_scrolling">在鼠标模式下选择用哪个摇杆控制鼠标移动</string>
     <string name="summary_seekbar_vibrate_fallback_strength">增强或减弱设备的震动强度</string>
     <string name="analogscroll_none">默认 (两个摇杆都控制鼠标)</string>
+    <string name="title_list_host_keyboard_layout">主机 PC 键盘布局</string>
+    <string name="summary_list_host_keyboard_layout">选择远程 PC 的键盘布局</string>
+    <string name="host_keyboard_layout_auto">自动 / 通用（默认）</string>
+    <string name="host_keyboard_layout_tr">土耳其语 (QWERTY)</string>
+    <string name="host_keyboard_layout_de">德语 (QWERTZ)</string>
+    <string name="host_keyboard_layout_fr">法语 (AZERTY)</string>
+    <string name="host_keyboard_layout_es">西班牙语 (QWERTY)</string>
+    <string name="host_keyboard_layout_it">意大利语 (QWERTY)</string>
+    <string name="title_show_guide_button">显示 Guide 按钮</string>
+    <string name="summary_show_guide_button">在屏幕上显示虚拟手柄的 Guide（主页）按钮</string>
+    <string name="local_network_rationale">Moonlight 需要本地网络权限才能与附近的主机通信</string>
+    <string name="title_checkbox_native_touch_long_press">原生触控长按触发右键</string>
+    <string name="summary_checkbox_native_touch_long_press">在原生触控模式下长按后触发鼠标右键点击。禁用可将长按直接传递给主机操作系统。</string>
+    <string name="title_list_native_touch_long_press_duration">长按持续时间</string>
+    <string name="summary_list_native_touch_long_press_duration">长按被识别为右键点击所需的时间。</string>
+    <string name="title_theme_mode">Material 3 主题</string>
+    <string name="summary_theme_mode">在 Material You 动态壁纸颜色或自定义 Zenith 主题之间选择</string>
+    <string name="theme_mode_dynamic">Material You（动态壁纸颜色）</string>
+    <string name="theme_mode_zenith">Zenith Indigo</string>
+    <string name="title_pure_black_theme">纯黑背景 (AMOLED)</string>
+    <string name="summary_pure_black_theme">在所选主题中使用纯黑 (#000000) 背景以节省 OLED 屏幕电量</string>
+    <string name="title_checkbox_sensor_landscape">使用传感器自动翻转横屏方向</string>
+    <string name="summary_checkbox_sensor_landscape">在连接和串流期间自动在正向横屏与反向横屏之间切换，即使系统自动旋转已关闭</string>
+    <string name="duration_500ms_default">500ms（默认）</string>
+    <string name="language_default">系统默认</string>
 </resources>

@@ -507,31 +507,36 @@ public class StreamSettings extends Activity {
             super.onCreate(savedInstanceState);
 
             addPreferencesFromResource(R.xml.preferences);
+            Preference.OnPreferenceChangeListener themeReloadListener = new Preference.OnPreferenceChangeListener() {
+                @Override
+                public boolean onPreferenceChange(Preference preference, Object newValue) {
+                    new Handler().postDelayed(new Runnable() {
+                        @Override
+                        public void run() {
+                            Activity act = SettingsFragment.this.getActivity();
+                            if (act != null && !act.isFinishing()) {
+                                String currentCat = (act instanceof StreamSettings)
+                                        ? ((StreamSettings) act).getCurrentCategoryKey()
+                                        : "category_ui_settings";
+                                Intent intent = new Intent(act, PcView.class);
+                                intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
+                                act.startActivity(intent);
+                                Intent settingsIntent = new Intent(act, StreamSettings.class);
+                                settingsIntent.putExtra(EXTRA_CATEGORY_KEY, currentCat);
+                                act.startActivity(settingsIntent);
+                            }
+                        }
+                    }, 150);
+                    return true;
+                }
+            };
             Preference themePref = findPreference(PreferenceConfiguration.THEME_MODE_PREF_STRING);
             if (themePref != null) {
-                themePref.setOnPreferenceChangeListener(new Preference.OnPreferenceChangeListener() {
-                    @Override
-                    public boolean onPreferenceChange(Preference preference, Object newValue) {
-                        new Handler().postDelayed(new Runnable() {
-                            @Override
-                            public void run() {
-                                Activity act = SettingsFragment.this.getActivity();
-                                if (act != null && !act.isFinishing()) {
-                                    String currentCat = (act instanceof StreamSettings)
-                                            ? ((StreamSettings) act).getCurrentCategoryKey()
-                                            : "category_ui_settings";
-                                    Intent intent = new Intent(act, PcView.class);
-                                    intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
-                                    act.startActivity(intent);
-                                    Intent settingsIntent = new Intent(act, StreamSettings.class);
-                                    settingsIntent.putExtra(EXTRA_CATEGORY_KEY, currentCat);
-                                    act.startActivity(settingsIntent);
-                                }
-                            }
-                        }, 150);
-                        return true;
-                    }
-                });
+                themePref.setOnPreferenceChangeListener(themeReloadListener);
+            }
+            Preference pureBlackPref = findPreference(PreferenceConfiguration.PURE_BLACK_THEME_PREF_STRING);
+            if (pureBlackPref != null) {
+                pureBlackPref.setOnPreferenceChangeListener(themeReloadListener);
             }
             PreferenceScreen screen = getPreferenceScreen();
 
@@ -834,7 +839,7 @@ public class StreamSettings extends Activity {
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) {
                 LimeLog.info("Excluding HDR toggle based on OS");
                 PreferenceCategory category =
-                        (PreferenceCategory) findPreference("category_advanced_settings");
+                        (PreferenceCategory) findPreference("category_basic_settings");
                 category.removePreference(findPreference("checkbox_enable_hdr"));
             }
             else {
@@ -855,13 +860,13 @@ public class StreamSettings extends Activity {
                 if (!foundHdr10) {
                     LimeLog.info("Excluding HDR toggle based on display capabilities");
                     PreferenceCategory category =
-                            (PreferenceCategory) findPreference("category_advanced_settings");
+                            (PreferenceCategory) findPreference("category_basic_settings");
                     category.removePreference(findPreference("checkbox_enable_hdr"));
                 }
                 else if (PreferenceConfiguration.isShieldAtvFirmwareWithBrokenHdr()) {
                     LimeLog.info("Disabling HDR toggle on old broken SHIELD TV firmware");
                     PreferenceCategory category =
-                            (PreferenceCategory) findPreference("category_advanced_settings");
+                            (PreferenceCategory) findPreference("category_basic_settings");
                     CheckBoxPreference hdrPref = (CheckBoxPreference) category.findPreference("checkbox_enable_hdr");
                     hdrPref.setEnabled(false);
                     hdrPref.setChecked(false);

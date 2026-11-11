@@ -45,8 +45,9 @@
 
     <!-- Don't forget to update locales_config.xml when you modify this! -->
     <string-array name="language_names" translatable="false">
-        <item>Default</item>
+        <item>@string/language_default</item>
         <item>English</item>
+        <item>Türkçe</item>
         <item>Italiano</item>
         <item>日本語</item>
         <item>Русский</item>
@@ -57,12 +58,15 @@
         <item>Español</item>
         <item>Français</item>
         <item>Deutsch</item>
+        <item>Polski</item>
+        <item>Български</item>
         <item>Română</item>
         <item>Українська</item>
         <item>Norsk bokmål</item>
         <item>Tiếng Việt</item>
         <item>Magyar</item>
         <item>Ελληνικά</item>
+        <item>Português</item>
         <item>Português do Brasil</item>
         <item>Čeština</item>
         <item>עִבְרִית</item>
@@ -75,6 +79,7 @@
     <string-array name="language_values" translatable="false">
         <item>default</item>
         <item>en</item>
+        <item>tr</item>
         <item>it</item>
         <item>ja</item>
         <item>ru</item>
@@ -85,12 +90,15 @@
         <item>es</item>
         <item>fr</item>
         <item>de</item>
+        <item>pl</item>
+        <item>bg</item>
         <item>ro</item>
         <item>uk</item>
         <item>nb-NO</item>
         <item>vi</item>
         <item>hu</item>
         <item>el</item>
+        <item>pt</item>
         <item>pt-BR</item>
         <item>cs</item>
         <item>iw</item>
@@ -156,7 +164,7 @@
     </string-array>
     <string-array name="native_touch_long_press_duration_names">
         <item>300ms</item>
-        <item>500ms (Default)</item>
+        <item>@string/duration_500ms_default</item>
         <item>800ms</item>
         <item>1000ms</item>
     </string-array>
@@ -169,11 +177,9 @@
     <string-array name="theme_mode_names">
         <item>@string/theme_mode_dynamic</item>
         <item>@string/theme_mode_zenith</item>
-        <item>@string/theme_mode_amoled</item>
     </string-array>
     <string-array name="theme_mode_values" translatable="false">
         <item>dynamic</item>
         <item>zenith</item>
-        <item>amoled</item>
     </string-array>
 </resources>

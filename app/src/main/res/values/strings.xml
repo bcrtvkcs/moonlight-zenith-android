@@ -320,7 +320,10 @@
     <string name="summary_theme_mode">Choose between Material You dynamic colors or custom Zenith themes</string>
     <string name="theme_mode_dynamic">Material You (Dynamic Wallpaper Colors)</string>
     <string name="theme_mode_zenith">Zenith Indigo (Material 3 Dark)</string>
-    <string name="theme_mode_amoled">Zenith AMOLED (Pure Black)</string>
+    <string name="title_pure_black_theme">Use pure black (AMOLED) background</string>
+    <string name="summary_pure_black_theme">Replaces the active theme background with pure black (#000000) for deeper contrast and power savings on OLED displays</string>
     <string name="title_checkbox_sensor_landscape">Auto-flip landscape orientation using sensor</string>
     <string name="summary_checkbox_sensor_landscape">Automatically switch between normal and reverse landscape while connecting and streaming, even when system auto-rotate is off</string>
+    <string name="duration_500ms_default">500ms (Default)</string>
+    <string name="language_default">System Default</string>
 </resources>

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ripple xmlns:android="http://schemas.android.com/apk/res/android"
-    android:color="#40DEE0FF">
+    android:color="?attr/colorOnSecondaryContainer">
     <item android:id="@android:id/mask">
         <shape android:shape="rectangle">
             <corners android:radius="14dp" />
@@ -12,15 +12,15 @@
             <item android:state_focused="true">
                 <shape android:shape="rectangle">
                     <corners android:radius="14dp" />
-                    <solid android:color="#3F51B5" />
-                    <stroke android:width="2dp" android:color="#DEE0FF" />
+                    <solid android:color="?attr/colorPrimaryContainer" />
+                    <stroke android:width="2dp" android:color="?attr/colorPrimary" />
                 </shape>
             </item>
             <item>
                 <shape android:shape="rectangle">
                     <corners android:radius="14dp" />
-                    <solid android:color="#D9303E90" />
-                    <stroke android:width="1dp" android:color="#5C6BC0" />
+                    <solid android:color="?attr/colorSecondaryContainer" />
+                    <stroke android:width="1dp" android:color="?attr/colorOutline" />
                 </shape>
             </item>
         </selector>

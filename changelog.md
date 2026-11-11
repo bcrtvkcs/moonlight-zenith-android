@@ -4,6 +4,40 @@ All notable changes to **Moonlight Zenith Android** are documented in this file.
 
 ---
 
+## [v2.1.2-zenith] - 2026-11-11
+
+### 🎨 Theme Engine Refinements, Material You System Surfaces & Soft Indigo App Icon
+- **Feat (Independent Pure Black AMOLED Setting & 2-Theme Selector):**
+  - Separated Pure Black (AMOLED) mode from the theme selector in `StreamSettings` (`preferences.xml`, `arrays.xml`, `PreferenceConfiguration.java`, `UiHelper.java`):
+    - **`list_theme_mode`** now presents two core themes: **Material You (`dynamic`)** and **Zenith Indigo (`zenith`)**.
+    - Added a dedicated **`checkbox_pure_black_theme`** (*Pure black background (AMOLED)*) switch directly below the theme selector that applies a true `#000000` OLED black surface overlay (`ThemeOverlay.Moonlight.DynamicAMOLED` / `ThemeOverlay.Moonlight.AMOLED`) on top of whichever theme is selected, with automatic migration for existing `dynamic_amoled` and `amoled` preferences.
+- **Fix (Material You System Status Bar, Window Background & In-Stream Attect Menu Coloring):**
+  - Added `UiHelper.applyWindowSurfaceColors(Activity)` to dynamically resolve `android.R.attr.colorBackground` and `colorSurfaceContainerLowest` after `DynamicColors` and AMOLED overlays are applied, fixing an issue where the system status bar, navigation bar, and window background remained on the static Zenith Indigo color (`#121318`) when **Material You** or **Pure Black (AMOLED)** was selected.
+  - Replaced hardcoded Indigo colors in the in-stream Attect floating button (`m3_float_button_bg.xml`), overflow panel (`game_overflow_menu.xml`), and quick-action chips (`m3_overflow_chip_bg.xml`, `m3_overflow_primary_chip_bg.xml`, `m3_overflow_danger_chip_bg.xml`, `m3_overflow_nvidia_chip_bg.xml`) with dynamic Material 3 theme attributes (`?attr/colorSurfaceContainerHigh`, `?attr/colorPrimaryContainer`, `?attr/colorOnPrimaryContainer`, `?attr/colorOutlineVariant`) and applied `UiHelper.applyMaterial3Theme(this)` in `Game.onCreate`.
+  - Added complete Turkish localization (`library-attect/src/main/res/values-tr/strings.xml`) for all in-stream floating menu actions.
+- **Feat (Soft Indigo-Tinted Moonlight App Icon Everywhere):**
+  - Softly tinted the standard Moonlight icon across all 23 PNG assets (`ic_launcher`, `ic_launcher_foreground`, `ic_pc_scut`, `ic_pc_scut_foreground` across `mdpi`–`xxxhdpi`, plus `app_icon`, `atv_banner`, and `ouya_icon`) and vector/color resources (`ic_launcher_background.xml`, `ic_pc_scut_background.xml`, `ic_lime_layer.xml`) with a refined slate-indigo (`#52597A`) background and soft ice-indigo (`#EEF0FF` / `#F0F2FF`) foreground, and removed `<monochrome>` from `ic_launcher.xml` and `ic_pc_scut.xml` so Android 13+ launchers always preserve the soft indigo icon design.
+
+### ⌨️ Keyboard Quote (`'` / `"`) & Punctuation / Shift Synchronization Fixes
+- **Fix (Single Quote `'` Typing `i` & Double Quote `"` Typing `é` on Turkish & European Keyboards):**
+  - Added missing single-quote (`'`) mapping (`VK_2` `0x32` with `requiresShift = true` on Turkish Q) to `HostKeyboardLayoutTranslator`, fixing the bug where pressing `'` fell through to Android's US `KEYCODE_APOSTROPHE` (`VK_OEM_7` `0xDE`), which types **`i`** on a Windows Turkish Q keyboard.
+  - Synchronized host `VK_LSHIFT` (`0x80A0`) and `VK_RSHIFT` (`0x80A1`) state in `Game.handleKeyDown`, `Game.handleKeyUp`, and `Game.handleKeyMultiple`:
+    - When `override.requiresShift` is `false` (such as `"` on Turkish Q, which is unshifted `0xC0` on Windows Turkish Q, whereas Android's `Virtual.kcm` sends `VK_LSHIFT` `DOWN` prior to `KEYCODE_APOSTROPHE`), `VK_LSHIFT` (`0x80A0`) is explicitly released before sending the key press so Windows types **`"`** instead of `Shift + 0xC0` (**`é`**).
+    - When `override.requiresShift` is `true` and Shift is not already held on the event (such as `'` on Turkish Q), `VK_LSHIFT` (`0x80A0`) is sent before the key down event and released on key up so Windows receives `Shift + 2` (**`'`**).
+  - Added `HostKeyboardLayoutTranslator.resolveLayout` so the default `"auto"` keyboard setting automatically resolves to `tr_TR`, `de_DE`, `fr_FR`, `es_ES`, or `it_IT` from `Locale.getDefault().getLanguage()`.
+  - Added complete number-row shifted punctuation (`!`, `^`, `+`, `%`, `&`, `/`, `(`, `)`, `=`, `?`, `_`, etc.) and direct UTF-8 injection (`TranslationResult.utf8`) for AltGr symbols (`@`, `#`, `$`, `[`, `]`, `{`, `}`, `\`, `|`, `` ` ``, `~`) across `tr_TR`, `de_DE`, `fr_FR`, `es_ES`, and `it_IT`.
+
+### 🖥️ PC & App Grid Fixes, Reorganized Settings Categories & 29-Language Localization
+- **Fix (PC Cards Stuck on `"Refreshing"` / `"Yenileniyor"` State):**
+  - Updated `PcView.java` and `PcGridAdapter.java` so `inProgress` is initialized only when `details.state == ComputerDetails.State.UNKNOWN` and is immediately cleared whenever a PC transitions to `ONLINE` or `OFFLINE`, ensuring the loading spinner and `"Refreshing"` label disappear as soon as the host responds.
+- **Fix (Desktop & Steam Cover Art Vertical Centering in `CenterContentImageView`):**
+  - Enhanced `CenterContentImageView.findContentBounds()` with a dual-pass foreground bounding-box detector that identifies dual-tone silhouette posters (such as Sunshine's default `600x800` **Desktop** and **Steam** covers whose visual content occupies `y=152..534`) even when the background gradient reaches the outer border, mathematically centering the icon and title vertically and horizontally inside the card rectangle while keeping full-bleed multi-color game box art edge-to-edge.
+- **Feat (Logical 8-Tab Settings Reorganization & Complete 29-Language Localization):**
+  - Reorganized `preferences.xml` and `StreamSettings.java` into 8 logical categories: **Video Settings** (consolidated with HDR, Full Range, and Codec settings), **Audio Settings** (moved PC host audio toggles to Host Settings), **Gamepad Settings**, **Input & Keyboard Settings** (dedicated tab for keyboard layout, touchscreen trackpad, mouse navigation buttons, remote desktop mode, and stylus), **On-Screen Controls Settings**, **Host Settings**, **Interface & Theme Settings** (consolidated theme, Pure Black AMOLED toggle, sensor-driven landscape rotation, small icon mode, and language), and **Advanced Settings**.
+  - Completed all missing translations across Turkish (`values-tr`) and all 27 other locale directories (**29 languages total**).
+
+---
+
 ## [v2.0.0-zenith] - 2026-11-11
 
 ### 🎨 Material Design 3 (Material You) Complete UI Overhaul (`df94739d`)

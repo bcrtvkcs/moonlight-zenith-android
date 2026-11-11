@@ -1421,7 +1421,8 @@ public class Game extends GameAttectActivity implements SurfaceHolder.Callback,
         // Try the keyboard handler if it wasn't handled as a game controller
         if (!handled) {
             android.content.SharedPreferences prefs = android.preference.PreferenceManager.getDefaultSharedPreferences(this);
-            String hostLayout = prefs.getString("list_host_keyboard_layout", "auto");
+            String hostLayout = com.limelight.binding.input.HostKeyboardLayoutTranslator.resolveLayout(
+                    prefs.getString("list_host_keyboard_layout", "auto"));
 
             // Android's Virtual.kcm synthesizes KEYCODE_ALT_LEFT + KEYCODE_C for 'ç'/'Ç'.
             // Swallow synthetic Alt events from virtual keyboards before they reach the host,
@@ -1452,9 +1453,24 @@ public class Game extends GameAttectActivity implements SurfaceHolder.Callback,
                     if (event.getRepeatCount() > 0) {
                         return true;
                     }
-                    byte modifier = (byte) (getModifierState(event) & ~com.limelight.nvstream.input.KeyboardPacket.MODIFIER_ALT);
+                    boolean hostShiftDown = (getModifierState(event) & com.limelight.nvstream.input.KeyboardPacket.MODIFIER_SHIFT) != 0;
+                    if (override.sendAsUtf8) {
+                        if (hostShiftDown) {
+                            conn.sendKeyboardInput((short) 0x80A0, com.limelight.nvstream.input.KeyboardPacket.KEY_UP, (byte) 0, (byte) 0);
+                            conn.sendKeyboardInput((short) 0x80A1, com.limelight.nvstream.input.KeyboardPacket.KEY_UP, (byte) 0, (byte) 0);
+                        }
+                        conn.sendUtf8Text(new String(Character.toChars(unicodeChar)));
+                        return true;
+                    }
+                    byte modifier = (byte) (getModifierState(event) & ~(com.limelight.nvstream.input.KeyboardPacket.MODIFIER_ALT | com.limelight.nvstream.input.KeyboardPacket.MODIFIER_SHIFT));
                     if (override.requiresShift) {
                         modifier = (byte) (modifier | com.limelight.nvstream.input.KeyboardPacket.MODIFIER_SHIFT);
+                        if (!hostShiftDown) {
+                            conn.sendKeyboardInput((short) 0x80A0, com.limelight.nvstream.input.KeyboardPacket.KEY_DOWN, modifier, (byte) 0);
+                        }
+                    } else if (hostShiftDown) {
+                        conn.sendKeyboardInput((short) 0x80A0, com.limelight.nvstream.input.KeyboardPacket.KEY_UP, modifier, (byte) 0);
+                        conn.sendKeyboardInput((short) 0x80A1, com.limelight.nvstream.input.KeyboardPacket.KEY_UP, modifier, (byte) 0);
                     }
                     short translatedVk = (short) (0x8000 | override.vkCode);
                     conn.sendKeyboardInput(translatedVk, com.limelight.nvstream.input.KeyboardPacket.KEY_DOWN, modifier, (byte) 0);
@@ -1532,7 +1548,8 @@ public class Game extends GameAttectActivity implements SurfaceHolder.Callback,
         // Try the keyboard handler if it wasn't handled as a game controller
         if (!handled) {
             android.content.SharedPreferences prefs = android.preference.PreferenceManager.getDefaultSharedPreferences(this);
-            String hostLayout = prefs.getString("list_host_keyboard_layout", "auto");
+            String hostLayout = com.limelight.binding.input.HostKeyboardLayoutTranslator.resolveLayout(
+                    prefs.getString("list_host_keyboard_layout", "auto"));
 
             if (!"auto".equals(hostLayout) && event.getDeviceId() <= 0 &&
                     (event.getKeyCode() == KeyEvent.KEYCODE_ALT_LEFT || event.getKeyCode() == KeyEvent.KEYCODE_ALT_RIGHT)) {
@@ -1555,12 +1572,20 @@ public class Game extends GameAttectActivity implements SurfaceHolder.Callback,
                     com.limelight.binding.input.HostKeyboardLayoutTranslator.translate(hostLayout, unicodeChar);
 
                 if (override != null) {
-                    byte modifier = (byte) (getModifierState(event) & ~com.limelight.nvstream.input.KeyboardPacket.MODIFIER_ALT);
+                    if (override.sendAsUtf8) {
+                        return true;
+                    }
+                    boolean hostShiftDown = (getModifierState(event) & com.limelight.nvstream.input.KeyboardPacket.MODIFIER_SHIFT) != 0;
+                    byte modifier = (byte) (getModifierState(event) & ~(com.limelight.nvstream.input.KeyboardPacket.MODIFIER_ALT | com.limelight.nvstream.input.KeyboardPacket.MODIFIER_SHIFT));
                     if (override.requiresShift) {
                         modifier = (byte) (modifier | com.limelight.nvstream.input.KeyboardPacket.MODIFIER_SHIFT);
                     }
                     short translatedVk = (short) (0x8000 | override.vkCode);
                     conn.sendKeyboardInput(translatedVk, com.limelight.nvstream.input.KeyboardPacket.KEY_UP, modifier, (byte) 0);
+                    if (override.requiresShift && !hostShiftDown) {
+                        conn.sendKeyboardInput((short) 0x80A0, com.limelight.nvstream.input.KeyboardPacket.KEY_UP,
+                                (byte) (modifier & ~com.limelight.nvstream.input.KeyboardPacket.MODIFIER_SHIFT), (byte) 0);
+                    }
                     return true;
                 }
             }
@@ -1598,7 +1623,8 @@ public class Game extends GameAttectActivity implements SurfaceHolder.Callback,
         }
 
         android.content.SharedPreferences prefs = android.preference.PreferenceManager.getDefaultSharedPreferences(this);
-        String hostLayout = prefs.getString("list_host_keyboard_layout", "auto");
+        String hostLayout = com.limelight.binding.input.HostKeyboardLayoutTranslator.resolveLayout(
+                prefs.getString("list_host_keyboard_layout", "auto"));
 
         String chars = event.getCharacters();
         for (int i = 0; i < chars.length(); i++) {
@@ -1606,19 +1632,23 @@ public class Game extends GameAttectActivity implements SurfaceHolder.Callback,
             com.limelight.binding.input.HostKeyboardLayoutTranslator.TranslationResult override = 
                 com.limelight.binding.input.HostKeyboardLayoutTranslator.translate(hostLayout, c);
 
-            if (override != null) {
-                byte modifier = getModifierState(event);
+            if (override != null && !override.sendAsUtf8) {
+                byte modifier = (byte) (getModifierState(event) & ~(com.limelight.nvstream.input.KeyboardPacket.MODIFIER_ALT | com.limelight.nvstream.input.KeyboardPacket.MODIFIER_SHIFT));
                 if (override.requiresShift) {
                     modifier = (byte) (modifier | com.limelight.nvstream.input.KeyboardPacket.MODIFIER_SHIFT);
+                    conn.sendKeyboardInput((short) 0x80A0, com.limelight.nvstream.input.KeyboardPacket.KEY_DOWN, modifier, (byte) 0);
                 }
                 short translatedVk = (short) (0x8000 | override.vkCode);
 
                 conn.sendKeyboardInput(translatedVk, com.limelight.nvstream.input.KeyboardPacket.KEY_DOWN, modifier, (byte) 0);
-                
-                // Immediately send UP
                 conn.sendKeyboardInput(translatedVk, com.limelight.nvstream.input.KeyboardPacket.KEY_UP, modifier, (byte) 0);
+
+                if (override.requiresShift) {
+                    conn.sendKeyboardInput((short) 0x80A0, com.limelight.nvstream.input.KeyboardPacket.KEY_UP,
+                            (byte) (modifier & ~com.limelight.nvstream.input.KeyboardPacket.MODIFIER_SHIFT), (byte) 0);
+                }
             } else {
-                conn.sendUtf8Text("" + (char) c);
+                conn.sendUtf8Text(new String(Character.toChars(c)));
             }
         }
         return true;

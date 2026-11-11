@@ -9,15 +9,19 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.SharedPreferences;
 import android.content.res.Configuration;
+import android.graphics.Color;
 import android.graphics.Insets;
+import android.graphics.drawable.ColorDrawable;
 import android.os.Build;
 import android.os.LocaleList;
+import android.util.TypedValue;
 import android.view.View;
 import android.view.WindowInsets;
 import android.view.WindowManager;
 
 import com.google.android.material.color.DynamicColors;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.limelight.Game;
 import com.limelight.R;
 import com.limelight.nvstream.http.ComputerDetails;
 import com.limelight.preferences.PreferenceConfiguration;
@@ -30,13 +34,44 @@ public class UiHelper {
     private static final int TV_HORIZONTAL_PADDING_DP = 15;
 
     public static void applyMaterial3Theme(Activity activity) {
-        String themeMode = PreferenceConfiguration.readPreferences(activity).themeMode;
-        if ("amoled".equals(themeMode)) {
-            activity.getTheme().applyStyle(R.style.ThemeOverlay_Moonlight_AMOLED, true);
-        } else if (!"zenith".equals(themeMode)) {
-            // Default: "dynamic" -> Apply Material You (Dynamic Colors) on Android 12+,
-            // falling back to the Zenith M3 palette on older Android versions.
+        PreferenceConfiguration prefs = PreferenceConfiguration.readPreferences(activity);
+        boolean isZenith = "zenith".equals(prefs.themeMode);
+        boolean isPureBlack = prefs.pureBlackTheme;
+
+        if (!isZenith && DynamicColors.isDynamicColorAvailable()) {
             DynamicColors.applyToActivityIfAvailable(activity);
+            activity.getTheme().applyStyle(com.google.android.material.R.style.ThemeOverlay_Material3_DynamicColors_Dark, true);
+            if (isPureBlack) {
+                activity.getTheme().applyStyle(R.style.ThemeOverlay_Moonlight_DynamicAMOLED, true);
+            }
+        } else if (isPureBlack) {
+            activity.getTheme().applyStyle(R.style.ThemeOverlay_Moonlight_AMOLED, true);
+        }
+        applyWindowSurfaceColors(activity);
+    }
+
+    public static void applyWindowSurfaceColors(Activity activity) {
+        if (activity == null || activity instanceof Game) {
+            return;
+        }
+        TypedValue tv = new TypedValue();
+        if (activity.getTheme().resolveAttribute(com.google.android.material.R.attr.colorSurface, tv, true)) {
+            int surfaceColor = tv.data;
+            if (activity.getWindow() != null) {
+                activity.getWindow().setBackgroundDrawable(new ColorDrawable(surfaceColor));
+                View decorView = activity.getWindow().getDecorView();
+                if (decorView != null) {
+                    decorView.setBackgroundColor(surfaceColor);
+                }
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                    activity.getWindow().setStatusBarColor(Color.TRANSPARENT);
+                    activity.getWindow().setNavigationBarColor(Color.TRANSPARENT);
+                }
+            }
+            View contentView = activity.findViewById(android.R.id.content);
+            if (contentView != null) {
+                contentView.setBackgroundColor(surfaceColor);
+            }
         }
     }
 
@@ -135,6 +170,7 @@ public class UiHelper {
 
     public static void notifyNewRootView(final Activity activity)
     {
+        applyWindowSurfaceColors(activity);
         View rootView = activity.findViewById(android.R.id.content);
         UiModeManager modeMgr = (UiModeManager) activity.getSystemService(Context.UI_MODE_SERVICE);
 

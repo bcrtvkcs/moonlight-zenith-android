@@ -63,7 +63,7 @@
 \nİnternet üzerinden yayın yapmaya çalışıyorsanız, Moonlight İnternet Barındırma Aracını bilgisayarınıza yükleyin ve bilgisayarınızın internet bağlantısını kontrol etmek için birlikte verilen İnternet Akış Test Cihazını çalıştırın.</string>
     <string name="title_checkbox_multi_controller">Oyun kumandası varlığını otomatik algıla</string>
     <string name="summary_checkbox_multi_controller">Bu seçeneğin işaretini kaldırmak, oyun kumandasının her zaman mevcut olmasını sağlar</string>
-    <string name="summary_checkbox_vibrate_fallback">Oyun kumandanız desteklemiyorsa, gürültüyü taklit etmek için cihazınızı titreştirir</string>
+    <string name="summary_checkbox_vibrate_fallback">Oyun kumandanız desteklemiyorsa, titreşim geri bildirimini (rumble) taklit etmek için cihazınızı titreştirir</string>
     <string name="title_seekbar_deadzone">Analog çubuk ölü bölgesini ayarla</string>
     <string name="summary_checkbox_xb1_driver">Yerel Xbox oyun kumandası desteği olmayan cihazlar için yerleşik USB sürücüsünü etkinleştirir</string>
     <string name="title_checkbox_mouse_emulation">Oyun kumandası üstünden fare taklidi</string>
@@ -132,7 +132,7 @@
     <string name="pcview_menu_send_wol">Yerel ağdan uyandırma isteği gönder</string>
     <string name="applist_refresh_msg">Uygulamalar yenileniyor…</string>
     <string name="applist_refresh_error_title">Hata</string>
-    <string name="title_add_pc">Bilgisayarı manuel olarak Ekle</string>
+    <string name="title_add_pc">Bilgisayarı manuel olarak ekle</string>
     <string name="title_resolution_list">Video çözünürlüğü</string>
     <string name="summary_fps_list">Daha akıcı bir video akışı için artırın. Düşük uçlu cihazlarda daha iyi performans için azaltın.</string>
     <string name="resolution_prefix_native">Yerel</string>
@@ -167,7 +167,7 @@
 \nMonitörünüz gerekli ekran yapılandırmasını desteklemiyor olabilir. Eğer öyleyse, sanal bir monitör kurmayı deneyebilirsiniz. Son olarak, cihazınız veya ana bilgisayarınız belirli bir çözünürlükte veya yenileme hızında akışı desteklemiyorsa ne yazık ki şansınız kalmaz.</string>
     <string name="summary_seekbar_bitrate">Daha iyi görüntü kalitesi için artırın. Daha yavaş bağlantılarda performansı artırmak için azaltın.</string>
     <string name="title_checkbox_stretch_video">Videoyu tam ekrana genişlet</string>
-    <string name="title_checkbox_vibrate_fallback">Titreşim ile gürültü desteğini taklit et</string>
+    <string name="title_checkbox_vibrate_fallback">Titreşim geri bildirimini (rumble) cihaz titreşimiyle taklit et</string>
     <string name="summary_checkbox_usb_bind_all">Yerel Xbox oyun kumandası desteği mevcut olsa bile desteklenen tüm oyun kumandaları için Moonlight\'ın USB sürücüsünü kullan</string>
     <string name="summary_checkbox_flip_face_buttons">Oyun kumandaları ve ekran kontrolleri için A/B ve X/Y yüzey düğmelerini değiştirir</string>
     <string name="summary_checkbox_absolute_mouse_mode">Bu fare hızlandırmanın uzak masaüstü kullanımı için daha doğal davranmasını sağlayabilir, ancak birçok oyunla uyumsuzdur.</string>
@@ -186,7 +186,7 @@
     <string name="title_native_fps_dialog">Yerel FPS Uyarısı</string>
     <string name="title_checkbox_enable_audiofx">Sistem ekolayzır desteğini etkinleştir</string>
     <string name="category_gamepad_settings">Oyun Kumandası Ayarları</string>
-    <string name="title_seekbar_vibrate_fallback_strength">Taklit edilmiş gürültü yoğunluğunu ayarla</string>
+    <string name="title_seekbar_vibrate_fallback_strength">Taklit edilen titreşim yoğunluğunu ayarla</string>
     <string name="suffix_seekbar_vibrate_fallback_strength">%</string>
     <string name="summary_seekbar_vibrate_fallback_strength">Cihazınızdaki titreşim yoğunluğunu artırın veya azaltın</string>
     <string name="title_checkbox_gamepad_touchpad_as_mouse">Fareyi her zaman dokunmatik yüzeyle kontrol et</string>
@@ -194,7 +194,7 @@
     <string name="title_checkbox_gamepad_motion_sensors">Oyun kumandası hareket sensörü kullanımına izin ver</string>
     <string name="title_checkbox_gamepad_motion_fallback">Oyun kumandası hareket sensörü desteğini taklit et</string>
     <string name="title_checkbox_vibrate_osc">Titreşimi etkinleştir</string>
-    <string name="summary_checkbox_vibrate_osc">Ekrandaki kontrollerde gürültüyü taklit etmek için cihazınızı titretir</string>
+    <string name="summary_checkbox_vibrate_osc">Ekrandaki kontrollerde titreşim geri bildirimini taklit etmek için cihazınızı titreştirir</string>
     <string name="title_only_l3r3">Yalnızca L3 ve R3 göster</string>
     <string name="summary_only_l3r3">L3 ve R3 dışındaki tüm sanal düğmeleri gizle</string>
     <string name="title_reset_osc">Kaydedilen ekran kontrolleri düzenini temizle</string>
@@ -259,11 +259,11 @@
     <string name="summary_checkbox_host_audio">Sesleri bilgisayardan ve bu cihazdan oynat</string>
     <string name="title_checkbox_enable_sops">Oyun ayarlarını iyileştir</string>
     <string name="title_checkbox_disable_warnings">Uyarı mesajlarını devre dışı bırak</string>
-    <string name="resolution_prefix_native_landscape">(Manzara)</string>
-    <string name="resolution_prefix_native_portrait">(Portre)</string>
+    <string name="resolution_prefix_native_landscape">(Yatay)</string>
+    <string name="resolution_prefix_native_portrait">(Dikey)</string>
     <string name="summary_disable_frame_drop">Bazı cihazlarda mikro kekemeliği azaltabilir ancak gecikmeyi artırabilir</string>
     <string name="resolution_360p">360p</string>
-    <string name="pcview_menu_eol">NVIDIA GameStream Hizmet Şartları</string>
+    <string name="pcview_menu_eol">NVIDIA GameStream Hizmet Sonu</string>
     <string name="resolution_720p">720p</string>
     <string name="fps_30">30 FPS</string>
     <string name="summary_checkbox_enable_audiofx">Ses efektlerinin akış sırasında çalışmasına izin verir ancak ses gecikmesini artırabilir</string>
@@ -276,9 +276,25 @@
     <string name="summary_theme_mode">Material You dinamik duvar kağıdı renkleri veya özel Zenith temaları arasında seçim yapın</string>
     <string name="theme_mode_dynamic">Material You (Dinamik Duvar Kağıdı Rengi)</string>
     <string name="theme_mode_zenith">Zenith İndigo (Özel M3 Koyu Tema)</string>
-    <string name="theme_mode_amoled">Zenith AMOLED (Saf Siyah)</string>
+    <string name="title_pure_black_theme">Saf siyah (AMOLED) arka plan kullan</string>
+    <string name="summary_pure_black_theme">OLED ekranlarda daha derin kontrast ve güç tasarrufu için seçili temanın arka planını saf siyah (#000000) yapar</string>
     <string name="title_checkbox_sensor_landscape">Yatay ekran yönünü sensörle otomatik döndür</string>
     <string name="summary_checkbox_sensor_landscape">Sistem otomatik döndürme kapalı olsa bile bağlanırken ve yayın sırasında yatay ile ters yatay yön arasında anlık geçiş yapar</string>
     <string name="title_show_guide_button">Rehber (Guide) düğmesini göster</string>
     <string name="summary_show_guide_button">Ekranda ana menü (Guide) düğmesini göster</string>
+    <string name="title_list_host_keyboard_layout">Ana bilgisayar klavye düzeni</string>
+    <string name="summary_list_host_keyboard_layout">Uzak bilgisayarınızın klavye düzenini seçin</string>
+    <string name="host_keyboard_layout_auto">Otomatik / Genel (Varsayılan)</string>
+    <string name="host_keyboard_layout_tr">Türkçe (QWERTY)</string>
+    <string name="host_keyboard_layout_de">Almanca (QWERTZ)</string>
+    <string name="host_keyboard_layout_fr">Fransızca (AZERTY)</string>
+    <string name="host_keyboard_layout_es">İspanyolca (QWERTY)</string>
+    <string name="host_keyboard_layout_it">İtalyanca (QWERTY)</string>
+    <string name="local_network_rationale">Moonlight, yakındaki ana bilgisayarlarla iletişim kurmak için yerel ağ iznine ihtiyaç duyar</string>
+    <string name="title_checkbox_native_touch_long_press">Doğrudan dokunmatik modda uzun basarak sağ tıkla</string>
+    <string name="summary_checkbox_native_touch_long_press">Doğrudan dokunmatik modda uzun basıldığında sağ tıklama tetikler. Uzun basışları doğrudan ana bilgisayar işletim sistemine iletmek için devre dışı bırakın.</string>
+    <string name="title_list_native_touch_long_press_duration">Uzun basma süresi</string>
+    <string name="summary_list_native_touch_long_press_duration">Uzun basışın sağ tıklama olarak algılanması için gereken süre.</string>
+    <string name="duration_500ms_default">500ms (Varsayılan)</string>
+    <string name="language_default">Varsayılan (Sistem Dili)</string>
 </resources>

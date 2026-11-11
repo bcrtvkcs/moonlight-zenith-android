@@ -286,4 +286,29 @@
     <string name="summary_checkbox_gamepad_motion_fallback">Verwendet die integrierten Bewegungssensoren Ihres Geräts, wenn Gamepad-Sensoren von Ihrem angeschlossenen Gamepad oder Ihrer Android-Version nicht unterstützt werden.
 \nHinweis: Die Aktivierung dieser Option kann dazu führen, dass Ihr Gamepad auf dem Host als PlayStation-Controller angezeigt wird.</string>
     <string name="pcview_menu_eol">NVIDIA GameStream End-of-Service</string>
+    <string name="title_list_host_keyboard_layout">Host-PC-Tastaturlayout</string>
+    <string name="summary_list_host_keyboard_layout">Wählen Sie das Tastaturlayout Ihres Remote-PCs</string>
+    <string name="host_keyboard_layout_auto">Automatisch / Standard</string>
+    <string name="host_keyboard_layout_tr">Türkisch (QWERTY)</string>
+    <string name="host_keyboard_layout_de">Deutsch (QWERTZ)</string>
+    <string name="host_keyboard_layout_fr">Französisch (AZERTY)</string>
+    <string name="host_keyboard_layout_es">Spanisch (QWERTY)</string>
+    <string name="host_keyboard_layout_it">Italienisch (QWERTY)</string>
+    <string name="title_show_guide_button">Guide-Taste anzeigen</string>
+    <string name="summary_show_guide_button">Guide-Taste auf dem Bildschirm anzeigen</string>
+    <string name="local_network_rationale">Moonlight benötigt Berechtigungen für das lokale Netzwerk, um mit Hosts in der Nähe zu kommunizieren</string>
+    <string name="title_checkbox_native_touch_long_press">Rechtsklick durch langes Drücken im nativen Touch-Modus</string>
+    <string name="summary_checkbox_native_touch_long_press">Löst im nativen Touch-Modus nach langem Drücken einen Rechtsklick aus. Deaktivieren, um langes Drücken direkt an das Host-Betriebssystem weiterzuleiten.</string>
+    <string name="title_list_native_touch_long_press_duration">Dauer für langes Drücken</string>
+    <string name="summary_list_native_touch_long_press_duration">Erforderliche Zeit, damit langes Drücken als Rechtsklick erkannt wird.</string>
+    <string name="title_theme_mode">Material 3 Design</string>
+    <string name="summary_theme_mode">Wählen Sie zwischen dynamischen Material You-Farben oder benutzerdefinierten Zenith-Designs</string>
+    <string name="theme_mode_dynamic">Material You (Dynamische Hintergrundfarben)</string>
+    <string name="theme_mode_zenith">Zenith Indigo</string>
+    <string name="title_pure_black_theme">Tiefschwarzer Hintergrund (AMOLED)</string>
+    <string name="summary_pure_black_theme">Reines Schwarz (#000000) als Hintergrund für das gewählte Design auf OLED-Bildschirmen verwenden</string>
+    <string name="title_checkbox_sensor_landscape">Querformat automatisch per Sensor drehen</string>
+    <string name="summary_checkbox_sensor_landscape">Wechselt beim Verbinden und Streamen automatisch zwischen normalem und umgekehrtem Querformat, auch wenn die automatische Systemdrehung deaktiviert ist</string>
+    <string name="duration_500ms_default">500ms (Standard)</string>
+    <string name="language_default">Systemstandard</string>
 </resources>

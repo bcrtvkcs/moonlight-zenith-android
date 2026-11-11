@@ -2,8 +2,9 @@
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:seekbar="http://schemas.moonlight-stream.com/apk/res/seekbar">
 
-    <com.limelight.preferences.M3PreferenceCategory android:title="@string/category_basic_settings"
-        android:key="category_basic_settings">
+    <com.limelight.preferences.M3PreferenceCategory
+        android:key="category_basic_settings"
+        android:title="@string/category_basic_settings">
         <com.limelight.preferences.M3ListPreference
             android:key="list_resolution"
             android:title="@string/title_resolution_list"
@@ -18,6 +19,11 @@
             android:entries="@array/fps_names"
             android:entryValues="@array/fps_values"
             android:defaultValue="60" />
+        <com.limelight.preferences.M3SwitchPreference
+            android:key="checkbox_unlock_fps"
+            android:title="@string/title_unlock_fps"
+            android:summary="@string/summary_unlock_fps"
+            android:defaultValue="false" />
         <com.limelight.preferences.SeekBarPreference
             android:key="seekbar_bitrate_kbps"
             android:dialogMessage="@string/summary_seekbar_bitrate"
@@ -41,14 +47,20 @@
             android:title="@string/title_checkbox_stretch_video"
             android:defaultValue="false" />
         <com.limelight.preferences.M3SwitchPreference
-            android:key="checkbox_sensor_landscape"
-            android:title="@string/title_checkbox_sensor_landscape"
-            android:summary="@string/summary_checkbox_sensor_landscape"
+            android:key="checkbox_enable_hdr"
+            android:title="@string/title_enable_hdr"
+            android:summary="@string/summary_enable_hdr"
+            android:defaultValue="false" />
+        <com.limelight.preferences.M3SwitchPreference
+            android:key="checkbox_enable_sops"
+            android:title="@string/title_checkbox_enable_sops"
+            android:summary="@string/summary_checkbox_enable_sops"
             android:defaultValue="true" />
     </com.limelight.preferences.M3PreferenceCategory>
 
-    <com.limelight.preferences.M3PreferenceCategory android:title="@string/category_audio_settings"
-        android:key="category_audio_settings">
+    <com.limelight.preferences.M3PreferenceCategory
+        android:key="category_audio_settings"
+        android:title="@string/category_audio_settings">
         <com.limelight.preferences.M3ListPreference
             android:key="list_audio_config"
             android:title="@string/title_audio_config_list"
@@ -57,26 +69,37 @@
             android:entryValues="@array/audio_config_values"
             android:defaultValue="2" />
         <com.limelight.preferences.M3SwitchPreference
+            android:key="checkbox_host_audio"
+            android:title="@string/title_checkbox_host_audio"
+            android:summary="@string/summary_checkbox_host_audio"
+            android:defaultValue="false" />
+        <com.limelight.preferences.M3SwitchPreference
             android:key="checkbox_enable_audiofx"
             android:title="@string/title_checkbox_enable_audiofx"
             android:summary="@string/summary_checkbox_enable_audiofx"
             android:defaultValue="false" />
     </com.limelight.preferences.M3PreferenceCategory>
 
-    <com.limelight.preferences.M3PreferenceCategory android:title="@string/category_gamepad_settings"
-        android:key="category_gamepad_settings">
+    <com.limelight.preferences.M3PreferenceCategory
+        android:key="category_gamepad_settings"
+        android:title="@string/category_gamepad_settings">
         <com.limelight.preferences.SeekBarPreference
             android:key="seekbar_deadzone"
             android:defaultValue="7"
             android:max="20"
             android:summary="@string/summary_seekbar_deadzone"
             android:text="@string/suffix_seekbar_deadzone"
-            android:title="@string/title_seekbar_deadzone"/>
+            android:title="@string/title_seekbar_deadzone" />
         <com.limelight.preferences.M3SwitchPreference
             android:key="checkbox_multi_controller"
             android:title="@string/title_checkbox_multi_controller"
             android:summary="@string/summary_checkbox_multi_controller"
             android:defaultValue="true" />
+        <com.limelight.preferences.M3SwitchPreference
+            android:key="checkbox_flip_face_buttons"
+            android:title="@string/title_checkbox_flip_face_buttons"
+            android:summary="@string/summary_checkbox_flip_face_buttons"
+            android:defaultValue="false" />
         <com.limelight.preferences.M3SwitchPreference
             android:key="checkbox_usb_driver"
             android:title="@string/title_checkbox_xb1_driver"
@@ -87,6 +110,29 @@
             android:dependency="checkbox_usb_driver"
             android:title="@string/title_checkbox_usb_bind_all"
             android:summary="@string/summary_checkbox_usb_bind_all"
+            android:defaultValue="false" />
+        <com.limelight.preferences.M3SwitchPreference
+            android:key="checkbox_vibrate_fallback"
+            android:title="@string/title_checkbox_vibrate_fallback"
+            android:summary="@string/summary_checkbox_vibrate_fallback"
+            android:defaultValue="false" />
+        <com.limelight.preferences.SeekBarPreference
+            android:key="seekbar_vibrate_fallback_strength"
+            android:dependency="checkbox_vibrate_fallback"
+            android:defaultValue="100"
+            android:max="200"
+            android:summary="@string/summary_seekbar_vibrate_fallback_strength"
+            android:text="@string/suffix_seekbar_vibrate_fallback_strength"
+            android:title="@string/title_seekbar_vibrate_fallback_strength" />
+        <com.limelight.preferences.M3SwitchPreference
+            android:key="checkbox_gamepad_motion_sensors"
+            android:title="@string/title_checkbox_gamepad_motion_sensors"
+            android:summary="@string/summary_checkbox_gamepad_motion_sensors"
+            android:defaultValue="true" />
+        <com.limelight.preferences.M3SwitchPreference
+            android:key="checkbox_gamepad_motion_fallback"
+            android:title="@string/title_checkbox_gamepad_motion_fallback"
+            android:summary="@string/summary_checkbox_gamepad_motion_fallback"
             android:defaultValue="false" />
         <com.limelight.preferences.M3SwitchPreference
             android:key="checkbox_mouse_emulation"
@@ -102,62 +148,43 @@
             android:entryValues="@array/analog_scrolling_values"
             android:defaultValue="right" />
         <com.limelight.preferences.M3SwitchPreference
-            android:key="checkbox_vibrate_fallback"
-            android:title="@string/title_checkbox_vibrate_fallback"
-            android:summary="@string/summary_checkbox_vibrate_fallback"
-            android:defaultValue="false" />
-        <com.limelight.preferences.SeekBarPreference
-            android:key="seekbar_vibrate_fallback_strength"
-            android:dependency="checkbox_vibrate_fallback"
-            android:defaultValue="100"
-            android:max="200"
-            android:summary="@string/summary_seekbar_vibrate_fallback_strength"
-            android:text="@string/suffix_seekbar_vibrate_fallback_strength"
-            android:title="@string/title_seekbar_vibrate_fallback_strength"/>
-        <com.limelight.preferences.M3SwitchPreference
-            android:key="checkbox_flip_face_buttons"
-            android:title="@string/title_checkbox_flip_face_buttons"
-            android:summary="@string/summary_checkbox_flip_face_buttons"
-            android:defaultValue="false" />
-        <com.limelight.preferences.M3SwitchPreference
             android:key="checkbox_gamepad_touchpad_as_mouse"
             android:title="@string/title_checkbox_gamepad_touchpad_as_mouse"
             android:summary="@string/summary_checkbox_gamepad_touchpad_as_mouse"
             android:defaultValue="false" />
-        <com.limelight.preferences.M3SwitchPreference
-            android:key="checkbox_gamepad_motion_sensors"
-            android:title="@string/title_checkbox_gamepad_motion_sensors"
-            android:summary="@string/summary_checkbox_gamepad_motion_sensors"
-            android:defaultValue="true" />
-        <com.limelight.preferences.M3SwitchPreference
-            android:key="checkbox_gamepad_motion_fallback"
-            android:title="@string/title_checkbox_gamepad_motion_fallback"
-            android:summary="@string/summary_checkbox_gamepad_motion_fallback"
-            android:defaultValue="false" />
     </com.limelight.preferences.M3PreferenceCategory>
 
-    <com.limelight.preferences.M3PreferenceCategory android:title="@string/category_input_settings"
-        android:key="category_input_settings">
+    <com.limelight.preferences.M3PreferenceCategory
+        android:key="category_input_settings"
+        android:title="@string/category_input_settings">
         <com.limelight.preferences.M3SwitchPreference
             android:key="checkbox_touchscreen_trackpad"
             android:title="@string/title_checkbox_touchscreen_trackpad"
             android:summary="@string/summary_checkbox_touchscreen_trackpad"
             android:defaultValue="true" />
-
         <com.limelight.preferences.M3SwitchPreference
             android:key="checkbox_native_touch_long_press"
             android:title="@string/title_checkbox_native_touch_long_press"
             android:summary="@string/summary_checkbox_native_touch_long_press"
             android:defaultValue="true" />
-
         <com.limelight.preferences.M3ListPreference
             android:key="list_native_touch_long_press_duration"
+            android:dependency="checkbox_native_touch_long_press"
             android:title="@string/title_list_native_touch_long_press_duration"
             android:summary="@string/summary_list_native_touch_long_press_duration"
             android:entries="@array/native_touch_long_press_duration_names"
             android:entryValues="@array/native_touch_long_press_duration_values"
             android:defaultValue="500" />
-
+        <com.limelight.preferences.M3SwitchPreference
+            android:key="checkbox_absolute_mouse_mode"
+            android:title="@string/title_checkbox_absolute_mouse_mode"
+            android:summary="@string/summary_checkbox_absolute_mouse_mode"
+            android:defaultValue="false" />
+        <com.limelight.preferences.M3SwitchPreference
+            android:key="checkbox_mouse_nav_buttons"
+            android:title="@string/title_checkbox_mouse_nav_buttons"
+            android:summary="@string/summary_checkbox_mouse_nav_buttons"
+            android:defaultValue="false" />
         <com.limelight.preferences.M3ListPreference
             android:key="list_host_keyboard_layout"
             android:title="@string/title_list_host_keyboard_layout"
@@ -165,30 +192,16 @@
             android:entries="@array/host_keyboard_layout_names"
             android:entryValues="@array/host_keyboard_layout_values"
             android:defaultValue="auto" />
-        <com.limelight.preferences.M3SwitchPreference
-            android:key="checkbox_mouse_nav_buttons"
-            android:title="@string/title_checkbox_mouse_nav_buttons"
-            android:summary="@string/summary_checkbox_mouse_nav_buttons"
-            android:defaultValue="false" />
-        <com.limelight.preferences.M3SwitchPreference
-            android:key="checkbox_absolute_mouse_mode"
-            android:title="@string/title_checkbox_absolute_mouse_mode"
-            android:summary="@string/summary_checkbox_absolute_mouse_mode"
-            android:defaultValue="false" />
     </com.limelight.preferences.M3PreferenceCategory>
 
-    <com.limelight.preferences.M3PreferenceCategory android:title="@string/category_on_screen_controls_settings"
-        android:key="category_onscreen_controls">
+    <com.limelight.preferences.M3PreferenceCategory
+        android:key="category_onscreen_controls"
+        android:title="@string/category_on_screen_controls_settings">
         <com.limelight.preferences.M3SwitchPreference
             android:defaultValue="false"
             android:key="checkbox_show_onscreen_controls"
             android:summary="@string/summary_checkbox_show_onscreen_controls"
             android:title="@string/title_checkbox_show_onscreen_controls" />
-        <com.limelight.preferences.M3SwitchPreference
-            android:key="checkbox_vibrate_osc"
-            android:title="@string/title_checkbox_vibrate_osc"
-            android:summary="@string/summary_checkbox_vibrate_osc"
-            android:defaultValue="true" />
         <com.limelight.preferences.M3SwitchPreference
             android:defaultValue="false"
             android:key="checkbox_only_show_L3R3"
@@ -201,6 +214,11 @@
             android:key="checkbox_show_guide_button"
             android:summary="@string/summary_show_guide_button"
             android:title="@string/title_show_guide_button" />
+        <com.limelight.preferences.M3SwitchPreference
+            android:key="checkbox_vibrate_osc"
+            android:title="@string/title_checkbox_vibrate_osc"
+            android:summary="@string/summary_checkbox_vibrate_osc"
+            android:defaultValue="true" />
         <com.limelight.preferences.SeekBarPreference
             android:key="seekbar_osc_opacity"
             android:dialogMessage="@string/summary_osc_opacity"
@@ -220,22 +238,9 @@
             android:negativeButtonText="@string/no" />
     </com.limelight.preferences.M3PreferenceCategory>
 
-    <com.limelight.preferences.M3PreferenceCategory android:title="@string/category_host_settings"
-        android:key="category_host_settings">
-        <com.limelight.preferences.M3SwitchPreference
-            android:key="checkbox_enable_sops"
-            android:title="@string/title_checkbox_enable_sops"
-            android:summary="@string/summary_checkbox_enable_sops"
-            android:defaultValue="true" />
-        <com.limelight.preferences.M3SwitchPreference
-            android:key="checkbox_host_audio"
-            android:title="@string/title_checkbox_host_audio"
-            android:summary="@string/summary_checkbox_host_audio"
-            android:defaultValue="false" />
-    </com.limelight.preferences.M3PreferenceCategory>
-
-    <com.limelight.preferences.M3PreferenceCategory android:title="@string/category_ui_settings"
-        android:key="category_ui_settings">
+    <com.limelight.preferences.M3PreferenceCategory
+        android:key="category_ui_settings"
+        android:title="@string/category_ui_settings">
         <com.limelight.preferences.M3ListPreference
             android:key="list_theme_mode"
             android:title="@string/title_theme_mode"
@@ -244,9 +249,9 @@
             android:entryValues="@array/theme_mode_values"
             android:defaultValue="dynamic" />
         <com.limelight.preferences.M3SwitchPreference
-            android:key="checkbox_enable_pip"
-            android:title="@string/title_checkbox_enable_pip"
-            android:summary="@string/summary_checkbox_enable_pip"
+            android:key="checkbox_pure_black_theme"
+            android:title="@string/title_pure_black_theme"
+            android:summary="@string/summary_pure_black_theme"
             android:defaultValue="false" />
         <com.limelight.preferences.LanguagePreference
             android:key="list_languages"
@@ -259,25 +264,21 @@
             android:key="checkbox_small_icon_mode"
             android:title="@string/title_checkbox_small_icon_mode"
             android:summary="@string/summary_checkbox_small_icon_mode" />
+        <com.limelight.preferences.M3SwitchPreference
+            android:key="checkbox_sensor_landscape"
+            android:title="@string/title_checkbox_sensor_landscape"
+            android:summary="@string/summary_checkbox_sensor_landscape"
+            android:defaultValue="true" />
+        <com.limelight.preferences.M3SwitchPreference
+            android:key="checkbox_enable_pip"
+            android:title="@string/title_checkbox_enable_pip"
+            android:summary="@string/summary_checkbox_enable_pip"
+            android:defaultValue="false" />
     </com.limelight.preferences.M3PreferenceCategory>
 
-    <com.limelight.preferences.M3PreferenceCategory android:title="@string/category_advanced_settings"
-        android:key="category_advanced_settings">
-        <com.limelight.preferences.M3SwitchPreference
-            android:key="checkbox_unlock_fps"
-            android:title="@string/title_unlock_fps"
-            android:summary="@string/summary_unlock_fps"
-            android:defaultValue="false" />
-        <com.limelight.preferences.M3SwitchPreference
-            android:key="checkbox_reduce_refresh_rate"
-            android:title="@string/title_checkbox_reduce_refresh_rate"
-            android:summary="@string/summary_checkbox_reduce_refresh_rate"
-            android:defaultValue="false" />
-        <com.limelight.preferences.M3SwitchPreference
-            android:key="checkbox_disable_warnings"
-            android:title="@string/title_checkbox_disable_warnings"
-            android:summary="@string/summary_checkbox_disable_warnings"
-            android:defaultValue="false" />
+    <com.limelight.preferences.M3PreferenceCategory
+        android:key="category_advanced_settings"
+        android:title="@string/category_advanced_settings">
         <com.limelight.preferences.M3ListPreference
             android:key="video_format"
             android:title="@string/title_video_format"
@@ -286,25 +287,30 @@
             android:summary="@string/summary_video_format"
             android:defaultValue="auto" />
         <com.limelight.preferences.M3SwitchPreference
-            android:key="checkbox_enable_hdr"
-            android:title="@string/title_enable_hdr"
-            android:summary="@string/summary_enable_hdr"
-            android:defaultValue="false" />
-        <com.limelight.preferences.M3SwitchPreference
             android:key="checkbox_full_range"
             android:title="@string/title_full_range"
             android:summary="@string/summary_full_range"
             android:defaultValue="false" />
         <com.limelight.preferences.M3SwitchPreference
+            android:key="checkbox_reduce_refresh_rate"
+            android:title="@string/title_checkbox_reduce_refresh_rate"
+            android:summary="@string/summary_checkbox_reduce_refresh_rate"
+            android:defaultValue="false" />
+        <com.limelight.preferences.M3SwitchPreference
             android:key="checkbox_enable_perf_overlay"
             android:title="@string/title_enable_perf_overlay"
             android:summary="@string/summary_enable_perf_overlay"
-            android:defaultValue="false"/>
+            android:defaultValue="false" />
         <com.limelight.preferences.M3SwitchPreference
             android:key="checkbox_enable_post_stream_toast"
             android:title="@string/title_enable_post_stream_toast"
             android:summary="@string/summary_enable_post_stream_toast"
-            android:defaultValue="false"/>
+            android:defaultValue="false" />
+        <com.limelight.preferences.M3SwitchPreference
+            android:key="checkbox_disable_warnings"
+            android:title="@string/title_checkbox_disable_warnings"
+            android:summary="@string/summary_checkbox_disable_warnings"
+            android:defaultValue="false" />
     </com.limelight.preferences.M3PreferenceCategory>
 
 </PreferenceScreen>

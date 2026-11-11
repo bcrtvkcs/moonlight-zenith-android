@@ -60,9 +60,11 @@ public class PcGridAdapter extends GenericGridAdapter<PcView.ComputerObject> {
 
         if (obj.details.state == ComputerDetails.State.UNKNOWN) {
             prgView.setVisibility(View.VISIBLE);
+            imgView.setVisibility(View.INVISIBLE);
         }
         else {
             prgView.setVisibility(View.GONE);
+            imgView.setVisibility(View.VISIBLE);
         }
 
         txtView.setText(obj.details.name);
