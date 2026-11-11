@@ -2,12 +2,15 @@
 
 **Moonlight Zenith** is a modernized, feature-rich fork of [Moonlight Android](https://github.com/moonlight-stream/moonlight-android) featuring a complete **Material Design 3 (Material You)** interface, a **bulletproof multi-language keyboard & punctuation engine**, **in-stream floating quick actions**, **enhanced on-screen controls**, and **sensor-driven landscape orientation**.
 
-![Main Screen](https://raw.githubusercontent.com/bcrtvkcs/moonlight-zenith-android/refs/heads/master/screenshots/Screenshot_20260613-224037_MoonlightZenith.png)
-![Settings](https://raw.githubusercontent.com/bcrtvkcs/moonlight-zenith-android/refs/heads/master/screenshots/Screenshot_20260613-224054_MoonlightZenith.png)
-![PCs](https://raw.githubusercontent.com/bcrtvkcs/moonlight-zenith-android/refs/heads/master/screenshots/Screenshot_20260613-224102_MoonlightZenith.png)
-![PCs](https://raw.githubusercontent.com/bcrtvkcs/moonlight-zenith-android/refs/heads/master/screenshots/Screenshot_20260613-224102_MoonlightZenith.png)
-![Desktop View](https://raw.githubusercontent.com/bcrtvkcs/moonlight-zenith-android/refs/heads/master/screenshots/Screenshot_20260613-224124_MoonlightZenith.png)
-![Attect Menu](https://raw.githubusercontent.com/bcrtvkcs/moonlight-zenith-android/refs/heads/master/screenshots/Screenshot_20260613-224131_MoonlightZenith.png)
+## 📸 Screenshots
+
+| PCs | Apps & Context Sheet | Settings |
+| :---: | :---: | :---: |
+| ![PCs](https://raw.githubusercontent.com/bcrtvkcs/moonlight-zenith-android/refs/heads/master/screenshots/Screenshot_20260613-224102_MoonlightZenith.png) | ![Apps & Context Sheet](https://raw.githubusercontent.com/bcrtvkcs/moonlight-zenith-android/refs/heads/master/screenshots/Screenshot_20260613-224037_MoonlightZenith.png) | ![Settings](https://raw.githubusercontent.com/bcrtvkcs/moonlight-zenith-android/refs/heads/master/screenshots/Screenshot_20260613-224054_MoonlightZenith.png) |
+
+| Desktop View | Attect Menu |
+| :---: | :---: |
+| ![Desktop View](https://raw.githubusercontent.com/bcrtvkcs/moonlight-zenith-android/refs/heads/master/screenshots/Screenshot_20260613-224124_MoonlightZenith.png) | ![Attect Menu](https://raw.githubusercontent.com/bcrtvkcs/moonlight-zenith-android/refs/heads/master/screenshots/Screenshot_20260613-224131_MoonlightZenith.png) |
 
 ## ✨ What's in the box?
 
