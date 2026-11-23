@@ -71,17 +71,37 @@ def getLatestTag = { ->
         resValues = true
     }
 
+    def hasReleaseKeystore = false
+
     signingConfigs {
         release {
             def keystorePropertiesFile = rootProject.file("local.properties")
             if (keystorePropertiesFile.exists()) {
                 def keystoreProperties = new Properties()
-                keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+                keystorePropertiesFile.withInputStream { keystoreProperties.load(it) }
                 if (keystoreProperties.containsKey('keystore.file')) {
-                    storeFile file(keystoreProperties['keystore.file'])
-                    storePassword keystoreProperties['keystore.password']
-                    keyAlias keystoreProperties['keystore.alias']
-                    keyPassword keystoreProperties['keystore.alias_password']
+                    def ksFile = file(keystoreProperties['keystore.file'])
+                    if (ksFile.exists()) {
+                        storeFile ksFile
+                        storePassword keystoreProperties['keystore.password']
+                        keyAlias keystoreProperties['keystore.alias']
+                        keyPassword keystoreProperties['keystore.alias_password']
+                        hasReleaseKeystore = true
+                    }
+                }
+            }
+
+            if (!hasReleaseKeystore) {
+                def envKeystorePath = System.getenv("KEYSTORE_FILE")
+                if (envKeystorePath != null && !envKeystorePath.trim().isEmpty()) {
+                    def ksFile = file(envKeystorePath)
+                    if (ksFile.exists()) {
+                        storeFile ksFile
+                        storePassword System.getenv("KEYSTORE_PASSWORD")
+                        keyAlias System.getenv("KEY_ALIAS")
+                        keyPassword System.getenv("KEY_PASSWORD")
+                        hasReleaseKeystore = true
+                    }
                 }
             }
         }
@@ -149,7 +169,9 @@ def getLatestTag = { ->
             resValue "string", "app_label", "Moonlight Zenith"
             resValue "string", "app_label_root", "Moonlight Zenith"
 
-            signingConfig signingConfigs.release
+            if (hasReleaseKeystore) {
+                signingConfig signingConfigs.release
+            }
 
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
@@ -189,7 +211,9 @@ def getLatestTag = { ->
             resValue "string", "app_label", "Moonlight Zenith"
             resValue "string", "app_label_root", "Moonlight Zenith"
 
-            signingConfig signingConfigs.release
+            if (hasReleaseKeystore) {
+                signingConfig signingConfigs.release
+            }
 
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'

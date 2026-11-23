@@ -47,6 +47,8 @@ app/src/main/jni/moonlight-core/Build.txt
 
 # sign
 sign.jks
+*.jks
+*.keystore
 
 # Windows shortcuts
 *.lnk

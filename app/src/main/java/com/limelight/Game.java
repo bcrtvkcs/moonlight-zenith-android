@@ -5,6 +5,7 @@ import com.limelight.binding.PlatformBinding;
 import com.limelight.binding.audio.AndroidAudioRenderer;
 import com.limelight.binding.input.ControllerHandler;
 import com.limelight.binding.input.KeyboardTranslator;
+import com.limelight.binding.input.StreamInputConnection;
 import com.limelight.binding.input.capture.InputCaptureManager;
 import com.limelight.binding.input.capture.InputCaptureProvider;
 import com.limelight.binding.input.touch.AbsoluteTouchContext;
@@ -75,6 +76,7 @@ import android.view.View.OnGenericMotionListener;
 import android.view.View.OnSystemUiVisibilityChangeListener;
 import android.view.View.OnTouchListener;
 import android.view.Window;
+import android.view.WindowInsets;
 import android.view.WindowManager;
 import android.widget.FrameLayout;
 import android.view.inputmethod.InputMethodManager;
@@ -139,6 +141,7 @@ public class Game extends GameAttectActivity implements SurfaceHolder.Callback,
     private InputCaptureProvider inputCaptureProvider;
     private int modifierFlags = 0;
     private boolean grabbedInput = true;
+    private boolean lastImeVisible = false;
     private boolean cursorVisible = false;
     private boolean waitingForAllModifiersUp = false;
     private int specialKeyCode = KeyEvent.KEYCODE_UNKNOWN;
@@ -273,6 +276,28 @@ public class Game extends GameAttectActivity implements SurfaceHolder.Callback,
         streamView.setOnGenericMotionListener(this);
         streamView.setOnKeyListener(this);
         streamView.setInputCallbacks(this);
+
+        if (prefConfig.smartKeyboard) {
+            // Present the StreamView as a text field to the IME so glide typing,
+            // suggestions and autocorrect work. Text edits are diffed into keystrokes.
+            streamView.setImeTextMode(true, imeTextSink);
+
+            // Being a text editor would otherwise allow the IME to pop up by itself
+            // when the stream starts on large screens.
+            getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_HIDDEN);
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                // Drop the IME's shadow text buffer when the keyboard is dismissed
+                streamView.setOnApplyWindowInsetsListener((v, insets) -> {
+                    boolean imeVisible = insets.isVisible(WindowInsets.Type.ime());
+                    if (lastImeVisible && !imeVisible) {
+                        streamView.resetImeTextBuffer();
+                    }
+                    lastImeVisible = imeVisible;
+                    return v.onApplyWindowInsets(insets);
+                });
+            }
+        }
 
         // Listen for touch events on the background touch view to enable trackpad mode
         // to work on areas outside of the StreamView itself. We use a separate View
@@ -821,6 +846,10 @@ public class Game extends GameAttectActivity implements SurfaceHolder.Callback,
         // We can't guarantee the state of modifiers keys which may have
         // lifted while focus was not on us. Clear the modifier state.
         this.modifierFlags = 0;
+
+        if (hasFocus && streamView != null && streamView.isImeTextModeEnabled()) {
+            streamView.requestFocus();
+        }
 
         // With Android native pointer capture, capture is lost when focus is lost,
         // so it must be requested again when focus is regained.
@@ -1622,37 +1651,148 @@ public class Game extends GameAttectActivity implements SurfaceHolder.Callback,
             return false;
         }
 
+        sendTextToHost(event.getCharacters(), getModifierState(event));
+        return true;
+    }
+
+    // Sends a string of characters to the host, honoring the configured host keyboard layout.
+    // Characters that map to a virtual key are sent on the keyboard channel (which avoids the
+    // 50ms flush sleep in LiSendUtf8TextEvent and stays strictly ordered with backspaces);
+    // everything else is batched as UTF-8 text.
+    private void sendTextToHost(String chars, byte baseModifiers) {
         android.content.SharedPreferences prefs = android.preference.PreferenceManager.getDefaultSharedPreferences(this);
         String hostLayout = com.limelight.binding.input.HostKeyboardLayoutTranslator.resolveLayout(
                 prefs.getString("list_host_keyboard_layout", "auto"));
 
-        String chars = event.getCharacters();
-        for (int i = 0; i < chars.length(); i++) {
+        boolean hostShiftDown = (baseModifiers & com.limelight.nvstream.input.KeyboardPacket.MODIFIER_SHIFT) != 0;
+        StringBuilder utf8Batch = null;
+
+        for (int i = 0; i < chars.length(); ) {
             int c = chars.codePointAt(i);
+            i += Character.charCount(c);
+
             com.limelight.binding.input.HostKeyboardLayoutTranslator.TranslationResult override = 
                 com.limelight.binding.input.HostKeyboardLayoutTranslator.translate(hostLayout, c);
 
+            if (override == null) {
+                if (c >= 'a' && c <= 'z') {
+                    override = new com.limelight.binding.input.HostKeyboardLayoutTranslator.TranslationResult(
+                            (short) ('A' + (c - 'a')), false);
+                } else if (c >= 'A' && c <= 'Z') {
+                    override = new com.limelight.binding.input.HostKeyboardLayoutTranslator.TranslationResult(
+                            (short) c, true);
+                } else if (c >= '0' && c <= '9') {
+                    override = new com.limelight.binding.input.HostKeyboardLayoutTranslator.TranslationResult(
+                            (short) c, false);
+                } else if (c == ' ') {
+                    override = new com.limelight.binding.input.HostKeyboardLayoutTranslator.TranslationResult(
+                            (short) 0x20, false);
+                } else if (c == '\t') {
+                    override = new com.limelight.binding.input.HostKeyboardLayoutTranslator.TranslationResult(
+                            (short) 0x09, false);
+                }
+            }
+
             if (override != null && !override.sendAsUtf8) {
-                byte modifier = (byte) (getModifierState(event) & ~(com.limelight.nvstream.input.KeyboardPacket.MODIFIER_ALT | com.limelight.nvstream.input.KeyboardPacket.MODIFIER_SHIFT));
+                if (utf8Batch != null && utf8Batch.length() > 0) {
+                    conn.sendUtf8Text(utf8Batch.toString());
+                    utf8Batch.setLength(0);
+                }
+
+                byte modifier = (byte) (baseModifiers & ~(com.limelight.nvstream.input.KeyboardPacket.MODIFIER_ALT | com.limelight.nvstream.input.KeyboardPacket.MODIFIER_SHIFT));
                 if (override.requiresShift) {
                     modifier = (byte) (modifier | com.limelight.nvstream.input.KeyboardPacket.MODIFIER_SHIFT);
-                    conn.sendKeyboardInput((short) 0x80A0, com.limelight.nvstream.input.KeyboardPacket.KEY_DOWN, modifier, (byte) 0);
+                    if (!hostShiftDown) {
+                        conn.sendKeyboardInput((short) 0x80A0, com.limelight.nvstream.input.KeyboardPacket.KEY_DOWN, modifier, (byte) 0);
+                    }
+                } else if (hostShiftDown) {
+                    conn.sendKeyboardInput((short) 0x80A0, com.limelight.nvstream.input.KeyboardPacket.KEY_UP, modifier, (byte) 0);
+                    conn.sendKeyboardInput((short) 0x80A1, com.limelight.nvstream.input.KeyboardPacket.KEY_UP, modifier, (byte) 0);
                 }
                 short translatedVk = (short) (0x8000 | override.vkCode);
 
                 conn.sendKeyboardInput(translatedVk, com.limelight.nvstream.input.KeyboardPacket.KEY_DOWN, modifier, (byte) 0);
                 conn.sendKeyboardInput(translatedVk, com.limelight.nvstream.input.KeyboardPacket.KEY_UP, modifier, (byte) 0);
 
-                if (override.requiresShift) {
+                if (override.requiresShift && !hostShiftDown) {
                     conn.sendKeyboardInput((short) 0x80A0, com.limelight.nvstream.input.KeyboardPacket.KEY_UP,
                             (byte) (modifier & ~com.limelight.nvstream.input.KeyboardPacket.MODIFIER_SHIFT), (byte) 0);
                 }
             } else {
-                conn.sendUtf8Text(new String(Character.toChars(c)));
+                if (hostShiftDown) {
+                    conn.sendKeyboardInput((short) 0x80A0, com.limelight.nvstream.input.KeyboardPacket.KEY_UP, (byte) 0, (byte) 0);
+                    conn.sendKeyboardInput((short) 0x80A1, com.limelight.nvstream.input.KeyboardPacket.KEY_UP, (byte) 0, (byte) 0);
+                    hostShiftDown = false;
+                }
+                if (utf8Batch == null) {
+                    utf8Batch = new StringBuilder();
+                }
+                utf8Batch.appendCodePoint(c);
             }
         }
-        return true;
+
+        if (utf8Batch != null && utf8Batch.length() > 0) {
+            conn.sendUtf8Text(utf8Batch.toString());
+        }
     }
+
+    // Presses and releases a Windows virtual key on the host
+    private void tapHostVirtualKey(int vk, int count) {
+        short keyMap = (short) (0x8000 | vk);
+        for (int i = 0; i < count; i++) {
+            conn.sendKeyboardInput(keyMap, KeyboardPacket.KEY_DOWN, (byte) 0, (byte) 0);
+            conn.sendKeyboardInput(keyMap, KeyboardPacket.KEY_UP, (byte) 0, (byte) 0);
+        }
+    }
+
+    // Receives text edits from the soft keyboard in smart keyboard mode
+    private final StreamInputConnection.HostTextSink imeTextSink = new StreamInputConnection.HostTextSink() {
+        private static final int VK_BACK = 0x08;
+        private static final int VK_RETURN = 0x0D;
+        private static final int VK_LEFT = 0x25;
+        private static final int VK_RIGHT = 0x27;
+        private static final int VK_DELETE = 0x2E;
+
+        @Override
+        public void sendText(String text) {
+            if (conn != null && grabbedInput) {
+                sendTextToHost(text, getModifierState());
+            }
+        }
+
+        @Override
+        public void sendBackspaces(int count) {
+            if (conn != null && grabbedInput) {
+                tapHostVirtualKey(VK_BACK, count);
+            }
+        }
+
+        @Override
+        public void sendForwardDeletes(int count) {
+            if (conn != null && grabbedInput) {
+                tapHostVirtualKey(VK_DELETE, count);
+            }
+        }
+
+        @Override
+        public void sendCursorMoves(int delta) {
+            if (conn != null && grabbedInput && delta != 0) {
+                tapHostVirtualKey(delta < 0 ? VK_LEFT : VK_RIGHT, Math.abs(delta));
+            }
+        }
+
+        @Override
+        public void sendEnter() {
+            if (conn != null && grabbedInput) {
+                tapHostVirtualKey(VK_RETURN, 1);
+            }
+        }
+
+        @Override
+        public boolean sendImeKeyEvent(KeyEvent event) {
+            return onKey(streamView, event.getKeyCode(), event);
+        }
+    };
 
     private TouchContext getTouchContext(int actionIndex) {
         if (actionIndex < touchContextMap.length) {
@@ -1666,6 +1806,34 @@ public class Game extends GameAttectActivity implements SurfaceHolder.Callback,
     public void toggleKeyboard() {
         LimeLog.info("Toggling keyboard overlay");
         InputMethodManager inputManager = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+        if (streamView != null && streamView.isImeTextModeEnabled()) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                WindowInsets rootInsets = streamView.getRootWindowInsets();
+                boolean imeVisible = rootInsets != null && rootInsets.isVisible(WindowInsets.Type.ime());
+                if (imeVisible) {
+                    if (!inputManager.hideSoftInputFromWindow(streamView.getWindowToken(), 0)) {
+                        inputManager.toggleSoftInput(0, 0);
+                    }
+                    return;
+                }
+
+                streamView.requestFocus();
+                inputManager.restartInput(streamView);
+                if (!inputManager.showSoftInput(streamView, 0)) {
+                    streamView.post(() -> {
+                        streamView.requestFocus();
+                        inputManager.restartInput(streamView);
+                        if (!inputManager.showSoftInput(streamView, 0)) {
+                            inputManager.toggleSoftInput(0, 0);
+                        }
+                    });
+                }
+                return;
+            }
+
+            streamView.requestFocus();
+            inputManager.restartInput(streamView);
+        }
         inputManager.toggleSoftInput(0, 0);
     }
 
@@ -1984,6 +2152,14 @@ public class Game extends GameAttectActivity implements SurfaceHolder.Callback,
     // Returns true if the event was consumed
     // NB: View is only present if called from a view callback
     private boolean handleMotionEvent(View view, MotionEvent event) {  //handleMotionEvent, mark mark
+        // A touch or click may move the host's caret/focus, so the IME's shadow
+        // text buffer can no longer be trusted
+        if (streamView != null &&
+                (event.getActionMasked() == MotionEvent.ACTION_DOWN ||
+                        event.getActionMasked() == MotionEvent.ACTION_BUTTON_PRESS)) {
+            streamView.resetImeTextBuffer();
+        }
+
         // Pass through mouse/touch/joystick input if we're not grabbing
 
         if (!grabbedInput) {

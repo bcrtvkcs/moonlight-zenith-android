@@ -284,6 +284,8 @@
     <string name="summary_show_guide_button">Ekranda ana menü (Guide) düğmesini göster</string>
     <string name="title_list_host_keyboard_layout">Ana bilgisayar klavye düzeni</string>
     <string name="summary_list_host_keyboard_layout">Uzak bilgisayarınızın klavye düzenini seçin</string>
+    <string name="title_checkbox_smart_keyboard">Akıllı klavye modu</string>
+    <string name="summary_checkbox_smart_keyboard">Ekran klavyesinde (ör. Gboard) kaydırarak yazma, öneriler ve otomatik düzeltmeyi etkinleştirir. Düzeltmeler ana bilgisayara geri silme tuşuyla uygulanır. Oyunlarda kapalı tutulması önerilir.</string>
     <string name="host_keyboard_layout_auto">Otomatik / Genel (Varsayılan)</string>
     <string name="host_keyboard_layout_tr">Türkçe (QWERTY)</string>
     <string name="host_keyboard_layout_de">Almanca (QWERTZ)</string>

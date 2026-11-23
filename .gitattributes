@@ -1,0 +1,4 @@
+# Ensure Gradle wrapper and shell scripts always use LF line endings for Linux CI runners
+gradlew text eol=lf
+*.sh text eol=lf
+*.bat text eol=crlf

@@ -192,6 +192,11 @@
             android:entries="@array/host_keyboard_layout_names"
             android:entryValues="@array/host_keyboard_layout_values"
             android:defaultValue="auto" />
+        <com.limelight.preferences.M3SwitchPreference
+            android:key="checkbox_smart_keyboard"
+            android:title="@string/title_checkbox_smart_keyboard"
+            android:summary="@string/summary_checkbox_smart_keyboard"
+            android:defaultValue="false" />
     </com.limelight.preferences.M3PreferenceCategory>
 
     <com.limelight.preferences.M3PreferenceCategory

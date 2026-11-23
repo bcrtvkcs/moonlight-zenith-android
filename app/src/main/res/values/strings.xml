@@ -96,6 +96,8 @@
     <!-- General strings -->
     <string name="title_list_host_keyboard_layout">Host PC Keyboard Layout</string>
     <string name="summary_list_host_keyboard_layout">Select the keyboard layout of your remote PC</string>
+    <string name="title_checkbox_smart_keyboard">Smart keyboard mode</string>
+    <string name="summary_checkbox_smart_keyboard">Enables glide typing, suggestions and autocorrect on the on-screen keyboard (e.g. Gboard). Corrections are applied on the host with backspaces. Best kept off for games.</string>
     <string name="host_keyboard_layout_auto">Auto / Generic (Default)</string>
     <string name="host_keyboard_layout_tr">Turkish (QWERTY)</string>
     <string name="host_keyboard_layout_de">German (QWERTZ)</string>

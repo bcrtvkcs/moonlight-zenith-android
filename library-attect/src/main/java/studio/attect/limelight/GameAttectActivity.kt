@@ -168,8 +168,8 @@ abstract class GameAttectActivity : Activity() {
             toggleOverflowMenu()
         }
         toggleSoftKeyboardMenu.setOnClickListener {
-            toggleSoftKeyboardRunner()
             toggleOverflowMenu()
+            toggleSoftKeyboardRunner()
         }
 
         virtualKeyExitProgram.setOnClickListener {

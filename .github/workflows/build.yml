@@ -1,0 +1,140 @@
+name: Build APKs
+
+on:
+  push:
+    branches:
+      - master
+    paths-ignore:
+      - '**.md'
+      - 'screenshots/**'
+      - 'store-assets/**'
+      - 'fastlane/**'
+      - '.gitignore'
+      - '.gitattributes'
+  pull_request:
+    branches:
+      - master
+    paths-ignore:
+      - '**.md'
+      - 'screenshots/**'
+      - 'store-assets/**'
+      - 'fastlane/**'
+      - '.gitignore'
+      - '.gitattributes'
+  workflow_dispatch:
+    inputs:
+      variant:
+        description: 'APK variant(s) to build'
+        required: true
+        default: 'debug'
+        type: choice
+        options:
+          - nonRootDebug
+          - debug
+          - release
+          - all
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Assemble Android APKs
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository with submodules and full history
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Accept SDK licenses and install NDK
+        run: |
+          yes | sdkmanager --licenses >/dev/null 2>&1 || true
+          sdkmanager --install "ndk;29.0.14206865"
+          sdkmanager --install "platforms;android-37" || sdkmanager --channel=3 --install "platforms;android-37" || true
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Prepare Gradle wrapper
+        run: |
+          sed -i 's/\r$//' gradlew
+          chmod +x gradlew
+
+      - name: Configure signing keystore (if secrets are present)
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            printf '%s' "$KEYSTORE_BASE64" | tr -d '\r\n ' | base64 --decode > "$RUNNER_TEMP/keystore.jks"
+            echo "KEYSTORE_FILE=$RUNNER_TEMP/keystore.jks" >> "$GITHUB_ENV"
+            echo "Signing keystore configured."
+          else
+            echo "KEYSTORE_BASE64 not configured; debug builds will use Android default debug keystore."
+          fi
+
+      - name: Build APKs
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          VARIANT: ${{ inputs.variant || 'debug' }}
+        run: |
+          case "$VARIANT" in
+            nonRootDebug)
+              TASKS=":app:assembleNonRootDebug"
+              ;;
+            debug)
+              TASKS=":app:assembleNonRootDebug :app:assembleRootDebug"
+              ;;
+            release)
+              if [ -z "${KEYSTORE_FILE:-}" ]; then
+                echo "::error::Release builds require KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_ALIAS, and KEY_PASSWORD secrets."
+                exit 1
+              fi
+              TASKS=":app:assembleNonRootRelease :app:assembleRootRelease"
+              ;;
+            all)
+              if [ -z "${KEYSTORE_FILE:-}" ]; then
+                echo "::error::Release builds require KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_ALIAS, and KEY_PASSWORD secrets."
+                exit 1
+              fi
+              TASKS=":app:assembleNonRootDebug :app:assembleRootDebug :app:assembleNonRootRelease :app:assembleRootRelease"
+              ;;
+            *)
+              echo "::error::Unknown variant: $VARIANT"
+              exit 1
+              ;;
+          esac
+
+          echo "Running Gradle tasks: $TASKS"
+          ./gradlew $TASKS --no-daemon --stacktrace
+
+      - name: Collect built APKs
+        run: |
+          mkdir -p "$RUNNER_TEMP/apks"
+          find app/build/outputs/apk -type f -name '*.apk' -exec cp -v {} "$RUNNER_TEMP/apks/" \;
+          ls -lh "$RUNNER_TEMP/apks/"
+
+      - name: Upload APK artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: moonlight-zenith-apks-${{ inputs.variant || 'debug' }}-${{ github.run_number }}
+          path: ${{ runner.temp }}/apks/*.apk
+          retention-days: 14
+          if-no-files-found: error
