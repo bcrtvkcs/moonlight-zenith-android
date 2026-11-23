@@ -182,4 +182,56 @@
         <item>dynamic</item>
         <item>zenith</item>
     </string-array>
+    <string-array name="ui_style_names">
+        <item>@string/ui_style_material3</item>
+        <item>@string/ui_style_liquid_glass</item>
+    </string-array>
+    <string-array name="ui_style_values" translatable="false">
+        <item>material3</item>
+        <item>liquid_glass</item>
+    </string-array>
+    <string-array name="liquid_glass_style_names">
+        <item>@string/liquid_glass_style_frosted</item>
+        <item>@string/liquid_glass_style_clear</item>
+        <item>@string/liquid_glass_style_tinted</item>
+        <item>@string/liquid_glass_style_custom</item>
+    </string-array>
+    <string-array name="liquid_glass_style_values" translatable="false">
+        <item>frosted</item>
+        <item>clear</item>
+        <item>tinted</item>
+        <item>custom</item>
+    </string-array>
+    <string-array name="ui_background_source_names">
+        <item>@string/ui_background_source_none</item>
+        <item>@string/ui_background_source_custom_image</item>
+        <item>@string/ui_background_source_wallpaper</item>
+    </string-array>
+    <string-array name="ui_background_source_values" translatable="false">
+        <item>none</item>
+        <item>custom_image</item>
+        <item>wallpaper</item>
+    </string-array>
+    <string-array name="ui_background_tint_mode_names">
+        <item>@string/ui_background_tint_theme_surface</item>
+        <item>@string/ui_background_tint_theme_primary</item>
+        <item>@string/ui_background_tint_pure_black</item>
+        <item>@string/ui_background_tint_indigo</item>
+        <item>@string/ui_background_tint_ocean</item>
+        <item>@string/ui_background_tint_emerald</item>
+        <item>@string/ui_background_tint_amber</item>
+        <item>@string/ui_background_tint_crimson</item>
+        <item>@string/ui_background_tint_none</item>
+    </string-array>
+    <string-array name="ui_background_tint_mode_values" translatable="false">
+        <item>theme_surface</item>
+        <item>theme_primary</item>
+        <item>pure_black</item>
+        <item>indigo</item>
+        <item>ocean</item>
+        <item>emerald</item>
+        <item>amber</item>
+        <item>crimson</item>
+        <item>none</item>
+    </string-array>
 </resources>

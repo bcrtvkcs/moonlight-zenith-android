@@ -6,10 +6,14 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.media.MediaCodecInfo;
+import android.content.DialogInterface;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.app.Activity;
 import android.os.Handler;
+import android.provider.MediaStore;
+import android.widget.Toast;
 import android.os.Vibrator;
 import android.preference.CheckBoxPreference;
 import android.preference.ListPreference;
@@ -30,16 +34,26 @@ import android.widget.FrameLayout;
 import android.widget.ListView;
 import android.widget.TextView;
 
+import androidx.activity.result.ActivityResult;
+import androidx.activity.result.ActivityResultCallback;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.viewpager2.widget.ViewPager2;
 
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.tabs.TabLayout;
 import com.google.android.material.tabs.TabLayoutMediator;
 import com.limelight.LimeLog;
 import com.limelight.PcView;
 import com.limelight.R;
 import com.limelight.binding.video.MediaCodecHelper;
+import com.limelight.ui.background.UiBackgroundManager;
+import com.limelight.ui.glass.StreamSettingsGlassCallbacks;
+import com.limelight.ui.glass.StreamSettingsGlassController;
+import com.limelight.ui.glass.StreamSettingsGlassHost;
 import com.limelight.utils.Dialog;
 import com.limelight.utils.UiHelper;
 
@@ -47,7 +61,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-public class StreamSettings extends Activity {
+public class StreamSettings extends AppCompatActivity {
     public static final String EXTRA_CATEGORY_KEY = "com.limelight.preferences.EXTRA_CATEGORY_KEY";
 
     private PreferenceConfiguration previousPrefs;
@@ -57,6 +71,9 @@ public class StreamSettings extends Activity {
     private TextView settingsTitleText;
     private SettingsFragment activeFragment;
     private TabLayoutMediator tabLayoutMediator;
+    private boolean isGlassUi;
+    private StreamSettingsGlassController glassController;
+    private ActivityResultLauncher<Intent> backgroundImagePickerLauncher;
 
     // HACK for Android 9
     static DisplayCutout displayCutoutP;
@@ -77,9 +94,79 @@ public class StreamSettings extends Activity {
         return currentCategoryKey;
     }
 
+    public void launchBackgroundImagePicker() {
+        if (backgroundImagePickerLauncher == null) {
+            return;
+        }
+        Intent pickerIntent;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            pickerIntent = new Intent(MediaStore.ACTION_PICK_IMAGES);
+            pickerIntent.setType("image/*");
+        } else {
+            pickerIntent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+            pickerIntent.addCategory(Intent.CATEGORY_OPENABLE);
+            pickerIntent.setType("image/*");
+        }
+        try {
+            backgroundImagePickerLauncher.launch(pickerIntent);
+        } catch (Exception e) {
+            // Fallback to generic ACTION_GET_CONTENT on OEM ROMs lacking system Photo Picker
+            Intent fallback = new Intent(Intent.ACTION_GET_CONTENT);
+            fallback.setType("image/*");
+            try {
+                backgroundImagePickerLauncher.launch(fallback);
+            } catch (Exception ignored) {
+                Toast.makeText(this, R.string.ui_background_image_failed, Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
+
+    public void clearCustomBackgroundImage() {
+        UiBackgroundManager.clearCustomImage(this);
+        UiBackgroundManager.refreshFromPreferences(this);
+        UiHelper.applyWindowSurfaceColors(this);
+        if (activeFragment != null) {
+            activeFragment.refreshUiBackgroundPreferenceStates();
+        }
+        if (glassController != null) {
+            glassController.bumpRevision();
+        }
+        Toast.makeText(this, R.string.ui_background_image_cleared, Toast.LENGTH_SHORT).show();
+    }
+
+    public void showCustomImageOptionsDialog() {
+        if (!UiBackgroundManager.hasCustomImage(this)) {
+            launchBackgroundImagePicker();
+            return;
+        }
+        new MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.title_ui_background_pick_image)
+                .setItems(new CharSequence[]{
+                        getString(R.string.ui_background_pick_action),
+                        getString(R.string.ui_background_clear_action)
+                }, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        if (which == 0) {
+                            launchBackgroundImagePicker();
+                        } else if (which == 1) {
+                            clearCustomBackgroundImage();
+                        }
+                    }
+                })
+                .show();
+    }
+
     void onCategoriesLoaded(final List<CategoryTab> categories, SettingsFragment fragment, final ViewPager2 viewPager) {
         this.activeFragment = fragment;
-        if (categories == null || categories.isEmpty() || settingsTabLayout == null || viewPager == null) {
+        if (categories == null || categories.isEmpty()) {
+            return;
+        }
+        if (isGlassUi && glassController != null) {
+            glassController.setCategories(categories, currentCategoryKey);
+            return;
+        }
+        if (settingsTabLayout == null || viewPager == null) {
             return;
         }
 
@@ -180,20 +267,115 @@ public class StreamSettings extends Activity {
 
         previousPrefs = PreferenceConfiguration.readPreferences(this);
 
+        backgroundImagePickerLauncher = registerForActivityResult(
+                new ActivityResultContracts.StartActivityForResult(),
+                new ActivityResultCallback<ActivityResult>() {
+                    @Override
+                    public void onActivityResult(ActivityResult result) {
+                        if (result.getResultCode() != Activity.RESULT_OK || result.getData() == null) {
+                            return;
+                        }
+                        Uri uri = result.getData().getData();
+                        if (uri == null) {
+                            return;
+                        }
+                        UiBackgroundManager.importCustomImage(StreamSettings.this, uri, new kotlin.jvm.functions.Function1<Boolean, kotlin.Unit>() {
+                            @Override
+                            public kotlin.Unit invoke(Boolean success) {
+                                if (Boolean.TRUE.equals(success)) {
+                                    SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(StreamSettings.this);
+                                    sp.edit().putString(
+                                            PreferenceConfiguration.UI_BACKGROUND_SOURCE_PREF_STRING,
+                                            PreferenceConfiguration.UI_BACKGROUND_SOURCE_CUSTOM
+                                    ).apply();
+                                    UiBackgroundManager.refreshFromPreferences(StreamSettings.this);
+                                    UiHelper.applyWindowSurfaceColors(StreamSettings.this);
+                                    if (activeFragment != null) {
+                                        activeFragment.syncBackgroundSourceListValue(PreferenceConfiguration.UI_BACKGROUND_SOURCE_CUSTOM);
+                                        activeFragment.refreshUiBackgroundPreferenceStates();
+                                    }
+                                    if (glassController != null) {
+                                        glassController.bumpRevision();
+                                    }
+                                    Toast.makeText(StreamSettings.this, R.string.ui_background_image_saved, Toast.LENGTH_SHORT).show();
+                                } else {
+                                    Toast.makeText(StreamSettings.this, R.string.ui_background_image_failed, Toast.LENGTH_SHORT).show();
+                                }
+                                return kotlin.Unit.INSTANCE;
+                            }
+                        });
+                    }
+                }
+        );
+
         UiHelper.setLocale(this);
+        isGlassUi = UiHelper.isLiquidGlassEnabled(this);
 
-        setContentView(R.layout.activity_stream_settings);
-        settingsTitleText = findViewById(R.id.settingsTitleText);
-        settingsTabLayout = findViewById(R.id.settingsTabLayout);
+        if (isGlassUi) {
+            glassController = new StreamSettingsGlassController();
+            FrameLayout root = new FrameLayout(this);
+            root.setLayoutParams(new ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT));
 
-        View backButton = findViewById(R.id.settingsBackButton);
-        if (backButton != null) {
-            backButton.setOnClickListener(new View.OnClickListener() {
+            FrameLayout hiddenFragmentHost = new FrameLayout(this);
+            hiddenFragmentHost.setId(R.id.stream_settings);
+            hiddenFragmentHost.setVisibility(View.GONE);
+            root.addView(hiddenFragmentHost, new FrameLayout.LayoutParams(0, 0));
+
+            root.addView(StreamSettingsGlassHost.createView(this, glassController, new StreamSettingsGlassCallbacks() {
                 @Override
-                public void onClick(View v) {
+                public void onBackClicked() {
                     onBackPressed();
                 }
-            });
+
+                @Override
+                public void onCategorySelected(String categoryKey) {
+                    if (categoryKey != null && !categoryKey.isEmpty()) {
+                        currentCategoryKey = categoryKey;
+                    }
+                }
+
+                @Override
+                public void onPickCustomBackgroundImage() {
+                    launchBackgroundImagePicker();
+                }
+
+                @Override
+                public void onClearCustomBackgroundImage() {
+                    clearCustomBackgroundImage();
+                }
+
+                @Override
+                public void onPreferenceMutated(String key) {
+                    if (activeFragment != null) {
+                        activeFragment.refreshUiBackgroundPreferenceStates();
+                    }
+                    UiBackgroundManager.refreshFromPreferences(StreamSettings.this);
+                    UiHelper.applyWindowSurfaceColors(StreamSettings.this);
+                    if (glassController != null) {
+                        glassController.bumpRevision();
+                    }
+                }
+            }), new FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT));
+
+            setContentView(root);
+        } else {
+            setContentView(R.layout.activity_stream_settings);
+            settingsTitleText = findViewById(R.id.settingsTitleText);
+            settingsTabLayout = findViewById(R.id.settingsTabLayout);
+
+            View backButton = findViewById(R.id.settingsBackButton);
+            if (backButton != null) {
+                backButton.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        onBackPressed();
+                    }
+                });
+            }
         }
 
         UiHelper.notifyNewRootView(this);
@@ -317,6 +499,117 @@ public class StreamSettings extends Activity {
             list.setAnimationCacheEnabled(false);
             list.setPadding(hPad, tPad, hPad, bPad);
             list.setClipToPadding(false);
+        }
+
+        void syncBackgroundSourceListValue(String value) {
+            Preference pref = findPreference(PreferenceConfiguration.UI_BACKGROUND_SOURCE_PREF_STRING);
+            if (pref instanceof ListPreference) {
+                ((ListPreference) pref).setValue(value);
+            }
+        }
+
+        private void markGlassStyleAsCustom(Activity act) {
+            SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(act);
+            if (!PreferenceConfiguration.LIQUID_GLASS_STYLE_CUSTOM.equals(
+                    sp.getString(PreferenceConfiguration.LIQUID_GLASS_STYLE_PREF_STRING, PreferenceConfiguration.DEFAULT_LIQUID_GLASS_STYLE))) {
+                sp.edit().putString(
+                        PreferenceConfiguration.LIQUID_GLASS_STYLE_PREF_STRING,
+                        PreferenceConfiguration.LIQUID_GLASS_STYLE_CUSTOM
+                ).apply();
+                Preference stylePref = findPreference(PreferenceConfiguration.LIQUID_GLASS_STYLE_PREF_STRING);
+                if (stylePref instanceof ListPreference) {
+                    ((ListPreference) stylePref).setValue(PreferenceConfiguration.LIQUID_GLASS_STYLE_CUSTOM);
+                }
+            }
+        }
+
+        private void syncGlassParameterPreferencesFromConfig(Activity act) {
+            PreferenceConfiguration cfg = PreferenceConfiguration.readPreferences(act);
+            Preference blurP = findPreference(PreferenceConfiguration.GLASS_BLUR_PREF_STRING);
+            if (blurP instanceof SeekBarPreference) {
+                ((SeekBarPreference) blurP).setProgress(cfg.glassBlurDp);
+            }
+            Preference refAmtP = findPreference(PreferenceConfiguration.GLASS_REFRACTION_AMOUNT_PREF_STRING);
+            if (refAmtP instanceof SeekBarPreference) {
+                ((SeekBarPreference) refAmtP).setProgress(cfg.glassRefractionAmountDp);
+            }
+            Preference refHeightP = findPreference(PreferenceConfiguration.GLASS_REFRACTION_HEIGHT_PREF_STRING);
+            if (refHeightP instanceof SeekBarPreference) {
+                ((SeekBarPreference) refHeightP).setProgress(cfg.glassRefractionHeightDp);
+            }
+            Preference chromaP = findPreference(PreferenceConfiguration.GLASS_CHROMATIC_ABERRATION_PREF_STRING);
+            if (chromaP instanceof CheckBoxPreference) {
+                ((CheckBoxPreference) chromaP).setChecked(cfg.glassChromaticAberration);
+            }
+            Preference depthP = findPreference(PreferenceConfiguration.GLASS_DEPTH_EFFECT_PREF_STRING);
+            if (depthP instanceof CheckBoxPreference) {
+                ((CheckBoxPreference) depthP).setChecked(cfg.glassDepthEffect);
+            }
+            Preference surfaceOpacityP = findPreference(PreferenceConfiguration.GLASS_SURFACE_OPACITY_PREF_STRING);
+            if (surfaceOpacityP instanceof SeekBarPreference) {
+                ((SeekBarPreference) surfaceOpacityP).setProgress(cfg.glassSurfaceOpacity);
+            }
+            Preference highlightP = findPreference(PreferenceConfiguration.GLASS_HIGHLIGHT_INTENSITY_PREF_STRING);
+            if (highlightP instanceof SeekBarPreference) {
+                ((SeekBarPreference) highlightP).setProgress(cfg.glassHighlightIntensity);
+            }
+            Preference vibrancyP = findPreference(PreferenceConfiguration.GLASS_VIBRANCY_PREF_STRING);
+            if (vibrancyP instanceof CheckBoxPreference) {
+                ((CheckBoxPreference) vibrancyP).setChecked(cfg.glassVibrancy);
+            }
+        }
+
+        void refreshUiBackgroundPreferenceStates() {
+            Activity act = getActivity();
+            if (act == null) {
+                return;
+            }
+            PreferenceConfiguration prefs = PreferenceConfiguration.readPreferences(act);
+            boolean isGlass = PreferenceConfiguration.UI_STYLE_LIQUID_GLASS.equals(prefs.uiStyle);
+            boolean hasBackground = !PreferenceConfiguration.DEFAULT_UI_BACKGROUND_SOURCE.equals(prefs.uiBackgroundSource);
+            boolean isCustomImage = PreferenceConfiguration.UI_BACKGROUND_SOURCE_CUSTOM.equals(prefs.uiBackgroundSource);
+            boolean hasTint = hasBackground && !"none".equals(prefs.uiBackgroundTintMode);
+
+            String[] glassKeys = new String[]{
+                    PreferenceConfiguration.LIQUID_GLASS_STYLE_PREF_STRING,
+                    PreferenceConfiguration.GLASS_BLUR_PREF_STRING,
+                    PreferenceConfiguration.GLASS_REFRACTION_AMOUNT_PREF_STRING,
+                    PreferenceConfiguration.GLASS_REFRACTION_HEIGHT_PREF_STRING,
+                    PreferenceConfiguration.GLASS_CHROMATIC_ABERRATION_PREF_STRING,
+                    PreferenceConfiguration.GLASS_DEPTH_EFFECT_PREF_STRING,
+                    PreferenceConfiguration.GLASS_SURFACE_OPACITY_PREF_STRING,
+                    PreferenceConfiguration.GLASS_HIGHLIGHT_INTENSITY_PREF_STRING,
+                    PreferenceConfiguration.GLASS_VIBRANCY_PREF_STRING
+            };
+            for (String key : glassKeys) {
+                Preference p = findPreference(key);
+                if (p != null) {
+                    p.setEnabled(isGlass);
+                }
+            }
+            Preference pickPref = findPreference(PreferenceConfiguration.UI_BACKGROUND_PICK_IMAGE_PREF_STRING);
+            if (pickPref != null) {
+                pickPref.setEnabled(isCustomImage);
+                pickPref.setSummary(UiBackgroundManager.hasCustomImage(act)
+                        ? R.string.summary_ui_background_pick_image_set
+                        : R.string.summary_ui_background_pick_image_empty);
+            }
+            Preference opacityPref = findPreference(PreferenceConfiguration.UI_BACKGROUND_OPACITY_PREF_STRING);
+            if (opacityPref != null) {
+                opacityPref.setEnabled(hasBackground);
+            }
+            Preference tintModePref = findPreference(PreferenceConfiguration.UI_BACKGROUND_TINT_MODE_PREF_STRING);
+            if (tintModePref != null) {
+                tintModePref.setEnabled(hasBackground);
+            }
+            Preference tintOpacityPref = findPreference(PreferenceConfiguration.UI_BACKGROUND_TINT_OPACITY_PREF_STRING);
+            if (tintOpacityPref != null) {
+                tintOpacityPref.setEnabled(hasTint);
+            }
+            Preference blurPref = findPreference(PreferenceConfiguration.UI_BACKGROUND_BLUR_PREF_STRING);
+            if (blurPref != null) {
+                blurPref.setEnabled(hasBackground);
+            }
         }
 
         private void setValue(String preferenceKey, String value) {
@@ -538,6 +831,238 @@ public class StreamSettings extends Activity {
             if (pureBlackPref != null) {
                 pureBlackPref.setOnPreferenceChangeListener(themeReloadListener);
             }
+            Preference uiStylePref = findPreference(PreferenceConfiguration.UI_STYLE_PREF_STRING);
+            if (uiStylePref != null) {
+                uiStylePref.setOnPreferenceChangeListener(themeReloadListener);
+            }
+
+            // Instant reactive listeners for Liquid Glass style & background customization
+            Preference.OnPreferenceChangeListener liveUiAppearanceListener = new Preference.OnPreferenceChangeListener() {
+                @Override
+                public boolean onPreferenceChange(final Preference preference, final Object newValue) {
+                    new Handler().post(new Runnable() {
+                        @Override
+                        public void run() {
+                            Activity act = SettingsFragment.this.getActivity();
+                            if (act != null && !act.isFinishing()) {
+                                UiBackgroundManager.clearLivePreview();
+                                UiBackgroundManager.refreshFromPreferences(act);
+                                UiHelper.applyWindowSurfaceColors(act);
+                                refreshUiBackgroundPreferenceStates();
+                                if (PreferenceConfiguration.UI_BACKGROUND_SOURCE_PREF_STRING.equals(preference.getKey())
+                                        && PreferenceConfiguration.UI_BACKGROUND_SOURCE_CUSTOM.equals(newValue)
+                                        && !UiBackgroundManager.hasCustomImage(act)
+                                        && act instanceof StreamSettings) {
+                                    ((StreamSettings) act).launchBackgroundImagePicker();
+                                }
+                                if (act instanceof StreamSettings && ((StreamSettings) act).glassController != null) {
+                                    ((StreamSettings) act).glassController.bumpRevision();
+                                }
+                            }
+                        }
+                    });
+                    return true;
+                }
+            };
+
+            Preference glassStylePref = findPreference(PreferenceConfiguration.LIQUID_GLASS_STYLE_PREF_STRING);
+            if (glassStylePref != null) {
+                glassStylePref.setOnPreferenceChangeListener(new Preference.OnPreferenceChangeListener() {
+                    @Override
+                    public boolean onPreferenceChange(Preference preference, final Object newValue) {
+                        new Handler().post(new Runnable() {
+                            @Override
+                            public void run() {
+                                Activity act = SettingsFragment.this.getActivity();
+                                if (act != null && !act.isFinishing()) {
+                                    String preset = newValue != null ? newValue.toString() : PreferenceConfiguration.DEFAULT_LIQUID_GLASS_STYLE;
+                                    if (!PreferenceConfiguration.LIQUID_GLASS_STYLE_CUSTOM.equals(preset)) {
+                                        UiBackgroundManager.applyGlassPresetToPreferences(act, preset);
+                                        syncGlassParameterPreferencesFromConfig(act);
+                                    } else {
+                                        UiBackgroundManager.refreshFromPreferences(act);
+                                    }
+                                    refreshUiBackgroundPreferenceStates();
+                                    if (act instanceof StreamSettings && ((StreamSettings) act).glassController != null) {
+                                        ((StreamSettings) act).glassController.bumpRevision();
+                                    }
+                                }
+                            }
+                        });
+                        return true;
+                    }
+                });
+            }
+
+            // Fine-grained Liquid Glass optical parameters (auto-switches preset to "custom" on edit)
+            Preference.OnPreferenceChangeListener glassParamChangeListener = new Preference.OnPreferenceChangeListener() {
+                @Override
+                public boolean onPreferenceChange(Preference preference, Object newValue) {
+                    new Handler().post(new Runnable() {
+                        @Override
+                        public void run() {
+                            Activity act = SettingsFragment.this.getActivity();
+                            if (act != null && !act.isFinishing()) {
+                                UiBackgroundManager.clearLivePreview();
+                                markGlassStyleAsCustom(act);
+                                UiBackgroundManager.refreshFromPreferences(act);
+                                refreshUiBackgroundPreferenceStates();
+                                if (act instanceof StreamSettings && ((StreamSettings) act).glassController != null) {
+                                    ((StreamSettings) act).glassController.bumpRevision();
+                                }
+                            }
+                        }
+                    });
+                    return true;
+                }
+            };
+
+            PreferenceCategory uiCatForGlass = (PreferenceCategory) findPreference("category_ui_settings");
+            String[] api31GlassKeys = new String[]{
+                    PreferenceConfiguration.GLASS_BLUR_PREF_STRING,
+                    PreferenceConfiguration.GLASS_VIBRANCY_PREF_STRING
+            };
+            String[] api33GlassKeys = new String[]{
+                    PreferenceConfiguration.GLASS_REFRACTION_AMOUNT_PREF_STRING,
+                    PreferenceConfiguration.GLASS_REFRACTION_HEIGHT_PREF_STRING,
+                    PreferenceConfiguration.GLASS_CHROMATIC_ABERRATION_PREF_STRING,
+                    PreferenceConfiguration.GLASS_DEPTH_EFFECT_PREF_STRING
+            };
+            String[] allGlassParamKeys = new String[]{
+                    PreferenceConfiguration.GLASS_BLUR_PREF_STRING,
+                    PreferenceConfiguration.GLASS_REFRACTION_AMOUNT_PREF_STRING,
+                    PreferenceConfiguration.GLASS_REFRACTION_HEIGHT_PREF_STRING,
+                    PreferenceConfiguration.GLASS_CHROMATIC_ABERRATION_PREF_STRING,
+                    PreferenceConfiguration.GLASS_DEPTH_EFFECT_PREF_STRING,
+                    PreferenceConfiguration.GLASS_SURFACE_OPACITY_PREF_STRING,
+                    PreferenceConfiguration.GLASS_HIGHLIGHT_INTENSITY_PREF_STRING,
+                    PreferenceConfiguration.GLASS_VIBRANCY_PREF_STRING
+            };
+
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S && uiCatForGlass != null) {
+                for (String key : api31GlassKeys) {
+                    Preference p = findPreference(key);
+                    if (p != null) {
+                        uiCatForGlass.removePreference(p);
+                    }
+                }
+            }
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU && uiCatForGlass != null) {
+                for (String key : api33GlassKeys) {
+                    Preference p = findPreference(key);
+                    if (p != null) {
+                        uiCatForGlass.removePreference(p);
+                    }
+                }
+            }
+            for (String key : allGlassParamKeys) {
+                Preference p = findPreference(key);
+                if (p != null) {
+                    p.setOnPreferenceChangeListener(glassParamChangeListener);
+                }
+            }
+            Preference bgSourcePref = findPreference(PreferenceConfiguration.UI_BACKGROUND_SOURCE_PREF_STRING);
+            if (bgSourcePref != null) {
+                bgSourcePref.setOnPreferenceChangeListener(liveUiAppearanceListener);
+            }
+            Preference bgTintModePref = findPreference(PreferenceConfiguration.UI_BACKGROUND_TINT_MODE_PREF_STRING);
+            if (bgTintModePref != null) {
+                bgTintModePref.setOnPreferenceChangeListener(liveUiAppearanceListener);
+            }
+            Preference bgPickImagePref = findPreference(PreferenceConfiguration.UI_BACKGROUND_PICK_IMAGE_PREF_STRING);
+            if (bgPickImagePref != null) {
+                bgPickImagePref.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
+                    @Override
+                    public boolean onPreferenceClick(Preference preference) {
+                        Activity act = SettingsFragment.this.getActivity();
+                        if (act instanceof StreamSettings) {
+                            ((StreamSettings) act).showCustomImageOptionsDialog();
+                        }
+                        return true;
+                    }
+                });
+            }
+
+            final SeekBarPreference bgOpacityPref = (SeekBarPreference) findPreference(PreferenceConfiguration.UI_BACKGROUND_OPACITY_PREF_STRING);
+            if (bgOpacityPref != null) {
+                bgOpacityPref.setOnPreferenceChangeListener(liveUiAppearanceListener);
+                bgOpacityPref.setOnLiveValueChangedListener(new SeekBarPreference.OnLiveValueChangedListener() {
+                    @Override
+                    public void onLiveValueChanged(int value) {
+                        Activity act = SettingsFragment.this.getActivity();
+                        UiBackgroundManager.setLivePreview(value, null, null);
+                        if (act != null && !UiHelper.isLiquidGlassEnabled(act)) {
+                            UiHelper.applyWindowSurfaceColors(act);
+                        }
+                    }
+
+                    @Override
+                    public void onLivePreviewCancelled() {
+                        Activity act = SettingsFragment.this.getActivity();
+                        UiBackgroundManager.clearLivePreview();
+                        if (act != null && !UiHelper.isLiquidGlassEnabled(act)) {
+                            UiHelper.applyWindowSurfaceColors(act);
+                        }
+                    }
+                });
+            }
+
+            final SeekBarPreference bgTintOpacityPref = (SeekBarPreference) findPreference(PreferenceConfiguration.UI_BACKGROUND_TINT_OPACITY_PREF_STRING);
+            if (bgTintOpacityPref != null) {
+                bgTintOpacityPref.setOnPreferenceChangeListener(liveUiAppearanceListener);
+                bgTintOpacityPref.setOnLiveValueChangedListener(new SeekBarPreference.OnLiveValueChangedListener() {
+                    @Override
+                    public void onLiveValueChanged(int value) {
+                        Activity act = SettingsFragment.this.getActivity();
+                        UiBackgroundManager.setLivePreview(null, value, null);
+                        if (act != null && !UiHelper.isLiquidGlassEnabled(act)) {
+                            UiHelper.applyWindowSurfaceColors(act);
+                        }
+                    }
+
+                    @Override
+                    public void onLivePreviewCancelled() {
+                        Activity act = SettingsFragment.this.getActivity();
+                        UiBackgroundManager.clearLivePreview();
+                        if (act != null && !UiHelper.isLiquidGlassEnabled(act)) {
+                            UiHelper.applyWindowSurfaceColors(act);
+                        }
+                    }
+                });
+            }
+
+            final SeekBarPreference bgBlurPref = (SeekBarPreference) findPreference(PreferenceConfiguration.UI_BACKGROUND_BLUR_PREF_STRING);
+            if (bgBlurPref != null) {
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+                    PreferenceCategory uiCat = (PreferenceCategory) findPreference("category_ui_settings");
+                    if (uiCat != null) {
+                        uiCat.removePreference(bgBlurPref);
+                    }
+                } else {
+                    bgBlurPref.setOnPreferenceChangeListener(liveUiAppearanceListener);
+                    bgBlurPref.setOnLiveValueChangedListener(new SeekBarPreference.OnLiveValueChangedListener() {
+                        @Override
+                        public void onLiveValueChanged(int value) {
+                            Activity act = SettingsFragment.this.getActivity();
+                            UiBackgroundManager.setLivePreview(null, null, value);
+                            if (act != null && !UiHelper.isLiquidGlassEnabled(act)) {
+                                UiHelper.applyWindowSurfaceColors(act);
+                            }
+                        }
+
+                        @Override
+                        public void onLivePreviewCancelled() {
+                            Activity act = SettingsFragment.this.getActivity();
+                            UiBackgroundManager.clearLivePreview();
+                            if (act != null && !UiHelper.isLiquidGlassEnabled(act)) {
+                                UiHelper.applyWindowSurfaceColors(act);
+                            }
+                        }
+                    });
+                }
+            }
+
+            refreshUiBackgroundPreferenceStates();
             PreferenceScreen screen = getPreferenceScreen();
 
             // hide on-screen controls category on non touch screen devices

@@ -26,3 +26,9 @@
 # jMDNS
 -dontwarn javax.jmdns.impl.DNSCache
 -dontwarn org.slf4j.**
+
+# Kyant0 AndroidLiquidGlass (Backdrop) & Shapes
+-keep class com.kyant.backdrop.** { *; }
+-keep class com.kyant.shapes.** { *; }
+-dontwarn com.kyant.backdrop.**
+-dontwarn com.kyant.shapes.**

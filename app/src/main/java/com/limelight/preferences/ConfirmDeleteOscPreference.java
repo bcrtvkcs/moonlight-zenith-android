@@ -63,6 +63,11 @@ public class ConfirmDeleteOscPreference extends DialogPreference {
         view.jumpDrawablesToCurrentState();
     }
 
+    public void resetOscConfiguration() {
+        getContext().getSharedPreferences(OSC_PREFERENCE, Context.MODE_PRIVATE).edit().clear().apply();
+        Toast.makeText(getContext(), R.string.toast_reset_osc_success, Toast.LENGTH_SHORT).show();
+    }
+
     @Override
     protected void showDialog(Bundle state) {
         new MaterialAlertDialogBuilder(getContext())
@@ -71,8 +76,7 @@ public class ConfirmDeleteOscPreference extends DialogPreference {
                 .setPositiveButton(getPositiveButtonText() != null ? getPositiveButtonText() : getContext().getString(R.string.yes), new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface d, int which) {
-                        getContext().getSharedPreferences(OSC_PREFERENCE, Context.MODE_PRIVATE).edit().clear().apply();
-                        Toast.makeText(getContext(), R.string.toast_reset_osc_success, Toast.LENGTH_SHORT).show();
+                        resetOscConfiguration();
                     }
                 })
                 .setNegativeButton(getNegativeButtonText() != null ? getNegativeButtonText() : getContext().getString(R.string.no), null)

@@ -247,6 +247,85 @@
         android:key="category_ui_settings"
         android:title="@string/category_ui_settings">
         <com.limelight.preferences.M3ListPreference
+            android:key="list_ui_style"
+            android:title="@string/title_ui_style"
+            android:summary="@string/summary_ui_style"
+            android:entries="@array/ui_style_names"
+            android:entryValues="@array/ui_style_values"
+            android:defaultValue="material3" />
+        <com.limelight.preferences.M3ListPreference
+            android:key="list_liquid_glass_style"
+            android:title="@string/title_liquid_glass_style"
+            android:summary="@string/summary_liquid_glass_style"
+            android:entries="@array/liquid_glass_style_names"
+            android:entryValues="@array/liquid_glass_style_values"
+            android:defaultValue="frosted" />
+        <com.limelight.preferences.SeekBarPreference
+            android:key="seekbar_glass_blur"
+            android:dialogMessage="@string/summary_glass_blur"
+            seekbar:min="0"
+            seekbar:step="1"
+            android:max="32"
+            android:defaultValue="16"
+            android:summary="@string/summary_glass_blur"
+            android:text="@string/suffix_dp"
+            android:title="@string/title_glass_blur" />
+        <com.limelight.preferences.SeekBarPreference
+            android:key="seekbar_glass_refraction_amount"
+            android:dialogMessage="@string/summary_glass_refraction_amount"
+            seekbar:min="0"
+            seekbar:step="1"
+            android:max="48"
+            android:defaultValue="18"
+            android:summary="@string/summary_glass_refraction_amount"
+            android:text="@string/suffix_dp"
+            android:title="@string/title_glass_refraction_amount" />
+        <com.limelight.preferences.SeekBarPreference
+            android:key="seekbar_glass_refraction_height"
+            android:dialogMessage="@string/summary_glass_refraction_height"
+            seekbar:min="0"
+            seekbar:step="1"
+            android:max="28"
+            android:defaultValue="11"
+            android:summary="@string/summary_glass_refraction_height"
+            android:text="@string/suffix_dp"
+            android:title="@string/title_glass_refraction_height" />
+        <com.limelight.preferences.M3SwitchPreference
+            android:key="checkbox_glass_chromatic_aberration"
+            android:title="@string/title_glass_chromatic_aberration"
+            android:summary="@string/summary_glass_chromatic_aberration"
+            android:defaultValue="true" />
+        <com.limelight.preferences.M3SwitchPreference
+            android:key="checkbox_glass_depth_effect"
+            android:title="@string/title_glass_depth_effect"
+            android:summary="@string/summary_glass_depth_effect"
+            android:defaultValue="false" />
+        <com.limelight.preferences.SeekBarPreference
+            android:key="seekbar_glass_surface_opacity"
+            android:dialogMessage="@string/summary_glass_surface_opacity"
+            seekbar:min="5"
+            seekbar:step="5"
+            android:max="75"
+            android:defaultValue="38"
+            android:summary="@string/summary_glass_surface_opacity"
+            android:text="@string/suffix_osc_opacity"
+            android:title="@string/title_glass_surface_opacity" />
+        <com.limelight.preferences.SeekBarPreference
+            android:key="seekbar_glass_highlight_intensity"
+            android:dialogMessage="@string/summary_glass_highlight_intensity"
+            seekbar:min="0"
+            seekbar:step="5"
+            android:max="100"
+            android:defaultValue="75"
+            android:summary="@string/summary_glass_highlight_intensity"
+            android:text="@string/suffix_osc_opacity"
+            android:title="@string/title_glass_highlight_intensity" />
+        <com.limelight.preferences.M3SwitchPreference
+            android:key="checkbox_glass_vibrancy"
+            android:title="@string/title_glass_vibrancy"
+            android:summary="@string/summary_glass_vibrancy"
+            android:defaultValue="true" />
+        <com.limelight.preferences.M3ListPreference
             android:key="list_theme_mode"
             android:title="@string/title_theme_mode"
             android:summary="@string/summary_theme_mode"
@@ -258,6 +337,54 @@
             android:title="@string/title_pure_black_theme"
             android:summary="@string/summary_pure_black_theme"
             android:defaultValue="false" />
+        <com.limelight.preferences.M3ListPreference
+            android:key="list_ui_background_source"
+            android:title="@string/title_ui_background_source"
+            android:summary="@string/summary_ui_background_source"
+            android:entries="@array/ui_background_source_names"
+            android:entryValues="@array/ui_background_source_values"
+            android:defaultValue="none" />
+        <Preference
+            android:key="pref_ui_background_pick_image"
+            android:title="@string/title_ui_background_pick_image"
+            android:summary="@string/summary_ui_background_pick_image_empty" />
+        <com.limelight.preferences.SeekBarPreference
+            android:key="seekbar_ui_background_opacity"
+            android:dialogMessage="@string/summary_ui_background_opacity"
+            seekbar:min="0"
+            seekbar:step="5"
+            android:max="100"
+            android:defaultValue="65"
+            android:summary="@string/summary_ui_background_opacity"
+            android:text="@string/suffix_osc_opacity"
+            android:title="@string/title_ui_background_opacity" />
+        <com.limelight.preferences.M3ListPreference
+            android:key="list_ui_background_tint_mode"
+            android:title="@string/title_ui_background_tint_mode"
+            android:summary="@string/summary_ui_background_tint_mode"
+            android:entries="@array/ui_background_tint_mode_names"
+            android:entryValues="@array/ui_background_tint_mode_values"
+            android:defaultValue="theme_surface" />
+        <com.limelight.preferences.SeekBarPreference
+            android:key="seekbar_ui_background_tint_opacity"
+            android:dialogMessage="@string/summary_ui_background_tint_opacity"
+            seekbar:min="0"
+            seekbar:step="5"
+            android:max="90"
+            android:defaultValue="45"
+            android:summary="@string/summary_ui_background_tint_opacity"
+            android:text="@string/suffix_osc_opacity"
+            android:title="@string/title_ui_background_tint_opacity" />
+        <com.limelight.preferences.SeekBarPreference
+            android:key="seekbar_ui_background_blur"
+            android:dialogMessage="@string/summary_ui_background_blur"
+            seekbar:min="0"
+            seekbar:step="1"
+            android:max="24"
+            android:defaultValue="0"
+            android:summary="@string/summary_ui_background_blur"
+            android:text="@string/suffix_dp"
+            android:title="@string/title_ui_background_blur" />
         <com.limelight.preferences.LanguagePreference
             android:key="list_languages"
             android:title="@string/title_language_list"

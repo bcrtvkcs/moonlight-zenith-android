@@ -21,9 +21,11 @@ import com.limelight.nvstream.jni.MoonBridge;
 import com.limelight.utils.Dialog;
 import com.limelight.utils.ServerHelper;
 import com.limelight.utils.SpinnerDialog;
+import com.limelight.ui.glass.AddComputerGlassCallbacks;
+import com.limelight.ui.glass.AddComputerGlassHost;
 import com.limelight.utils.UiHelper;
 
-import android.app.Activity;
+import androidx.appcompat.app.AppCompatActivity;
 import android.app.Service;
 import android.content.ComponentName;
 import android.content.Context;
@@ -38,7 +40,7 @@ import android.view.inputmethod.InputMethodManager;
 import android.widget.TextView;
 import android.widget.Toast;
 
-public class AddComputerManually extends Activity {
+public class AddComputerManually extends AppCompatActivity {
     private TextView hostText;
     private ComputerManagerService.ComputerManagerBinder managerBinder;
     private final LinkedBlockingQueue<String> computersToAdd = new LinkedBlockingQueue<>();
@@ -269,6 +271,28 @@ public class AddComputerManually extends Activity {
         super.onCreate(savedInstanceState);
 
         UiHelper.setLocale(this);
+
+        if (UiHelper.isLiquidGlassEnabled(this)) {
+            setContentView(AddComputerGlassHost.createView(this, new AddComputerGlassCallbacks() {
+                @Override
+                public void onBackClicked() {
+                    finish();
+                }
+
+                @Override
+                public void onSubmitHost(String host) {
+                    if (host == null || host.trim().isEmpty()) {
+                        Toast.makeText(AddComputerManually.this, getResources().getString(R.string.addpc_enter_ip), Toast.LENGTH_LONG).show();
+                        return;
+                    }
+                    computersToAdd.add(host.trim());
+                }
+            }));
+            UiHelper.notifyNewRootView(this);
+            bindService(new Intent(AddComputerManually.this,
+                        ComputerManagerService.class), serviceConnection, Service.BIND_AUTO_CREATE);
+            return;
+        }
 
         setContentView(R.layout.activity_add_computer_manually);
 

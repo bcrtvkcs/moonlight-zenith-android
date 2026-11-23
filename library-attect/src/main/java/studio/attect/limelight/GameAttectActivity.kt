@@ -71,6 +71,20 @@ abstract class GameAttectActivity : Activity() {
      */
     var nativeTouchEventMode = false
 
+    fun applyAttectLiquidGlassStyle() {
+        if (::floatButton.isInitialized) {
+            floatButton.setBackgroundResource(R.drawable.m3_glass_float_button_bg)
+        }
+        if (::overflowLayout.isInitialized && overflowLayout.childCount > 0) {
+            val card = overflowLayout.getChildAt(0) as? com.google.android.material.card.MaterialCardView
+            if (card != null) {
+                card.setCardBackgroundColor(0xB8181C26.toInt())
+                card.strokeColor = 0x47FFFFFF
+                card.strokeWidth = (1.25f * resources.displayMetrics.density).toInt().coerceAtLeast(1)
+            }
+        }
+    }
+
     fun afterOnCreate(
         appIconResId: Int,
         toggleSoftKeyboardRunner: () -> Unit,

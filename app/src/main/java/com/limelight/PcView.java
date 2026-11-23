@@ -22,6 +22,10 @@ import com.limelight.preferences.PreferenceConfiguration;
 import com.limelight.preferences.StreamSettings;
 import com.limelight.ui.AdapterFragment;
 import com.limelight.ui.AdapterFragmentCallbacks;
+import com.limelight.ui.glass.GlassMenuData;
+import com.limelight.ui.glass.PcViewGlassCallbacks;
+import com.limelight.ui.glass.PcViewGlassController;
+import com.limelight.ui.glass.PcViewGlassHost;
 import com.limelight.utils.Dialog;
 import com.limelight.utils.HelpLauncher;
 import com.limelight.utils.M3MenuHelper;
@@ -31,7 +35,7 @@ import com.limelight.utils.ServerHelper;
 import com.limelight.utils.ShortcutHelper;
 import com.limelight.utils.UiHelper;
 
-import android.app.Activity;
+import androidx.appcompat.app.AppCompatActivity;
 import android.app.ActivityManager;
 import android.app.Service;
 import android.content.ComponentName;
@@ -62,12 +66,14 @@ import org.xmlpull.v1.XmlPullParserException;
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
 
-public class PcView extends Activity implements AdapterFragmentCallbacks {
+public class PcView extends AppCompatActivity implements AdapterFragmentCallbacks {
     private RelativeLayout noPcFoundLayout;
     private PcGridAdapter pcGridAdapter;
     private ShortcutHelper shortcutHelper;
     private ComputerManagerService.ComputerManagerBinder managerBinder;
     private boolean freezeUpdates, runningPolling, inForeground, completeOnCreateCalled;
+    private boolean isGlassUi;
+    private PcViewGlassController glassController;
     private final ServiceConnection serviceConnection = new ServiceConnection() {
         public void onServiceConnected(ComponentName className, IBinder binder) {
             final ComputerManagerService.ComputerManagerBinder localBinder =
@@ -106,7 +112,7 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
         // handle initializing views with the config change accounted for.
         // This is not prone to races because both callbacks are invoked
         // in the main thread.
-        if (completeOnCreateCalled) {
+        if (completeOnCreateCalled && !isGlassUi) {
             // Reinitialize views just in case orientation changed
             initializeViews();
         }
@@ -123,10 +129,27 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
     private final static int TEST_NETWORK_ID = 10;
     private final static int GAMESTREAM_EOL_ID = 11;
 
-    private void initializeViews() {
-        setContentView(R.layout.activity_pc_view);
+    private void handleComputerClick(ComputerObject computer) {
+        if (computer.details.state == ComputerDetails.State.UNKNOWN ||
+            computer.details.state == ComputerDetails.State.OFFLINE) {
+            // Open the context menu if a PC is offline or refreshing
+            showComputerMenu(computer);
+        } else if (computer.details.pairState != PairState.PAIRED) {
+            // Pair an unpaired machine by default
+            doPair(computer.details);
+        } else {
+            doAppList(computer.details, false, false);
+        }
+    }
 
-        UiHelper.notifyNewRootView(this);
+    private void syncGlassComputers() {
+        if (isGlassUi && glassController != null && pcGridAdapter != null) {
+            glassController.updateComputers(pcGridAdapter.getCurrentItems());
+        }
+    }
+
+    private void initializeViews() {
+        isGlassUi = UiHelper.isLiquidGlassEnabled(this);
 
         // Allow floating expanded PiP overlays while browsing PCs
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -138,6 +161,47 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
 
         // Set the correct layout for the PC grid
         pcGridAdapter.updateLayoutWithPreferences(this, PreferenceConfiguration.readPreferences(this));
+
+        if (isGlassUi) {
+            if (glassController == null) {
+                glassController = new PcViewGlassController();
+                boolean showHelp = !getPackageManager().hasSystemFeature("amazon.hardware.fire_tv");
+                glassController.setFlags(showHelp, UiHelper.isTvMode(this));
+                setContentView(PcViewGlassHost.createView(this, glassController, new PcViewGlassCallbacks() {
+                    @Override
+                    public void onComputerClicked(ComputerObject computer) {
+                        handleComputerClick(computer);
+                    }
+
+                    @Override
+                    public void onComputerLongClicked(ComputerObject computer) {
+                        showComputerMenu(computer);
+                    }
+
+                    @Override
+                    public void onSettingsClicked() {
+                        startActivity(new Intent(PcView.this, StreamSettings.class));
+                    }
+
+                    @Override
+                    public void onAddComputerClicked() {
+                        startActivity(new Intent(PcView.this, AddComputerManually.class));
+                    }
+
+                    @Override
+                    public void onHelpClicked() {
+                        HelpLauncher.launchSetupGuide(PcView.this);
+                    }
+                }));
+                UiHelper.notifyNewRootView(this);
+            }
+            syncGlassComputers();
+            return;
+        }
+
+        setContentView(R.layout.activity_pc_view);
+
+        UiHelper.notifyNewRootView(this);
 
         // Setup the list view
         View settingsButton = findViewById(R.id.settingsButton);
@@ -307,6 +371,8 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
     protected void onResume() {
         super.onResume();
 
+        UiHelper.applyWindowSurfaceColors(this);
+
         // Display a decoder crash notification if we've returned after a crash
         UiHelper.showDecoderCrashDialog(this);
 
@@ -391,6 +457,31 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
                 getResources().getString(R.string.pcview_menu_details), R.drawable.ic_m3_info));
         options.add(M3MenuHelper.MenuOption.destructive(DELETE_ID,
                 getResources().getString(R.string.pcview_menu_delete_pc), R.drawable.ic_m3_delete));
+
+        if (isGlassUi && glassController != null) {
+            glassController.showMenu(GlassMenuData.create(
+                    computer.details.name,
+                    subtitle,
+                    headerIcon,
+                    options,
+                    new M3MenuHelper.OnMenuOptionSelectedListener() {
+                        @Override
+                        public void onOptionSelected(M3MenuHelper.MenuOption option) {
+                            glassController.dismissMenu();
+                            handleComputerMenuAction(option.id, computer);
+                            startComputerUpdates();
+                        }
+                    },
+                    new Runnable() {
+                        @Override
+                        public void run() {
+                            glassController.dismissMenu();
+                            startComputerUpdates();
+                        }
+                    }
+            ));
+            return;
+        }
 
         M3MenuHelper.showMenu(
                 this,
@@ -852,10 +943,11 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
                 pcGridAdapter.removeComputer(computer);
                 pcGridAdapter.notifyDataSetChanged();
 
-                if (pcGridAdapter.getCount() == 0) {
+                if (noPcFoundLayout != null && pcGridAdapter.getCount() == 0) {
                     // Show the "Discovery in progress" view
                     noPcFoundLayout.setVisibility(View.VISIBLE);
                 }
+                syncGlassComputers();
 
                 break;
             }
@@ -884,11 +976,14 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
             pcGridAdapter.addComputer(new ComputerObject(details));
 
             // Remove the "Discovery in progress" view
-            noPcFoundLayout.setVisibility(View.GONE);
+            if (noPcFoundLayout != null) {
+                noPcFoundLayout.setVisibility(View.GONE);
+            }
         }
 
         // Notify the view that the data has changed
         pcGridAdapter.notifyDataSetChanged();
+        syncGlassComputers();
     }
 
     @Override

@@ -15,6 +15,10 @@ import com.limelight.nvstream.http.PairingManager;
 import com.limelight.preferences.PreferenceConfiguration;
 import com.limelight.ui.AdapterFragment;
 import com.limelight.ui.AdapterFragmentCallbacks;
+import com.limelight.ui.glass.AppViewGlassCallbacks;
+import com.limelight.ui.glass.AppViewGlassController;
+import com.limelight.ui.glass.AppViewGlassHost;
+import com.limelight.ui.glass.GlassMenuData;
 import com.limelight.utils.CacheHelper;
 import com.limelight.utils.Dialog;
 import com.limelight.utils.M3MenuHelper;
@@ -24,7 +28,7 @@ import com.limelight.utils.ShortcutHelper;
 import com.limelight.utils.SpinnerDialog;
 import com.limelight.utils.UiHelper;
 
-import android.app.Activity;
+import androidx.appcompat.app.AppCompatActivity;
 import android.app.Service;
 import android.content.ComponentName;
 import android.content.Intent;
@@ -51,8 +55,10 @@ import android.widget.AdapterView.AdapterContextMenuInfo;
 
 import org.xmlpull.v1.XmlPullParserException;
 
-public class AppView extends Activity implements AdapterFragmentCallbacks {
+public class AppView extends AppCompatActivity implements AdapterFragmentCallbacks {
     private AppGridAdapter appGridAdapter;
+    private boolean isGlassUi;
+    private AppViewGlassController glassController;
     private String uuidString;
     private ShortcutHelper shortcutHelper;
 
@@ -141,12 +147,16 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
                             // Despite my best efforts to catch all conditions that could
                             // cause the activity to be destroyed when we try to commit
                             // I haven't been able to, so we have this try-catch block.
-                            try {
-                                getFragmentManager().beginTransaction()
-                                        .replace(R.id.appFragmentContainer, new AdapterFragment())
-                                        .commitAllowingStateLoss();
-                            } catch (IllegalStateException e) {
-                                e.printStackTrace();
+                            if (isGlassUi) {
+                                syncGlassApps();
+                            } else {
+                                try {
+                                    getFragmentManager().beginTransaction()
+                                            .replace(R.id.appFragmentContainer, new AdapterFragment())
+                                            .commitAllowingStateLoss();
+                                } catch (IllegalStateException e) {
+                                    e.printStackTrace();
+                                }
                             }
                         }
                     });
@@ -169,13 +179,17 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
             // Update the app grid adapter to create grid items with the correct layout
             appGridAdapter.updateLayoutWithPreferences(this, PreferenceConfiguration.readPreferences(this));
 
-            try {
-                // Reinflate the app grid itself to pick up the layout change
-                getFragmentManager().beginTransaction()
-                        .replace(R.id.appFragmentContainer, new AdapterFragment())
-                        .commitAllowingStateLoss();
-            } catch (IllegalStateException e) {
-                e.printStackTrace();
+            if (isGlassUi) {
+                syncGlassApps();
+            } else {
+                try {
+                    // Reinflate the app grid itself to pick up the layout change
+                    getFragmentManager().beginTransaction()
+                            .replace(R.id.appFragmentContainer, new AdapterFragment())
+                            .commitAllowingStateLoss();
+                } catch (IllegalStateException e) {
+                    e.printStackTrace();
+                }
             }
         }
     }
@@ -292,15 +306,12 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
         shortcutHelper = new ShortcutHelper(this);
 
         UiHelper.setLocale(this);
-
-        setContentView(R.layout.activity_app_view);
+        isGlassUi = UiHelper.isLiquidGlassEnabled(this);
 
         // Allow floating expanded PiP overlays while browsing apps
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             setShouldDockBigOverlays(false);
         }
-
-        UiHelper.notifyNewRootView(this);
 
         showHiddenApps = getIntent().getBooleanExtra(SHOW_HIDDEN_APPS_EXTRA, false);
         uuidString = getIntent().getStringExtra(UUID_EXTRA);
@@ -311,10 +322,42 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
         }
 
         String computerName = getIntent().getStringExtra(NAME_EXTRA);
-
-        TextView label = findViewById(R.id.appListText);
         setTitle(computerName);
-        label.setText(computerName);
+
+        if (isGlassUi) {
+            glassController = new AppViewGlassController();
+            glassController.setHeader(
+                    computerName != null ? computerName : "",
+                    PreferenceConfiguration.readPreferences(this).smallIconMode,
+                    UiHelper.isTvMode(this)
+            );
+            setContentView(AppViewGlassHost.createView(this, glassController, new AppViewGlassCallbacks() {
+                @Override
+                public void onBackClicked() {
+                    finish();
+                }
+
+                @Override
+                public void onAppClicked(AppObject app, Bitmap boxArtBitmap) {
+                    if (lastRunningAppId != 0) {
+                        showAppMenuWithBitmap(app, null, boxArtBitmap);
+                    } else {
+                        ServerHelper.doStart(AppView.this, app.app, computer, managerBinder);
+                    }
+                }
+
+                @Override
+                public void onAppLongClicked(AppObject app, Bitmap boxArtBitmap) {
+                    showAppMenuWithBitmap(app, null, boxArtBitmap);
+                }
+            }));
+            UiHelper.notifyNewRootView(this);
+        } else {
+            setContentView(R.layout.activity_app_view);
+            UiHelper.notifyNewRootView(this);
+            TextView label = findViewById(R.id.appListText);
+            label.setText(computerName);
+        }
         View backButton = findViewById(R.id.appBackButton);
         if (backButton != null) {
             backButton.setOnClickListener(new View.OnClickListener() {
@@ -343,6 +386,17 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
                 .apply();
 
         appGridAdapter.updateHiddenApps(hiddenAppIds, hideImmediately);
+        syncGlassApps();
+    }
+
+    private void syncGlassApps() {
+        if (isGlassUi && glassController != null && appGridAdapter != null) {
+            glassController.updateApps(
+                    appGridAdapter.getCurrentItems(),
+                    appGridAdapter.getAssetLoader(),
+                    PreferenceConfiguration.readPreferences(this).smallIconMode
+            );
+        }
     }
 
     private void populateAppGridWithCache() {
@@ -383,6 +437,8 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
     @Override
     protected void onResume() {
         super.onResume();
+
+        UiHelper.applyWindowSurfaceColors(this);
 
         // Display a decoder crash notification if we've returned after a crash
         UiHelper.showDecoderCrashDialog(this);
@@ -448,6 +504,10 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
     }
 
     private void showAppMenu(final AppObject selectedApp, final View targetView) {
+        showAppMenuWithBitmap(selectedApp, targetView, null);
+    }
+
+    private void showAppMenuWithBitmap(final AppObject selectedApp, final View targetView, final Bitmap explicitBitmap) {
         if (selectedApp == null) {
             return;
         }
@@ -476,19 +536,44 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
         options.add(M3MenuHelper.MenuOption.action(VIEW_DETAILS_ID,
                 getResources().getString(R.string.applist_menu_details), R.drawable.ic_m3_info));
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && targetView != null) {
+        Bitmap shortcutBitmap = explicitBitmap;
+        if (shortcutBitmap == null && targetView != null) {
             ImageView appImageView = targetView.findViewById(R.id.grid_image);
             if (appImageView != null && appImageView.getDrawable() instanceof BitmapDrawable) {
-                BitmapDrawable drawable = (BitmapDrawable) appImageView.getDrawable();
-                if (drawable.getBitmap() != null) {
-                    options.add(M3MenuHelper.MenuOption.action(CREATE_SHORTCUT_ID,
-                            getResources().getString(R.string.applist_menu_scut), R.drawable.ic_m3_shortcut));
-                }
+                shortcutBitmap = ((BitmapDrawable) appImageView.getDrawable()).getBitmap();
             }
+        }
+        final Bitmap resolvedShortcutBitmap = shortcutBitmap;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && resolvedShortcutBitmap != null) {
+            options.add(M3MenuHelper.MenuOption.action(CREATE_SHORTCUT_ID,
+                    getResources().getString(R.string.applist_menu_scut), R.drawable.ic_m3_shortcut));
         }
 
         String subtitle = computer != null ? computer.name : null;
         int headerIcon = (lastRunningAppId == selectedApp.app.getAppId()) ? R.drawable.ic_play : R.drawable.ic_computer;
+
+        if (isGlassUi && glassController != null) {
+            glassController.showMenu(GlassMenuData.create(
+                    selectedApp.app.getAppName(),
+                    subtitle,
+                    headerIcon,
+                    options,
+                    new M3MenuHelper.OnMenuOptionSelectedListener() {
+                        @Override
+                        public void onOptionSelected(M3MenuHelper.MenuOption option) {
+                            glassController.dismissMenu();
+                            handleAppMenuAction(option.id, selectedApp, targetView, resolvedShortcutBitmap);
+                        }
+                    },
+                    new Runnable() {
+                        @Override
+                        public void run() {
+                            glassController.dismissMenu();
+                        }
+                    }
+            ));
+            return;
+        }
 
         M3MenuHelper.showMenu(
                 this,
@@ -499,14 +584,14 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
                 new M3MenuHelper.OnMenuOptionSelectedListener() {
                     @Override
                     public void onOptionSelected(M3MenuHelper.MenuOption option) {
-                        handleAppMenuAction(option.id, selectedApp, targetView);
+                        handleAppMenuAction(option.id, selectedApp, targetView, resolvedShortcutBitmap);
                     }
                 },
                 null
         );
     }
 
-    private void handleAppMenuAction(int itemId, final AppObject app, final View targetView) {
+    private void handleAppMenuAction(int itemId, final AppObject app, final View targetView, final Bitmap resolvedBitmap) {
         switch (itemId) {
             case START_WITH_QUIT:
                 UiHelper.displayQuitConfirmationDialog(this, new Runnable() {
@@ -554,14 +639,15 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
                 break;
 
             case CREATE_SHORTCUT_ID:
-                if (targetView != null) {
+                Bitmap appBits = resolvedBitmap;
+                if (appBits == null && targetView != null) {
                     ImageView appImageView = targetView.findViewById(R.id.grid_image);
                     if (appImageView != null && appImageView.getDrawable() instanceof BitmapDrawable) {
-                        Bitmap appBits = ((BitmapDrawable) appImageView.getDrawable()).getBitmap();
-                        if (!shortcutHelper.createPinnedGameShortcut(computer, app.app, appBits)) {
-                            Toast.makeText(AppView.this, getResources().getString(R.string.unable_to_pin_shortcut), Toast.LENGTH_LONG).show();
-                        }
+                        appBits = ((BitmapDrawable) appImageView.getDrawable()).getBitmap();
                     }
+                }
+                if (appBits != null && !shortcutHelper.createPinnedGameShortcut(computer, app.app, appBits)) {
+                    Toast.makeText(AppView.this, getResources().getString(R.string.unable_to_pin_shortcut), Toast.LENGTH_LONG).show();
                 }
                 break;
         }
@@ -673,6 +759,7 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
 
                 if (updated) {
                     appGridAdapter.notifyDataSetChanged();
+                    syncGlassApps();
                 }
             }
         });
@@ -747,6 +834,7 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
 
                 if (updated) {
                     appGridAdapter.notifyDataSetChanged();
+                    syncGlassApps();
                 }
             }
         });

@@ -143,6 +143,9 @@ public class SeekBarPreference extends DialogPreference
                 }
 
                 valueText.setText(formatValueText(roundedValue));
+                if (liveValueChangedListener != null) {
+                    liveValueChangedListener.onLiveValueChanged(roundedValue);
+                }
             }
 
             @Override
@@ -183,6 +186,51 @@ public class SeekBarPreference extends DialogPreference
         }
     }
 
+    public interface OnLiveValueChangedListener {
+        void onLiveValueChanged(int value);
+        void onLivePreviewCancelled();
+    }
+
+    private OnLiveValueChangedListener liveValueChangedListener;
+
+    public void setOnLiveValueChangedListener(OnLiveValueChangedListener listener) {
+        this.liveValueChangedListener = listener;
+    }
+
+    public int getMinValue() {
+        return minValue;
+    }
+
+    public int getMaxValue() {
+        return maxValue;
+    }
+
+    public int getStepSize() {
+        return stepSize;
+    }
+
+    public String getDialogMessageText() {
+        return dialogMessage;
+    }
+
+    public String formatDisplayValue(int value) {
+        return formatValueText(value);
+    }
+
+    public void applyValueFromExternal(int newValue) {
+        int clamped = Math.max(minValue, Math.min(maxValue, newValue));
+        int rounded = ((clamped + (stepSize - 1)) / stepSize) * stepSize;
+        if (rounded > maxValue) {
+            rounded = maxValue;
+        }
+        if (shouldPersist()) {
+            currentValue = rounded;
+            persistInt(rounded);
+            callChangeListener(rounded);
+            notifyChanged();
+        }
+    }
+
     public void setProgress(int progress) {
         this.currentValue = progress;
         if (seekBar != null) {
@@ -215,7 +263,22 @@ public class SeekBarPreference extends DialogPreference
                         d.dismiss();
                     }
                 })
-                .setNegativeButton(android.R.string.cancel, null)
+                .setNegativeButton(android.R.string.cancel, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface d, int which) {
+                        if (liveValueChangedListener != null) {
+                            liveValueChangedListener.onLivePreviewCancelled();
+                        }
+                    }
+                })
+                .setOnCancelListener(new DialogInterface.OnCancelListener() {
+                    @Override
+                    public void onCancel(DialogInterface dialog) {
+                        if (liveValueChangedListener != null) {
+                            liveValueChangedListener.onLivePreviewCancelled();
+                        }
+                    }
+                })
                 .show();
     }
 }

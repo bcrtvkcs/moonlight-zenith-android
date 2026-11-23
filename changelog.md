@@ -4,6 +4,25 @@ All notable changes to **Moonlight Zenith Android** are documented in this file.
 
 ---
 
+## [v3.0.0-rc1-zenith] - 2026-11-24
+
+### 🫧 Optional Liquid Glass UI (`Kyant0/AndroidLiquidGlass`) & Customizable App Background
+- **Feat (Dual-Engine Optional Liquid Glass Interface via `io.github.kyant0:backdrop:2.0.1`):**
+  - Integrated **Jetpack Compose (BOM `2026.09.00`)**, **Kotlin `2.4.10`** (`org.jetbrains.kotlin.plugin.compose`), and **`io.github.kyant0:backdrop:2.0.1`** (`Kyant0/AndroidLiquidGlass`) while keeping the existing **Material You Expressive** XML UI as the default with zero regressions (minimum SDK raised from `21` to `23` to align with Compose `1.12.1`, preserving `root` flavor `maxSdk 25`).
+  - Added an **Interface style** selector (`list_ui_style`: **Material You Expressive** vs. **Liquid Glass**) under **UI Settings**.
+  - Implemented a dual-layer `LayerBackdrop` + `rememberCombinedBackdrop` rendering architecture (`LiquidGlassTheme.kt`, `LiquidGlassComponents.kt`) with real-time AGSL optical lens refraction (`lens`), chromatic aberration, 3D depth effect, Gaussian backdrop blur, vibrancy, specular rim highlights, and depth shadows on Android 13+, hardware `RenderEffect` blur on Android 12, and a clean translucent fallback on older versions.
+  - Built full Liquid Glass Compose screens with D-pad / Android TV focus navigation and edge-to-edge system bar insets across **`PcView`** (`PcViewGlassScreen.kt`, portrait top bar + floating extended FAB and landscape/TV floating glass navigation rail), **`AppView`** (`AppViewGlassScreen.kt`, preserving `CenterContentImageView` box-art centering and shortcut creation), **`StreamSettings`** (`StreamSettingsGlassScreen.kt`, 8-tab swipeable `HorizontalPager` with floating `GlassPillTabBar` backed directly by `SettingsFragment` with zero logic duplication), **`AddComputerManually`** (`AddComputerGlassScreen.kt`), and in-window **`GlassMenuOverlay`** bottom sheets / centered TV dialogs.
+  - Styled AlertDialogs, `SpinnerDialog`, confirmation dialogs (with Android 12+ hardware window blur-behind), and in-stream zero-latency performance/notification HUD overlays & Attect floating menu (`Game.java`, `GameAttectActivity.kt`) to match Liquid Glass mode without touching `StreamView`.
+- **Feat (Fine-Grained Liquid Glass Optical Parameter Controls & Live Preview):**
+  - Added 3 synchronized presets (**Frosted Glass**, **Clear Glass**, **Tinted Glass**) plus an automatic **Custom Parameters** mode (`list_liquid_glass_style`).
+  - Exposed 8 fine-grained Liquid Glass controls with **real-time 60/120fps live preview** while dragging sliders: **Glass blur radius** (`0–32 dp`), **Lens refraction amount** (`0–48 dp`), **Lens refraction height** (`0–28 dp`), **Chromatic aberration**, **3D lens depth effect**, **Glass surface opacity** (`5–75%`), **Specular edge highlight** (`0–100%`), and **Backdrop vibrancy**, automatically gated by Android API capability.
+- **Feat (Customizable Tinted Background Image & Phone Wallpaper Support):**
+  - Added **`UiBackgroundManager.kt`** supporting **Theme Default** (adaptive ambient mesh gradient in Liquid Glass mode), **Custom Image** (zero-permission system Photo Picker / `ACTION_OPEN_DOCUMENT` with safe downsampling, EXIF orientation correction, persistent WebP storage, and live thumbnail preview), and **Phone Wallpaper** (zero-permission `FLAG_SHOW_WALLPAPER` + Android 12+ window blur on Android 13–16 for both static and live wallpapers, plus safe bitmap fallback on Android ≤ 12).
+  - Added **Background opacity** (`0–100%`), **Background color tint** (9 modes including adaptive Theme Surface, Theme Accent, Pure Black Scrim, Indigo, Ocean, Emerald, Amber, Crimson, and No Tint), **Tint intensity** (`0–90%`), and **Background blur** (`0–24 dp`, Android 12+) with live preview across both **Liquid Glass** and **Material You Expressive** modes.
+  - Added complete English (`values/strings.xml`) and Turkish (`values-tr/strings.xml`) localizations for all new settings.
+
+---
+
 ## [v2.2.1-zenith] - 2026-11-23
 
 ### 🛠️ Build Toolchain & Native NDK Modernization

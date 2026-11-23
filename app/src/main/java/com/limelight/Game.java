@@ -329,6 +329,10 @@ public class Game extends GameAttectActivity implements SurfaceHolder.Callback,
         notificationOverlayView = findViewById(R.id.notificationOverlay);
 
         performanceOverlayView = findViewById(R.id.performanceOverlay);
+        if (UiHelper.isLiquidGlassEnabled(this)) {
+            notificationOverlayView.setBackgroundResource(R.drawable.m3_glass_perf_overlay_bg);
+            performanceOverlayView.setBackgroundResource(R.drawable.m3_glass_perf_overlay_bg);
+        }
 
         inputCaptureProvider = InputCaptureManager.getInputCaptureProvider(this, this);
 
@@ -627,6 +631,9 @@ public class Game extends GameAttectActivity implements SurfaceHolder.Callback,
                     return Unit.INSTANCE;
                 }
         );
+        if (UiHelper.isLiquidGlassEnabled(this)) {
+            applyAttectLiquidGlassStyle();
+        }
 
     }
 

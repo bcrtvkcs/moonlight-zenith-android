@@ -48,6 +48,10 @@ public class PcGridAdapter extends GenericGridAdapter<PcView.ComputerObject> {
         return itemList.remove(computer);
     }
 
+    public java.util.List<PcView.ComputerObject> getCurrentItems() {
+        return new java.util.ArrayList<>(itemList);
+    }
+
     @Override
     public void populateView(View parentView, ImageView imgView, ProgressBar prgView, TextView txtView, ImageView overlayView, PcView.ComputerObject obj) {
         imgView.setImageResource(R.drawable.ic_computer);

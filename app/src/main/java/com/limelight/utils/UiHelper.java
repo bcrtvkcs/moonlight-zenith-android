@@ -25,6 +25,7 @@ import com.limelight.Game;
 import com.limelight.R;
 import com.limelight.nvstream.http.ComputerDetails;
 import com.limelight.preferences.PreferenceConfiguration;
+import com.limelight.ui.background.UiBackgroundManager;
 
 import java.util.Locale;
 
@@ -32,6 +33,22 @@ public class UiHelper {
 
     private static final int TV_VERTICAL_PADDING_DP = 15;
     private static final int TV_HORIZONTAL_PADDING_DP = 15;
+
+    public static boolean isLiquidGlassEnabled(Context context) {
+        if (context == null) {
+            return false;
+        }
+        PreferenceConfiguration prefs = PreferenceConfiguration.readPreferences(context);
+        return PreferenceConfiguration.UI_STYLE_LIQUID_GLASS.equals(prefs.uiStyle);
+    }
+
+    public static int resolveThemeColor(Context context, int attrResId, int fallbackColor) {
+        TypedValue tv = new TypedValue();
+        if (context.getTheme().resolveAttribute(attrResId, tv, true)) {
+            return tv.data;
+        }
+        return fallbackColor;
+    }
 
     public static void applyMaterial3Theme(Activity activity) {
         PreferenceConfiguration prefs = PreferenceConfiguration.readPreferences(activity);
@@ -47,6 +64,7 @@ public class UiHelper {
         } else if (isPureBlack) {
             activity.getTheme().applyStyle(R.style.ThemeOverlay_Moonlight_AMOLED, true);
         }
+        UiBackgroundManager.refreshFromPreferences(activity);
         applyWindowSurfaceColors(activity);
     }
 
@@ -54,23 +72,25 @@ public class UiHelper {
         if (activity == null || activity instanceof Game) {
             return;
         }
-        TypedValue tv = new TypedValue();
-        if (activity.getTheme().resolveAttribute(com.google.android.material.R.attr.colorSurface, tv, true)) {
-            int surfaceColor = tv.data;
-            if (activity.getWindow() != null) {
-                activity.getWindow().setBackgroundDrawable(new ColorDrawable(surfaceColor));
-                View decorView = activity.getWindow().getDecorView();
-                if (decorView != null) {
-                    decorView.setBackgroundColor(surfaceColor);
-                }
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                    activity.getWindow().setStatusBarColor(Color.TRANSPARENT);
-                    activity.getWindow().setNavigationBarColor(Color.TRANSPARENT);
-                }
+        int surfaceColor = resolveThemeColor(activity, com.google.android.material.R.attr.colorSurface, 0xFF11131A);
+        int primaryColor = resolveThemeColor(activity, androidx.appcompat.R.attr.colorPrimary, 0xFFBAC3FF);
+
+        if (activity.getWindow() != null) {
+            UiBackgroundManager.applyWindowWallpaperFlags(activity, surfaceColor);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                activity.getWindow().setStatusBarColor(Color.TRANSPARENT);
+                activity.getWindow().setNavigationBarColor(Color.TRANSPARENT);
             }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                activity.getWindow().setNavigationBarContrastEnforced(false);
+            }
+        }
+        if (!isLiquidGlassEnabled(activity)) {
+            UiBackgroundManager.applyBackgroundToXmlActivity(activity, surfaceColor, primaryColor);
+        } else {
             View contentView = activity.findViewById(android.R.id.content);
             if (contentView != null) {
-                contentView.setBackgroundColor(surfaceColor);
+                contentView.setBackgroundColor(Color.TRANSPARENT);
             }
         }
     }
@@ -187,6 +207,21 @@ public class UiHelper {
                     WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
         }
 
+        if (isLiquidGlassEnabled(activity)) {
+            // Compose Liquid Glass screens manage edge-to-edge insets directly so the custom
+            // background image or phone wallpaper extends seamlessly behind status & nav bars.
+            rootView.setPadding(0, 0, 0, 0);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                activity.getWindow().setDecorFitsSystemWindows(false);
+            } else {
+                activity.getWindow().getDecorView().setSystemUiVisibility(
+                        View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                                | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                                | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION);
+            }
+            return;
+        }
+
         if (modeMgr.getCurrentModeType() == Configuration.UI_MODE_TYPE_TELEVISION) {
             // Increase view padding on TVs
             float scale = activity.getResources().getDisplayMetrics().density;
@@ -264,6 +299,26 @@ public class UiHelper {
         }
     }
 
+    public static void applyLiquidGlassDialogStyle(Context context, android.app.Dialog dialog) {
+        if (context == null || dialog == null || !isLiquidGlassEnabled(context)) {
+            return;
+        }
+        android.view.Window window = dialog.getWindow();
+        if (window == null) {
+            return;
+        }
+        window.setBackgroundDrawableResource(R.drawable.m3_glass_dialog_bg);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            try {
+                window.addFlags(WindowManager.LayoutParams.FLAG_BLUR_BEHIND);
+                window.setBackgroundBlurRadius((int) (24 * context.getResources().getDisplayMetrics().density));
+                window.setDimAmount(0.32f);
+            } catch (Throwable ignored) {
+                // Fallback gracefully on OEM builds that disable window blur
+            }
+        }
+    }
+
     public static void displayQuitConfirmationDialog(Activity parent, final Runnable onYes, final Runnable onNo) {
         DialogInterface.OnClickListener dialogClickListener = new DialogInterface.OnClickListener() {
             @Override
@@ -284,11 +339,13 @@ public class UiHelper {
             }
         };
 
-        new MaterialAlertDialogBuilder(parent)
+        androidx.appcompat.app.AlertDialog dialog = new MaterialAlertDialogBuilder(parent)
                 .setMessage(parent.getResources().getString(R.string.applist_quit_confirmation))
                 .setPositiveButton(parent.getResources().getString(R.string.yes), dialogClickListener)
                 .setNegativeButton(parent.getResources().getString(R.string.no), dialogClickListener)
-                .show();
+                .create();
+        applyLiquidGlassDialogStyle(parent, dialog);
+        dialog.show();
     }
 
     public static void displayDeletePcConfirmationDialog(Activity parent, ComputerDetails computer, final Runnable onYes, final Runnable onNo) {
@@ -311,11 +368,13 @@ public class UiHelper {
             }
         };
 
-        new MaterialAlertDialogBuilder(parent)
+        androidx.appcompat.app.AlertDialog dialog = new MaterialAlertDialogBuilder(parent)
                 .setMessage(parent.getResources().getString(R.string.delete_pc_msg))
                 .setTitle(computer.name)
                 .setPositiveButton(parent.getResources().getString(R.string.yes), dialogClickListener)
                 .setNegativeButton(parent.getResources().getString(R.string.no), dialogClickListener)
-                .show();
+                .create();
+        applyLiquidGlassDialogStyle(parent, dialog);
+        dialog.show();
     }
 }

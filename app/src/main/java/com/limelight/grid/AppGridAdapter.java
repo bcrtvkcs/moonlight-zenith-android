@@ -121,6 +121,14 @@ public class AppGridAdapter extends GenericGridAdapter<AppView.AppObject> {
         loader.freeCacheMemory();
     }
 
+    public CachedAppAssetLoader getAssetLoader() {
+        return loader;
+    }
+
+    public java.util.List<AppView.AppObject> getCurrentItems() {
+        return new java.util.ArrayList<>(itemList);
+    }
+
     private static void sortList(List<AppView.AppObject> list) {
         Collections.sort(list, new Comparator<AppView.AppObject>() {
             @Override

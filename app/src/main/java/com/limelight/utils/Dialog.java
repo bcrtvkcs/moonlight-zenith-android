@@ -111,6 +111,7 @@ public class Dialog implements Runnable {
 
         synchronized (rundownDialogs) {
             rundownDialogs.add(this);
+            UiHelper.applyLiquidGlassDialogStyle(activity, alert);
             alert.show();
         }
     }
