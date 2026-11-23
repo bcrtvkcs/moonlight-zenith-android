@@ -4,14 +4,15 @@ All notable changes to **Moonlight Zenith Android** are documented in this file.
 
 ---
 
-## [v2.2.0-rc1-zenith] - 2026-11-23
+## [v2.2.1-zenith] - 2026-11-23
 
-### 🛠️ Build Toolchain & Native NDK Modernization (Pre-Release)
-- **Chore (Latest Build Toolchain Upgrade):**
-  - Upgraded **Gradle Wrapper** from `9.7.1` to **`9.9.2`** for security patches and incremental Kotlin DSL compilation speedups.
+### 🛠️ Build Toolchain & Native NDK Modernization
+- **Chore (Latest Build Toolchain & NDK r30 LTS Upgrade):**
+  - Upgraded **Gradle Wrapper** from `9.7.1` to **`9.9.2`** for security fixes and faster incremental Kotlin DSL compilation.
   - Upgraded **Android Gradle Plugin (AGP)** from `9.4.0` to **`9.5.1`**.
-  - Upgraded **Android NDK** from `r29` (`29.0.14206865`) to **`r30` LTS (`30.0.16248370`)** across `app/build.gradle` and GitHub Actions CI/release workflows.
-  - Extended GitHub Actions release tag trigger (`v*-zenith*`) so pre-release tags (`-alpha`, `-beta`, `-rc`) publish cleanly as GitHub Pre-releases.
+  - Upgraded **Android NDK** from `r29` (`29.0.14206865`) to **`r30` LTS (`30.0.16248370`)** across `app/build.gradle` and GitHub Actions CI/release workflows, verified cleanly on device across native `moonlight-core` and `evdev_reader` builds.
+  - Upgraded GitHub Actions workflow steps to Node 24-native major releases (`actions/checkout@v7`, `actions/setup-java@v6`, `gradle/actions/setup-gradle@v6`, `actions/upload-artifact@v7`, `softprops/action-gh-release@v3`) and switched to the runner's preinstalled Android SDK `cmdline-tools 20.0`.
+  - Extended release tag matching (`v*-zenith*`) so pre-release tags (`-alpha`, `-beta`, `-rc`) are automatically published as GitHub Pre-releases.
 
 ---
 
