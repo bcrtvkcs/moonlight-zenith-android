@@ -4,6 +4,26 @@ All notable changes to **Moonlight Zenith Android** are documented in this file.
 
 ---
 
+## [v2.2.0-zenith] - 2026-11-23
+
+### ⌨️ Smart Keyboard Mode (Gboard Glide Typing, Suggestions & Autocorrect)
+- **Feat (Opt-In Smart Keyboard Mode for On-Screen IMEs):**
+  - Added **`checkbox_smart_keyboard`** (*Smart keyboard mode* / *Akıllı klavye modu*) under **Input Settings** (`preferences.xml`, `PreferenceConfiguration.java`, `values/strings.xml`, `values-tr/strings.xml`), disabled by default so raw key-event behavior for games remains untouched unless enabled.
+  - Implemented **`StreamInputConnection`** (`app/src/main/java/com/limelight/binding/input/StreamInputConnection.java`), a shadow-buffer `BaseInputConnection` with a real-time diff engine that translates IME text edits (`setComposingText`, `commitText`, `deleteSurroundingText`, `replaceText`, and spacebar cursor swiping via `setSelection`) directly into host cursor moves, backspaces, forward deletes, and keystrokes.
+  - Updated **`StreamView`** (`onCheckIsTextEditor()`, `onCreateInputConnection()`) to expose a proper text editor configuration (`TYPE_CLASS_TEXT | TYPE_TEXT_FLAG_AUTO_CORRECT | TYPE_TEXT_FLAG_CAP_SENTENCES | TYPE_TEXT_FLAG_MULTI_LINE`) with `IME_FLAG_NO_EXTRACT_UI | IME_FLAG_NO_FULLSCREEN` so Gboard enables glide typing, predictive suggestions, and autocorrect without covering the landscape stream in a fullscreen extract editor.
+  - Refactored text delivery in **`Game.java`** (`sendTextToHost`) to route ASCII letters, digits, spaces, and `HostKeyboardLayoutTranslator` regional characters (TR-Q, DE, FR, ES, IT) directly through the low-latency keyboard VK channel (strictly ordered with backspaces and avoiding `LiSendUtf8TextEvent`'s 50ms flush delay), while batching remaining Unicode/emoji characters into unified UTF-8 sends.
+  - Automatically resets the shadow text buffer on stream touch/mouse clicks, physical keyboard input, Enter/Tab/Esc, and IME dismissal (`WindowInsets.Type.ime()`) to prevent host cursor desynchronization.
+  - Improved soft keyboard focus and toggle sequencing in **`Game.toggleKeyboard()`** and **`GameAttectActivity.kt`** (`toggleOverflowMenu()` before `toggleSoftKeyboardRunner()`, `restartInput`, and `showSoftInput` / `hideSoftInputFromWindow` on Android 11+).
+
+### 🚀 Automated GitHub Actions CI & Release Pipeline
+- **Feat (Cloud APK Builds & Signed Direct Releases):**
+  - Added **`.github/workflows/build.yml`** for automated `master`/PR builds and manual `workflow_dispatch` APK builds (`nonRootDebug`, `debug`, `release`, `all`) uploaded directly to Actions Artifacts.
+  - Added **`.github/workflows/release.yml`** triggered on `v*-zenith` tag pushes (or manual dispatch) to build both signed **`nonRootRelease`** and **`rootRelease`** APKs, verify signatures via `apksigner`, generate `SHA256SUMS.txt`, extract matching release notes directly from `CHANGELOG.md`, and publish the GitHub Release automatically.
+  - Updated **`app/build.gradle`** (`signingConfigs.release`) to seamlessly support both local `local.properties` and CI environment variables (`KEYSTORE_FILE`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD`), with safe default debug signing fallback when secrets are unavailable.
+  - Added `*.jks` / `*.keystore` to **`.gitignore`** and enforced LF line endings for `gradlew` via **`.gitattributes`**.
+
+---
+
 ## [v2.1.2-zenith] - 2026-11-11
 
 ### 🎨 Theme Engine Refinements, Material You System Surfaces & Soft Indigo App Icon

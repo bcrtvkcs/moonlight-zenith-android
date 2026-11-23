@@ -41,7 +41,7 @@ jobs:
           fi
 
       - name: Checkout repository with submodules and full history
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag != '' && inputs.tag || github.ref }}
           submodules: recursive
@@ -73,22 +73,22 @@ jobs:
           echo "Releasing tag: $TAG_NAME (prerelease=$IS_PRERELEASE)"
 
       - name: Set up JDK 21
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '21'
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Accept SDK licenses and install NDK
+      - name: Configure preinstalled Android SDK & install NDK
         run: |
-          yes | sdkmanager --licenses >/dev/null 2>&1 || true
-          sdkmanager --install "ndk;29.0.14206865"
-          sdkmanager --install "platforms;android-37" || sdkmanager --channel=3 --install "platforms;android-37" || true
+          SDK_ROOT="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          SDKMANAGER="$SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
+          echo "Using preinstalled sdkmanager: $SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses >/dev/null 2>&1 || true
+          "$SDKMANAGER" --install "ndk;29.0.14206865"
+          "$SDKMANAGER" --install "platforms;android-37" || "$SDKMANAGER" --channel=3 --install "platforms;android-37" || true
 
       - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v6
 
       - name: Prepare Gradle wrapper
         run: |
@@ -150,7 +150,7 @@ jobs:
           ls -lh "$OUT_DIR"
           cat "$OUT_DIR/SHA256SUMS.txt"
 
-      - name: Extract release notes from CHANGELOG.md
+      - name: Extract release notes from changelog.md
         id: notes
         env:
           TAG_NAME: ${{ steps.tag.outputs.tag_name }}
@@ -162,10 +162,16 @@ jobs:
           tag = sys.argv[1]
           out_path = sys.argv[2]
 
-          if not os.path.exists("CHANGELOG.md"):
+          changelog_path = None
+          for candidate in ("changelog.md", "CHANGELOG.md", "Changelog.md"):
+              if os.path.exists(candidate):
+                  changelog_path = candidate
+                  break
+
+          if changelog_path is None:
               sys.exit(0)
 
-          with open("CHANGELOG.md", "r", encoding="utf-8") as f:
+          with open(changelog_path, "r", encoding="utf-8") as f:
               lines = f.readlines()
 
           header_re = re.compile(r'^##\s+\[?' + re.escape(tag) + r'\]?(?:\s|$)')
@@ -176,7 +182,7 @@ jobs:
                   break
 
           if start_idx is None:
-              print(f"No matching section for {tag} found in CHANGELOG.md; will use auto-generated release notes.")
+              print(f"No matching section for {tag} found in {changelog_path}; will use auto-generated release notes.")
               sys.exit(0)
 
           collected = []
@@ -190,7 +196,7 @@ jobs:
           if body:
               with open(out_path, "w", encoding="utf-8") as out:
                   out.write(body + "\n")
-              print(f"Extracted release notes for {tag} ({len(body)} chars).")
+              print(f"Extracted release notes for {tag} from {changelog_path} ({len(body)} chars).")
           PY
 
           if [ -s "$NOTES_FILE" ]; then
@@ -200,9 +206,9 @@ jobs:
             echo "has_notes=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Publish GitHub Release (with CHANGELOG.md notes)
+      - name: Publish GitHub Release (with changelog.md notes)
         if: steps.notes.outputs.has_notes == 'true'
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ steps.tag.outputs.tag_name }}
           name: Moonlight Zenith ${{ steps.tag.outputs.tag_name }}
@@ -215,7 +221,7 @@ jobs:
 
       - name: Publish GitHub Release (auto-generated notes fallback)
         if: steps.notes.outputs.has_notes != 'true'
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ steps.tag.outputs.tag_name }}
           name: Moonlight Zenith ${{ steps.tag.outputs.tag_name }}
@@ -227,7 +233,7 @@ jobs:
             ${{ runner.temp }}/release-assets/SHA256SUMS.txt
 
       - name: Upload release assets as workflow artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: moonlight-zenith-release-${{ steps.tag.outputs.tag_name }}
           path: ${{ runner.temp }}/release-assets/*
