@@ -4,6 +4,17 @@ All notable changes to **Moonlight Zenith Android** are documented in this file.
 
 ---
 
+## [v2.2.0-rc1-zenith] - 2026-11-23
+
+### 🛠️ Build Toolchain & Native NDK Modernization (Pre-Release)
+- **Chore (Latest Build Toolchain Upgrade):**
+  - Upgraded **Gradle Wrapper** from `9.7.1` to **`9.9.2`** for security patches and incremental Kotlin DSL compilation speedups.
+  - Upgraded **Android Gradle Plugin (AGP)** from `9.4.0` to **`9.5.1`**.
+  - Upgraded **Android NDK** from `r29` (`29.0.14206865`) to **`r30` LTS (`30.0.16248370`)** across `app/build.gradle` and GitHub Actions CI/release workflows.
+  - Extended GitHub Actions release tag trigger (`v*-zenith*`) so pre-release tags (`-alpha`, `-beta`, `-rc`) publish cleanly as GitHub Pre-releases.
+
+---
+
 ## [v2.2.0-zenith] - 2026-11-23
 
 ### ⌨️ Smart Keyboard Mode (Gboard Glide Typing, Suggestions & Autocorrect)

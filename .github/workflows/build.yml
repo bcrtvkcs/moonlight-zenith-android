@@ -65,7 +65,7 @@ jobs:
           SDKMANAGER="$SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
           echo "Using preinstalled sdkmanager: $SDKMANAGER"
           yes | "$SDKMANAGER" --licenses >/dev/null 2>&1 || true
-          "$SDKMANAGER" --install "ndk;29.0.14206865"
+          "$SDKMANAGER" --install "ndk;30.0.16248370"
           "$SDKMANAGER" --install "platforms;android-37" || "$SDKMANAGER" --channel=3 --install "platforms;android-37" || true
 
       - name: Set up Gradle
