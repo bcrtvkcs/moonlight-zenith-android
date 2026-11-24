@@ -1,6 +1,9 @@
 package com.limelight.ui.glass
 
 import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
+import android.os.Build
 import androidx.activity.compose.BackHandler
 import androidx.annotation.DrawableRes
 import androidx.compose.animation.AnimatedVisibility
@@ -63,17 +66,19 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.BlurEffect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -235,7 +240,7 @@ fun LiquidGlassScaffold(
             bgState.pureBlackTheme,
             bgState.themeMode
         ) {
-            (context as? Activity)?.let { act ->
+            context.findActivity()?.let { act ->
                 UiBackgroundManager.applyWindowWallpaperFlags(act, surfaceArgb)
             }
         }
@@ -287,6 +292,7 @@ fun LiquidGlassBackgroundLayer(
     val opacityFraction = bgState.effectiveOpacity / 100f
     val tintAlpha = bgState.effectiveTintOpacity / 100f
     val blurDp = bgState.effectiveBlurDp.dp
+    val blurPx = with(LocalDensity.current) { blurDp.toPx() }.coerceIn(0f, 150f)
 
     val tintColorInt = remember(bgState.tintMode, colorScheme.surface, colorScheme.primary) {
         UiBackgroundManager.resolveTintColorInt(
@@ -314,16 +320,22 @@ fun LiquidGlassBackgroundLayer(
                         .fillMaxSize()
                         .background(colorScheme.surface)
                 )
-                val imgModifier = Modifier
-                    .fillMaxSize()
-                    .graphicsLayer { alpha = opacityFraction }
-                    .let { if (blurDp > 0.dp) it.blur(blurDp) else it }
-
                 Image(
                     bitmap = customBitmap.asImageBitmap(),
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
-                    modifier = imgModifier
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .graphicsLayer {
+                            alpha = opacityFraction
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && blurPx > 0.5f) {
+                                renderEffect = BlurEffect(blurPx, blurPx, TileMode.Clamp)
+                                clip = true
+                            } else {
+                                renderEffect = null
+                                clip = false
+                            }
+                        }
                 )
             }
             useLiveWindowWallpaper -> {
@@ -882,4 +894,10 @@ fun GlassActionButton(
             maxLines = 1
         )
     }
+}
+
+private tailrec fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext?.findActivity()
+    else -> null
 }

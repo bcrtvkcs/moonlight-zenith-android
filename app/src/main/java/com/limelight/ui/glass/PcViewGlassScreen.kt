@@ -33,7 +33,7 @@ import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
@@ -73,7 +73,7 @@ data class PcCardModel(
     val uuid: String,
     val name: String,
     val state: ComputerDetails.State,
-    val pairState: PairingManager.PairState,
+    val pairState: PairingManager.PairState?,
     val runningGameId: Int,
     val computerObject: PcView.ComputerObject
 )
@@ -89,14 +89,17 @@ class PcViewGlassController {
     private val _uiState = MutableStateFlow(PcViewGlassUiState())
     val uiState: StateFlow<PcViewGlassUiState> = _uiState.asStateFlow()
 
-    fun updateComputers(items: List<PcView.ComputerObject>) {
-        val mapped = items.map { obj ->
+    fun updateComputers(items: List<PcView.ComputerObject>?) {
+        val mapped = items.orEmpty().mapIndexedNotNull { index, obj ->
+            val details = obj?.details ?: return@mapIndexedNotNull null
+            val safeName = details.name.orEmpty()
+            val safeUuid = details.uuid?.takeIf { it.isNotBlank() } ?: "${safeName}_$index"
             PcCardModel(
-                uuid = obj.details.uuid ?: obj.details.name.orEmpty(),
-                name = obj.details.name.orEmpty(),
-                state = obj.details.state,
-                pairState = obj.details.pairState,
-                runningGameId = obj.details.runningGameId,
+                uuid = safeUuid,
+                name = safeName,
+                state = details.state ?: ComputerDetails.State.UNKNOWN,
+                pairState = details.pairState,
+                runningGameId = details.runningGameId,
                 computerObject = obj
             )
         }
@@ -342,10 +345,10 @@ fun PcViewGlassScreen(
                 verticalArrangement = Arrangement.spacedBy(14.dp),
                 modifier = Modifier.fillMaxSize()
             ) {
-                items(
+                itemsIndexed(
                     items = state.computers,
-                    key = { it.uuid }
-                ) { pc ->
+                    key = { index, pc -> "${pc.uuid}_$index" }
+                ) { _, pc ->
                     GlassPcCard(
                         pc = pc,
                         backdrop = backgroundBackdrop,

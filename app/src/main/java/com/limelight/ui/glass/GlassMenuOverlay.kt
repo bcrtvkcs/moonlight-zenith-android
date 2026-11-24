@@ -48,18 +48,18 @@ data class GlassMenuData(
     companion object {
         @JvmStatic
         fun create(
-            title: String,
+            title: String?,
             subtitle: String?,
             headerIconRes: Int,
-            options: List<M3MenuHelper.MenuOption>,
+            options: List<M3MenuHelper.MenuOption>?,
             listener: M3MenuHelper.OnMenuOptionSelectedListener?,
             onDismiss: Runnable?
         ): GlassMenuData {
             return GlassMenuData(
-                title = title,
+                title = title.orEmpty(),
                 subtitle = subtitle,
                 headerIconRes = headerIconRes,
-                options = options,
+                options = options.orEmpty().filterNotNull(),
                 onOptionSelected = { option -> listener?.onOptionSelected(option) },
                 onDismiss = { onDismiss?.run() }
             )
@@ -196,7 +196,7 @@ private fun GlassMenuContent(menuData: GlassMenuData) {
                     Spacer(modifier = Modifier.width(14.dp))
                 }
                 Text(
-                    text = option.title,
+                    text = option.title.orEmpty(),
                     style = MaterialTheme.typography.bodyLarge.copy(
                         fontWeight = if (option.isPrimary || option.isDestructive) FontWeight.SemiBold else FontWeight.Medium
                     ),

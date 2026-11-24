@@ -37,7 +37,7 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
@@ -88,19 +88,20 @@ class AppViewGlassController {
     private val _uiState = MutableStateFlow(AppViewGlassUiState())
     val uiState: StateFlow<AppViewGlassUiState> = _uiState.asStateFlow()
 
-    fun setHeader(computerName: String, smallIconMode: Boolean, isTv: Boolean) {
+    fun setHeader(computerName: String?, smallIconMode: Boolean, isTv: Boolean) {
         _uiState.value = _uiState.value.copy(
-            computerName = computerName,
+            computerName = computerName.orEmpty(),
             smallIconMode = smallIconMode,
             isTv = isTv
         )
     }
 
-    fun updateApps(items: List<AppView.AppObject>, loader: CachedAppAssetLoader?, smallIconMode: Boolean) {
-        val mapped = items.map { obj ->
+    fun updateApps(items: List<AppView.AppObject>?, loader: CachedAppAssetLoader?, smallIconMode: Boolean) {
+        val mapped = items.orEmpty().mapNotNull { obj ->
+            val app = obj?.app ?: return@mapNotNull null
             AppCardModel(
-                appId = obj.app.appId,
-                appName = obj.app.appName.orEmpty(),
+                appId = app.appId,
+                appName = app.appName.orEmpty(),
                 isRunning = obj.isRunning,
                 isHidden = obj.isHidden,
                 appObject = obj
@@ -195,10 +196,10 @@ fun AppViewGlassScreen(
             verticalArrangement = Arrangement.spacedBy(14.dp),
             modifier = Modifier.fillMaxSize()
         ) {
-            items(
+            itemsIndexed(
                 items = state.apps,
-                key = { it.appId }
-            ) { item ->
+                key = { index, item -> "${item.appId}_$index" }
+            ) { _, item ->
                 GlassAppCard(
                     item = item,
                     loader = state.loader,

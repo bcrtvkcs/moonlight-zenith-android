@@ -7,6 +7,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.graphics.Matrix
+import android.graphics.PixelFormat
 import android.graphics.RenderEffect
 import android.graphics.Shader
 import android.graphics.drawable.BitmapDrawable
@@ -453,17 +454,27 @@ object UiBackgroundManager {
         val useWallpaperFlag = shouldUseWindowWallpaperFlag(activity, bgState)
 
         if (useWallpaperFlag) {
+            window.setFormat(PixelFormat.TRANSLUCENT)
             window.addFlags(WindowManager.LayoutParams.FLAG_SHOW_WALLPAPER)
             window.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
             window.decorView.setBackgroundColor(Color.TRANSPARENT)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 try {
-                    val blurPx = (bgState.effectiveBlurDp * activity.resources.displayMetrics.density).roundToInt()
+                    val blurPx = (bgState.effectiveBlurDp * activity.resources.displayMetrics.density)
+                        .roundToInt()
+                        .coerceIn(0, 150)
+                    val lp = window.attributes
                     if (blurPx > 0) {
                         window.addFlags(WindowManager.LayoutParams.FLAG_BLUR_BEHIND)
-                        window.setBackgroundBlurRadius(blurPx)
+                        lp.blurBehindRadius = blurPx
+                        window.attributes = lp
+                        window.setBackgroundBlurRadius(0)
                     } else {
                         window.clearFlags(WindowManager.LayoutParams.FLAG_BLUR_BEHIND)
+                        if (lp.blurBehindRadius != 0) {
+                            lp.blurBehindRadius = 0
+                            window.attributes = lp
+                        }
                         window.setBackgroundBlurRadius(0)
                     }
                 } catch (_: Throwable) {
@@ -472,9 +483,15 @@ object UiBackgroundManager {
             }
         } else {
             window.clearFlags(WindowManager.LayoutParams.FLAG_SHOW_WALLPAPER)
+            window.setFormat(PixelFormat.OPAQUE)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 try {
                     window.clearFlags(WindowManager.LayoutParams.FLAG_BLUR_BEHIND)
+                    val lp = window.attributes
+                    if (lp.blurBehindRadius != 0) {
+                        lp.blurBehindRadius = 0
+                        window.attributes = lp
+                    }
                     window.setBackgroundBlurRadius(0)
                 } catch (_: Throwable) {
                 }
@@ -552,7 +569,8 @@ object UiBackgroundManager {
                     setImageBitmap(bitmap)
                     alpha = opacityFraction
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && bgState.effectiveBlurDp > 0) {
-                        val radiusPx = bgState.effectiveBlurDp * activity.resources.displayMetrics.density
+                        val radiusPx = (bgState.effectiveBlurDp * activity.resources.displayMetrics.density)
+                            .coerceIn(1f, 150f)
                         setRenderEffect(
                             RenderEffect.createBlurEffect(radiusPx, radiusPx, Shader.TileMode.CLAMP)
                         )

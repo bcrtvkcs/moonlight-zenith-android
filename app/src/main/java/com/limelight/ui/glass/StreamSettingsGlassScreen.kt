@@ -31,7 +31,7 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
@@ -90,10 +90,10 @@ class StreamSettingsGlassController {
     private val _uiState = MutableStateFlow(StreamSettingsGlassUiState())
     val uiState: StateFlow<StreamSettingsGlassUiState> = _uiState.asStateFlow()
 
-    fun setCategories(categories: List<StreamSettings.CategoryTab>, currentKey: String) {
+    fun setCategories(categories: List<StreamSettings.CategoryTab>?, currentKey: String?) {
         _uiState.value = _uiState.value.copy(
-            categories = categories.toList(),
-            initialCategoryKey = currentKey,
+            categories = categories.orEmpty().filterNotNull(),
+            initialCategoryKey = currentKey ?: "category_basic_settings",
             revision = _uiState.value.revision + 1
         )
     }
@@ -161,7 +161,7 @@ fun StreamSettingsGlassScreen(
 
     LaunchedEffect(pagerState.currentPage, categories) {
         if (pagerState.currentPage in categories.indices) {
-            callbacks.onCategorySelected(categories[pagerState.currentPage].key)
+            categories[pagerState.currentPage].key?.let { callbacks.onCategorySelected(it) }
         }
     }
 
@@ -301,7 +301,11 @@ fun StreamSettingsGlassScreen(
                 val cat = categories[pageIndex]
                 val prefsList = remember(cat, uiState.revision) {
                     val screen = cat.screen
-                    List(screen.preferenceCount) { idx -> screen.getPreference(idx) }
+                    if (screen == null) {
+                        emptyList()
+                    } else {
+                        List(screen.preferenceCount) { idx -> screen.getPreference(idx) }.filterNotNull()
+                    }
                 }
 
                 LazyColumn(
@@ -314,10 +318,10 @@ fun StreamSettingsGlassScreen(
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    items(
+                    itemsIndexed(
                         items = prefsList,
-                        key = { it.key ?: it.title?.toString() ?: it.hashCode() }
-                    ) { pref ->
+                        key = { idx, pref -> "${pref.key ?: pref.title?.toString() ?: "pref"}_$idx" }
+                    ) { _, pref ->
                         if (pref.key == PreferenceConfiguration.UI_BACKGROUND_PICK_IMAGE_PREF_STRING) {
                             GlassCustomBackgroundPickerCard(
                                 enabled = pref.isEnabled,
@@ -578,7 +582,7 @@ private fun GlassSingleChoicePrefDialog(
         ) {
             entries.forEachIndexed { idx, label ->
                 if (idx >= values.size) return@forEachIndexed
-                val itemVal = values[idx].toString()
+                val itemVal = values[idx]?.toString().orEmpty()
                 val isSelected = itemVal == currentVal
                 val interactionSource = remember { MutableInteractionSource() }
                 val isFocused by interactionSource.collectIsFocusedAsState()
@@ -623,7 +627,7 @@ private fun GlassSingleChoicePrefDialog(
                     }
                     Spacer(modifier = Modifier.width(12.dp))
                     Text(
-                        text = label.toString(),
+                        text = label?.toString().orEmpty(),
                         style = MaterialTheme.typography.bodyLarge.copy(
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                         ),
@@ -715,7 +719,7 @@ private fun GlassSeekBarPrefDialog(
                 .padding(horizontal = 18.dp, vertical = 8.dp)
         ) {
             Text(
-                text = pref.formatDisplayValue(currentVal),
+                text = pref.formatDisplayValue(currentVal).orEmpty(),
                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                 color = MaterialTheme.colorScheme.onPrimaryContainer
             )

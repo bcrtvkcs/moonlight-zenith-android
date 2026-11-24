@@ -310,8 +310,14 @@ public class UiHelper {
         window.setBackgroundDrawableResource(R.drawable.m3_glass_dialog_bg);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             try {
+                int blurPx = Math.min(150, (int) (24 * context.getResources().getDisplayMetrics().density));
                 window.addFlags(WindowManager.LayoutParams.FLAG_BLUR_BEHIND);
-                window.setBackgroundBlurRadius((int) (24 * context.getResources().getDisplayMetrics().density));
+                WindowManager.LayoutParams lp = window.getAttributes();
+                if (lp != null) {
+                    lp.setBlurBehindRadius(blurPx);
+                    window.setAttributes(lp);
+                }
+                window.setBackgroundBlurRadius(blurPx);
                 window.setDimAmount(0.32f);
             } catch (Throwable ignored) {
                 // Fallback gracefully on OEM builds that disable window blur

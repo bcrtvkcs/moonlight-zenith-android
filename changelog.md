@@ -4,6 +4,18 @@ All notable changes to **Moonlight Zenith Android** are documented in this file.
 
 ---
 
+## [v3.0.0-rc2-zenith] - 2026-11-25
+
+### 🐛 Liquid Glass Stability & Background Blur Fixes
+- **Fix (Startup Crash on `PcView` in Liquid Glass Mode):**
+  - Fixed a `NullPointerException` in `PcViewGlassController.updateComputers()` (`PcView.syncGlassComputers`) triggered when cached offline/timed-out PCs had a `null` `ComputerDetails.pairState` passed into non-null `PcCardModel.pairState`.
+  - Hardened Java→Kotlin null-safety and guaranteed unique `LazyVerticalGrid`/`LazyColumn` item keys across `PcViewGlassScreen.kt`, `AppViewGlassScreen.kt`, `StreamSettingsGlassScreen.kt`, and `GlassMenuOverlay.kt`.
+- **Fix (Phone Wallpaper & Custom Image Background Blur):**
+  - Updated `UiBackgroundManager.applyWindowWallpaperFlags()` to set `PixelFormat.TRANSLUCENT` and push `WindowManager.LayoutParams.blurBehindRadius` (clamped `0–150px`) via `window.attributes` alongside `FLAG_BLUR_BEHIND` on Android 12+, fixing background blur when using the system Phone Wallpaper (`FLAG_SHOW_WALLPAPER`).
+  - Unified custom image opacity and `BlurEffect(blurPx, blurPx, TileMode.Clamp)` into a single stable `graphicsLayer` in `LiquidGlassBackgroundLayer` (`LiquidGlassComponents.kt`) with safe `Context.findActivity()` resolution for live slider previews, and applied `lp.setBlurBehindRadius()` to native Liquid Glass dialogs in `UiHelper.applyLiquidGlassDialogStyle()`.
+
+---
+
 ## [v3.0.0-rc1-zenith] - 2026-11-24
 
 ### 🫧 Optional Liquid Glass UI (`Kyant0/AndroidLiquidGlass`) & Customizable App Background
