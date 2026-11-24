@@ -92,7 +92,7 @@ import kotlin.math.roundToInt
 /**
  * Authentic Kyant0/AndroidLiquidGlass-powered Switch (`LiquidToggle` architecture).
  * The glass capsule thumb refracts both the underlying screen backdrop AND the glowing switch track,
- * stretching and turning crystal-clear on press or horizontal drag just like iOS 26.
+ * stretching and turning crystal-clear on press or horizontal drag.
  */
 @Composable
 fun LiquidGlassSwitch(
@@ -517,13 +517,13 @@ fun resolveSettingsNavTabItem(categoryKey: String?, fallbackTitle: String): Sett
 }
 
 /**
- * iOS 26 / iPhone-style Liquid Glass Floating Bottom Navigation Bar.
+ * Liquid Glass Floating Bottom Navigation Bar.
  *
  * Features:
  * - Outer full-capsule Liquid Glass dock floating above the gesture bar (`combinedBackdrop` refracts
  *   scrolling settings cards right behind it).
  * - Inner sliding **Liquid Glass lens bubble** that glides smoothly with spring physics on tap,
- *   tracks pager swipes 1:1, and supports **press-and-drag scrubbing across tabs** just like iPhone!
+ *   tracks pager swipes 1:1, and supports **press-and-drag scrubbing across tabs**.
  */
 @Composable
 fun LiquidFloatingBottomBar(
@@ -558,12 +558,12 @@ fun LiquidFloatingBottomBar(
     val animatedIndicatorIndex by animateFloatAsState(
         targetValue = targetPos,
         animationSpec = spring(stiffness = Spring.StiffnessMediumLow, dampingRatio = 0.78f),
-        label = "iosDockLensPos"
+        label = "glassDockLensPos"
     )
     val scrubScale by animateFloatAsState(
         targetValue = if (isScrubbing) 1f else 0f,
         animationSpec = spring(stiffness = Spring.StiffnessMedium, dampingRatio = 0.68f),
-        label = "iosDockLensScale"
+        label = "glassDockLensScale"
     )
 
     // Smoothly keep the active tab centered inside the scrollable capsule
@@ -592,7 +592,7 @@ fun LiquidFloatingBottomBar(
                 bottom = navPadding.calculateBottomPadding() + 12.dp
             )
     ) {
-        // Outer floating iOS 26 Liquid Glass capsule dock
+        // Outer floating Liquid Glass capsule dock
         Box(
             modifier = Modifier
                 .widthIn(max = 580.dp)
@@ -636,7 +636,7 @@ fun LiquidFloatingBottomBar(
                         )
                     }
             ) {
-                // Sliding Liquid Glass active lens bubble behind/over active item (iOS 26 style)
+                // Sliding Liquid Glass active lens bubble behind/over active item
                 val pillShape = RoundedCornerShape(28.dp)
                 val lensMod = Modifier
                     .graphicsLayer {

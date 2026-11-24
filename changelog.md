@@ -6,14 +6,14 @@ All notable changes to **Moonlight Zenith Android** are documented in this file.
 
 ## [v3.0.0-rc3-zenith] - 2026-11-25
 
-### 🫧 Full Liquid Glass Parity, iOS-Style Floating Bottom Bar & Flexible Host/Client Audio Output
+### 🫧 Full Liquid Glass Parity, Floating Bottom Bar & Flexible Host/Client Audio Output
 - **Feat (Flexible Multi-Select Audio Output — Client, Host, Both, or Muted):**
   - Replaced the single *Play audio on PC* toggle (`checkbox_host_audio`) with a multi-select **Audio output** checkbox preference (`M3AudioOutputPreference`, key `pref_audio_output`) supporting **This device (Client)** and/or **PC (Host)** independently (`Client`, `Host`, `Client + Host`, or `None / Muted`), preserving backwards compatibility with existing `checkbox_host_audio` preferences.
   - Added **`SilentAudioRenderer`** (`com.limelight.binding.audio.SilentAudioRenderer`) so disabling Client audio keeps RTSP stream audio negotiation healthy without allocating an Android `AudioTrack` or stealing system audio focus.
   - Localized all new audio output strings across all **29** language locales (`values*/strings.xml`).
 - **Feat (Optional Settings Navigation Style — Tabbed vs. Floating Bottom Bar):**
   - Added **`list_settings_nav_style`** (*Settings navigation style*: **Tabbed** default vs. **Floating Bottom Bar**) under **UI Settings**, switching live without restarting Settings.
-  - In **Liquid Glass** mode, **Floating Bottom Bar** renders an iPhone / iOS 26-style floating full-capsule Liquid Glass dock (`LiquidFloatingBottomBar`) with a sliding refractive glass lens bubble supporting tap, pager-swipe tracking, press-and-drag tab scrubbing, and D-pad focus across all 7 categories with custom vector icons (`ic_nav_*.xml`).
+  - In **Liquid Glass** mode, **Floating Bottom Bar** renders a floating full-capsule Liquid Glass dock (`LiquidFloatingBottomBar`) with a sliding refractive glass lens bubble supporting tap, pager-swipe tracking, press-and-drag tab scrubbing, and D-pad focus across all 7 categories with custom vector icons (`ic_nav_*.xml`).
   - In **Material You Expressive** mode, **Floating Bottom Bar** renders a pure Material 3 Expressive floating pill dock (`activity_stream_settings.xml`, `StreamSettings.java`) with zero Liquid Glass overhead; **Tabbed** mode remains completely unchanged.
 - **Fix & Polish (Full Liquid Glass Coverage, Optical Shader Redraw & Animated Dialogs):**
   - Fixed `DrawBackdropNode` missing draw invalidation when optical parameters change via Snapshot-observable `LocalGlassTokensState`, expanded lens ranges (`refractionAmount` `0–72 dp`, `refractionHeight` `0–40 dp`), calibrated translucent glass presets, enriched the default ambient aurora mesh, and added a draggable **Live Liquid Glass Preview** card + Android 13+ Phone Wallpaper optical refraction hint card in UI Settings.
