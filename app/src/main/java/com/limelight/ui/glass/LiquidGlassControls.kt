@@ -10,9 +10,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
@@ -46,6 +47,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -130,53 +132,57 @@ fun LiquidGlassSwitch(
         label = "liquidTogglePress"
     )
 
-    val trackBackdrop = rememberLayerBackdrop()
+    val trackBackdrop = rememberFramePacedLayerBackdrop()
     val thumbBackdrop = rememberCombinedBackdrop(backdrop, trackBackdrop)
     val primaryColor = MaterialTheme.colorScheme.primary
     val inactiveTrackColor = Color.White.copy(alpha = 0.18f)
+
+    val currentChecked by rememberUpdatedState(checked)
+    val currentOnCheckedChange by rememberUpdatedState(onCheckedChange)
 
     Box(
         contentAlignment = Alignment.CenterStart,
         modifier = Modifier
             .size(width = trackWidthDp, height = trackHeightDp)
             .alpha(if (enabled) 1f else 0.40f)
-            .pointerInput(enabled, checked) {
+            .pointerInput(enabled, travelPx) {
                 if (!enabled) return@pointerInput
-                detectTapGestures(
-                    onPress = {
-                        isPressedOrDragging = true
-                        tryAwaitRelease()
-                        isPressedOrDragging = false
-                    },
-                    onTap = {
-                        onCheckedChange(!checked)
-                    }
-                )
-            }
-            .pointerInput(enabled, checked, travelPx) {
-                if (!enabled) return@pointerInput
-                detectHorizontalDragGestures(
-                    onDragStart = {
-                        isPressedOrDragging = true
-                        dragFraction = if (checked) 1f else 0f
-                    },
-                    onHorizontalDrag = { change, dragAmount ->
-                        change.consume()
-                        if (travelPx > 0f) {
-                            dragFraction = (dragFraction + dragAmount / travelPx).coerceIn(0f, 1f)
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false)
+                    down.consume()
+                    val startChecked = currentChecked
+                    val startX = down.position.x
+                    val startFraction = if (startChecked) 1f else 0f
+                    var moved = false
+                    dragFraction = startFraction
+                    isPressedOrDragging = true
+
+                    val pointerId = down.id
+                    try {
+                        while (true) {
+                            val event = awaitPointerEvent()
+                            val change = event.changes.firstOrNull { it.id == pointerId } ?: break
+                            if (!change.pressed) {
+                                change.consume()
+                                break
+                            }
+                            change.consume()
+                            val dx = change.position.x - startX
+                            if (kotlin.math.abs(dx) > 6f) {
+                                moved = true
+                            }
+                            if (travelPx > 0f && moved) {
+                                dragFraction = (startFraction + dx / travelPx).coerceIn(0f, 1f)
+                            }
                         }
-                    },
-                    onDragEnd = {
-                        val nextChecked = dragFraction >= 0.5f
-                        isPressedOrDragging = false
-                        if (nextChecked != checked) {
-                            onCheckedChange(nextChecked)
+                        val nextChecked = if (moved) dragFraction >= 0.5f else !startChecked
+                        if (nextChecked != startChecked) {
+                            currentOnCheckedChange(nextChecked)
                         }
-                    },
-                    onDragCancel = {
+                    } finally {
                         isPressedOrDragging = false
                     }
-                )
+                }
             }
     ) {
         // Track recorded into trackBackdrop so the refractive thumb magnifies its glowing edge
@@ -184,7 +190,7 @@ fun LiquidGlassSwitch(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .layerBackdrop(trackBackdrop)
+                .framePacedLayerBackdrop(trackBackdrop)
                 .clip(RoundedCornerShape(16.dp))
                 .background(activeColor)
                 .border(
@@ -256,7 +262,8 @@ fun LiquidGlassSwitch(
 /**
  * Authentic Kyant0/AndroidLiquidGlass-powered Slider (`LiquidSlider` architecture).
  * Features a sleek translucent track with glowing active fill and an interactive Liquid Glass
- * capsule thumb that swells into a clear magnifying lens while dragging.
+ * capsule thumb that stays magnified and refractive from touch-down until finger lift,
+ * regardless of finger movement outside the slider bounds.
  */
 @Composable
 fun LiquidGlassSlider(
@@ -274,9 +281,18 @@ fun LiquidGlassSlider(
     val range = (safeMax - minValue).toFloat()
 
     var isDragging by remember { mutableStateOf(false) }
-    var rawFraction by remember(value, minValue, safeMax) {
+    var rawFraction by remember {
         mutableFloatStateOf(((value - minValue).toFloat() / range).coerceIn(0f, 1f))
     }
+
+    LaunchedEffect(value, minValue, safeMax, isDragging) {
+        if (!isDragging) {
+            rawFraction = ((value - minValue).toFloat() / range).coerceIn(0f, 1f)
+        }
+    }
+
+    val currentValue by rememberUpdatedState(value)
+    val currentOnValueChange by rememberUpdatedState(onValueChange)
 
     val displayedFraction by animateFloatAsState(
         targetValue = if (isDragging) rawFraction else ((value - minValue).toFloat() / range).coerceIn(0f, 1f),
@@ -295,12 +311,12 @@ fun LiquidGlassSlider(
         val rawInt = (minValue + clamped * range).roundToInt()
         val stepped = (((rawInt - minValue + safeStep / 2) / safeStep) * safeStep + minValue)
             .coerceIn(minValue, safeMax)
-        if (stepped != value) {
-            onValueChange(stepped)
+        if (stepped != currentValue) {
+            currentOnValueChange(stepped)
         }
     }
 
-    val trackBackdrop = rememberLayerBackdrop()
+    val trackBackdrop = rememberFramePacedLayerBackdrop()
     val thumbBackdrop = rememberCombinedBackdrop(backdrop, trackBackdrop)
     val primaryColor = MaterialTheme.colorScheme.primary
     val tertiaryColor = MaterialTheme.colorScheme.tertiary
@@ -320,11 +336,11 @@ fun LiquidGlassSlider(
                 if (event.type == KeyEventType.KeyDown) {
                     when (event.key) {
                         Key.DirectionLeft -> {
-                            onValueChange((value - safeStep).coerceIn(minValue, safeMax))
+                            currentOnValueChange((currentValue - safeStep).coerceIn(minValue, safeMax))
                             true
                         }
                         Key.DirectionRight -> {
-                            onValueChange((value + safeStep).coerceIn(minValue, safeMax))
+                            currentOnValueChange((currentValue + safeStep).coerceIn(minValue, safeMax))
                             true
                         }
                         else -> false
@@ -345,31 +361,30 @@ fun LiquidGlassSlider(
             modifier = Modifier
                 .fillMaxSize()
                 .pointerInput(minValue, safeMax, safeStep, usableWidthPx, thumbWidthPx) {
-                    detectTapGestures(
-                        onPress = { offset ->
-                            isDragging = true
-                            val frac = (offset.x - thumbWidthPx / 2f) / usableWidthPx
-                            commitFraction(frac)
-                            tryAwaitRelease()
+                    awaitEachGesture {
+                        val down = awaitFirstDown(requireUnconsumed = false)
+                        down.consume()
+                        isDragging = true
+                        commitFraction((down.position.x - thumbWidthPx / 2f) / usableWidthPx)
+
+                        val pointerId = down.id
+                        try {
+                            while (true) {
+                                val event = awaitPointerEvent()
+                                val change = event.changes.firstOrNull { it.id == pointerId } ?: break
+                                if (!change.pressed) {
+                                    change.consume()
+                                    break
+                                }
+                                change.consume()
+                                // Track X across the entire screen; keep Liquid Glass active strictly
+                                // until the finger is actually lifted off the display.
+                                commitFraction((change.position.x - thumbWidthPx / 2f) / usableWidthPx)
+                            }
+                        } finally {
                             isDragging = false
                         }
-                    )
-                }
-                .pointerInput(minValue, safeMax, safeStep, usableWidthPx, thumbWidthPx) {
-                    detectHorizontalDragGestures(
-                        onDragStart = { offset ->
-                            isDragging = true
-                            val frac = (offset.x - thumbWidthPx / 2f) / usableWidthPx
-                            commitFraction(frac)
-                        },
-                        onHorizontalDrag = { change, _ ->
-                            change.consume()
-                            val frac = (change.position.x - thumbWidthPx / 2f) / usableWidthPx
-                            commitFraction(frac)
-                        },
-                        onDragEnd = { isDragging = false },
-                        onDragCancel = { isDragging = false }
-                    )
+                    }
                 }
         ) {
             Box(
@@ -377,7 +392,7 @@ fun LiquidGlassSlider(
                     .fillMaxWidth()
                     .padding(horizontal = thumbWidth / 2f)
                     .height(10.dp)
-                    .layerBackdrop(trackBackdrop)
+                    .framePacedLayerBackdrop(trackBackdrop)
                     .clip(RoundedCornerShape(5.dp))
                     .background(Color.White.copy(alpha = 0.16f))
                     .border(
@@ -576,7 +591,7 @@ fun LiquidFloatingBottomBar(
         }
     }
 
-    val dockContentBackdrop = rememberLayerBackdrop()
+    val dockContentBackdrop = rememberFramePacedLayerBackdrop()
     val lensBackdrop = rememberCombinedBackdrop(backdrop, dockContentBackdrop)
     val primaryColor = MaterialTheme.colorScheme.primary
     val onSurface = MaterialTheme.colorScheme.onSurface
@@ -698,7 +713,7 @@ fun LiquidFloatingBottomBar(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
                         .fillMaxHeight()
-                        .layerBackdrop(dockContentBackdrop)
+                        .framePacedLayerBackdrop(dockContentBackdrop)
                 ) {
                     tabs.forEachIndexed { index, tab ->
                         val isSelected = index == selectedIndex
@@ -761,7 +776,7 @@ fun LiquidGlassLivePreviewCard(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val previewBackdrop = rememberLayerBackdrop()
+    val previewBackdrop = rememberFramePacedLayerBackdrop()
     val customBitmap = remember(bgState.hasCustomImage, bgState.imageVersion) {
         if (bgState.hasCustomImage) UiBackgroundManager.loadCustomBitmapSync(context) else null
     }
@@ -795,7 +810,7 @@ fun LiquidGlassLivePreviewCard(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .layerBackdrop(previewBackdrop)
+                    .framePacedLayerBackdrop(previewBackdrop)
             ) {
                 if (customBitmap != null && !customBitmap.isRecycled) {
                     Image(

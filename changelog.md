@@ -4,53 +4,27 @@ All notable changes to **Moonlight Zenith Android** are documented in this file.
 
 ---
 
-## [v3.0.0-rc3-zenith] - 2026-11-25
+## [v3.0.0-zenith] - 2026-11-25
 
-### 🫧 Full Liquid Glass Parity, Floating Bottom Bar & Flexible Host/Client Audio Output
-- **Feat (Flexible Multi-Select Audio Output — Client, Host, Both, or Muted):**
-  - Replaced the single *Play audio on PC* toggle (`checkbox_host_audio`) with a multi-select **Audio output** checkbox preference (`M3AudioOutputPreference`, key `pref_audio_output`) supporting **This device (Client)** and/or **PC (Host)** independently (`Client`, `Host`, `Client + Host`, or `None / Muted`), preserving backwards compatibility with existing `checkbox_host_audio` preferences.
-  - Added **`SilentAudioRenderer`** (`com.limelight.binding.audio.SilentAudioRenderer`) so disabling Client audio keeps RTSP stream audio negotiation healthy without allocating an Android `AudioTrack` or stealing system audio focus.
-  - Localized all new audio output strings across all **29** language locales (`values*/strings.xml`).
-- **Feat (Optional Settings Navigation Style — Tabbed vs. Floating Bottom Bar):**
-  - Added **`list_settings_nav_style`** (*Settings navigation style*: **Tabbed** default vs. **Floating Bottom Bar**) under **UI Settings**, switching live without restarting Settings.
-  - In **Liquid Glass** mode, **Floating Bottom Bar** renders a floating full-capsule Liquid Glass dock (`LiquidFloatingBottomBar`) with a sliding refractive glass lens bubble supporting tap, pager-swipe tracking, press-and-drag tab scrubbing, and D-pad focus across all 7 categories with custom vector icons (`ic_nav_*.xml`).
-  - In **Material You Expressive** mode, **Floating Bottom Bar** renders a pure Material 3 Expressive floating pill dock (`activity_stream_settings.xml`, `StreamSettings.java`) with zero Liquid Glass overhead; **Tabbed** mode remains completely unchanged.
-- **Fix & Polish (Full Liquid Glass Coverage, Optical Shader Redraw & Animated Dialogs):**
-  - Fixed `DrawBackdropNode` missing draw invalidation when optical parameters change via Snapshot-observable `LocalGlassTokensState`, expanded lens ranges (`refractionAmount` `0–72 dp`, `refractionHeight` `0–40 dp`), calibrated translucent glass presets, enriched the default ambient aurora mesh, and added a draggable **Live Liquid Glass Preview** card + Android 13+ Phone Wallpaper optical refraction hint card in UI Settings.
-  - Replaced remaining flat Material You elements in Liquid Glass mode with true `Kyant0/AndroidLiquidGlass` components: **LiquidGlassSwitch** (`LiquidToggle` refractive capsule thumb), **LiquidGlassSlider** (`LiquidSlider` magnifying drag capsule), **GlassDialogPortal** (true animated Liquid Glass Quit/Delete/Alert/Spinner dialogs both in-scaffold and on `Game`/`ShortcutTrampoline`), refractive **GlassMenuOverlay** bottom sheet action rows, and state-retaining spring enter/exit dialog & bottom sheet animations.
-  - Fixed custom background image import (including **Google Photos Cloud Media Picker**, HEIC/AVIF/WebP/PNG/JPEG, and EXIF rotation) by migrating to `ActivityResultContracts.PickVisualMedia` + `OpenDocument` fallback with single-stream staging and API 28+ `ImageDecoder`.
-  - Upgraded the in-stream **Attect** floating menu (`GameAttectActivity.kt`) in Liquid Glass mode with translucent specular glass drawables for all 28 shortcut chips, smooth open/close animations, and (on Android 12+) a zero-latency non-focusable SurfaceFlinger blur-behind window over the live game stream.
-
----
-
-## [v3.0.0-rc2-zenith] - 2026-11-25
-
-### 🐛 Liquid Glass Stability & Background Blur Fixes
-- **Fix (Startup Crash on `PcView` in Liquid Glass Mode):**
-  - Fixed a `NullPointerException` in `PcViewGlassController.updateComputers()` (`PcView.syncGlassComputers`) triggered when cached offline/timed-out PCs had a `null` `ComputerDetails.pairState` passed into non-null `PcCardModel.pairState`.
-  - Hardened Java→Kotlin null-safety and guaranteed unique `LazyVerticalGrid`/`LazyColumn` item keys across `PcViewGlassScreen.kt`, `AppViewGlassScreen.kt`, `StreamSettingsGlassScreen.kt`, and `GlassMenuOverlay.kt`.
-- **Fix (Phone Wallpaper & Custom Image Background Blur):**
-  - Updated `UiBackgroundManager.applyWindowWallpaperFlags()` to set `PixelFormat.TRANSLUCENT` and push `WindowManager.LayoutParams.blurBehindRadius` (clamped `0–150px`) via `window.attributes` alongside `FLAG_BLUR_BEHIND` on Android 12+, fixing background blur when using the system Phone Wallpaper (`FLAG_SHOW_WALLPAPER`).
-  - Unified custom image opacity and `BlurEffect(blurPx, blurPx, TileMode.Clamp)` into a single stable `graphicsLayer` in `LiquidGlassBackgroundLayer` (`LiquidGlassComponents.kt`) with safe `Context.findActivity()` resolution for live slider previews, and applied `lp.setBlurBehindRadius()` to native Liquid Glass dialogs in `UiHelper.applyLiquidGlassDialogStyle()`.
-
----
-
-## [v3.0.0-rc1-zenith] - 2026-11-24
-
-### 🫧 Optional Liquid Glass UI (`Kyant0/AndroidLiquidGlass`) & Customizable App Background
-- **Feat (Dual-Engine Optional Liquid Glass Interface via `io.github.kyant0:backdrop:2.0.1`):**
+### 🫧 Optional Liquid Glass UI (`Kyant0/AndroidLiquidGlass`), Floating Bottom Bar, Custom Tinted Backgrounds & Flexible Audio Output
+- **Feat (Optional Dual-Engine Liquid Glass Interface via `io.github.kyant0:backdrop:2.0.1`):**
   - Integrated **Jetpack Compose (BOM `2026.09.00`)**, **Kotlin `2.4.10`** (`org.jetbrains.kotlin.plugin.compose`), and **`io.github.kyant0:backdrop:2.0.1`** (`Kyant0/AndroidLiquidGlass`) while keeping the existing **Material You Expressive** XML UI as the default with zero regressions (minimum SDK raised from `21` to `23` to align with Compose `1.12.1`, preserving `root` flavor `maxSdk 25`).
   - Added an **Interface style** selector (`list_ui_style`: **Material You Expressive** vs. **Liquid Glass**) under **UI Settings**.
-  - Implemented a dual-layer `LayerBackdrop` + `rememberCombinedBackdrop` rendering architecture (`LiquidGlassTheme.kt`, `LiquidGlassComponents.kt`) with real-time AGSL optical lens refraction (`lens`), chromatic aberration, 3D depth effect, Gaussian backdrop blur, vibrancy, specular rim highlights, and depth shadows on Android 13+, hardware `RenderEffect` blur on Android 12, and a clean translucent fallback on older versions.
-  - Built full Liquid Glass Compose screens with D-pad / Android TV focus navigation and edge-to-edge system bar insets across **`PcView`** (`PcViewGlassScreen.kt`, portrait top bar + floating extended FAB and landscape/TV floating glass navigation rail), **`AppView`** (`AppViewGlassScreen.kt`, preserving `CenterContentImageView` box-art centering and shortcut creation), **`StreamSettings`** (`StreamSettingsGlassScreen.kt`, 8-tab swipeable `HorizontalPager` with floating `GlassPillTabBar` backed directly by `SettingsFragment` with zero logic duplication), **`AddComputerManually`** (`AddComputerGlassScreen.kt`), and in-window **`GlassMenuOverlay`** bottom sheets / centered TV dialogs.
-  - Styled AlertDialogs, `SpinnerDialog`, confirmation dialogs (with Android 12+ hardware window blur-behind), and in-stream zero-latency performance/notification HUD overlays & Attect floating menu (`Game.java`, `GameAttectActivity.kt`) to match Liquid Glass mode without touching `StreamView`.
-- **Feat (Fine-Grained Liquid Glass Optical Parameter Controls & Live Preview):**
-  - Added 3 synchronized presets (**Frosted Glass**, **Clear Glass**, **Tinted Glass**) plus an automatic **Custom Parameters** mode (`list_liquid_glass_style`).
-  - Exposed 8 fine-grained Liquid Glass controls with **real-time 60/120fps live preview** while dragging sliders: **Glass blur radius** (`0–32 dp`), **Lens refraction amount** (`0–48 dp`), **Lens refraction height** (`0–28 dp`), **Chromatic aberration**, **3D lens depth effect**, **Glass surface opacity** (`5–75%`), **Specular edge highlight** (`0–100%`), and **Backdrop vibrancy**, automatically gated by Android API capability.
+  - Implemented a dual-layer `FramePacedLayerBackdrop` + `rememberCombinedBackdrop` rendering architecture (`LiquidGlassTheme.kt`, `LiquidGlassComponents.kt`, `LiquidGlassControls.kt`) with real-time AGSL optical lens refraction (`lens`), chromatic aberration, 3D depth effect, Gaussian backdrop blur, vibrancy, specular rim highlights, and depth shadows on Android 13+, hardware `RenderEffect` blur on Android 12, and a clean translucent fallback on older versions.
+  - Built full Liquid Glass Compose screens with D-pad / Android TV focus navigation and edge-to-edge system bar insets across **`PcView`** (`PcViewGlassScreen.kt`), **`AppView`** (`AppViewGlassScreen.kt`), **`StreamSettings`** (`StreamSettingsGlassScreen.kt`), **`AddComputerManually`** (`AddComputerGlassScreen.kt`), animated **`GlassMenuOverlay`** bottom sheets / TV dialogs, and unified animated **`GlassDialogPortal`** (`Dialog`, `SpinnerDialog`, Quit & Delete PC confirmations).
+  - Implemented authentic refractive **`LiquidGlassSwitch`** (`LiquidToggle` capsule thumb), **`LiquidGlassSlider`** (`LiquidSlider` magnifying drag capsule that stays active strictly until finger lift), and a zero-latency **`AttectGlassMenuHost`** rendering the in-stream Attect overflow panel and all **28** shortcut buttons in live Liquid Glass without blurring the game stream behind it.
+- **Feat (Fine-Grained Liquid Glass Controls, Live Preview & Refresh Rate Limit):**
+  - Added 3 synchronized presets (**Frosted Glass**, **Clear Glass**, **Tinted Glass**) plus automatic **Custom Parameters** mode (`list_liquid_glass_style`), an interactive draggable **Live Liquid Glass Preview** card, and **8** real-time optical parameter controls: **Glass blur radius** (`0–32 dp`), **Lens refraction amount** (`0–72 dp`), **Lens refraction height** (`0–40 dp`), **Chromatic aberration**, **3D lens depth effect**, **Glass surface opacity** (`5–75%`), **Specular edge highlight** (`0–100%`), and **Backdrop vibrancy**.
+  - Added **Liquid Glass refresh rate (FPS)** (`list_glass_fps`: **`15`**, **`30`**, **`60`**, **`90`**, **`120`**, **`144`**, **`144+ (Unlimited)`**) powered by `FramePacedLayerBackdrop` to pace dynamic backdrop sampling while keeping scrolling and touch at full native display refresh rate.
+- **Feat (Optional Settings Navigation Style — Tabbed vs. Floating Bottom Bar):**
+  - Added **`list_settings_nav_style`** (*Settings navigation style*: **Tabbed** default vs. **Floating Bottom Bar**) under **UI Settings**, switching live without restarting Settings.
+  - Renders a full-capsule sliding-lens Liquid Glass floating dock (`LiquidFloatingBottomBar`) in **Liquid Glass** mode and a pure Material 3 Expressive floating dock (`activity_stream_settings.xml`, `StreamSettings.java`) in **Material You Expressive** mode across all 7 categories with custom vector icons (`ic_nav_*.xml`).
 - **Feat (Customizable Tinted Background Image & Phone Wallpaper Support):**
-  - Added **`UiBackgroundManager.kt`** supporting **Theme Default** (adaptive ambient mesh gradient in Liquid Glass mode), **Custom Image** (zero-permission system Photo Picker / `ACTION_OPEN_DOCUMENT` with safe downsampling, EXIF orientation correction, persistent WebP storage, and live thumbnail preview), and **Phone Wallpaper** (zero-permission `FLAG_SHOW_WALLPAPER` + Android 12+ window blur on Android 13–16 for both static and live wallpapers, plus safe bitmap fallback on Android ≤ 12).
-  - Added **Background opacity** (`0–100%`), **Background color tint** (9 modes including adaptive Theme Surface, Theme Accent, Pure Black Scrim, Indigo, Ocean, Emerald, Amber, Crimson, and No Tint), **Tint intensity** (`0–90%`), and **Background blur** (`0–24 dp`, Android 12+) with live preview across both **Liquid Glass** and **Material You Expressive** modes.
-  - Added complete English (`values/strings.xml`) and Turkish (`values-tr/strings.xml`) localizations for all new settings.
+  - Added **`UiBackgroundManager.kt`** supporting **Theme Default** (adaptive ambient aurora mesh), **Custom Image** (modern `ActivityResultContracts.PickVisualMedia` supporting local gallery & Google Photos cloud media + `OpenDocument` fallback, single-stream staging, API 28+ `ImageDecoder` for JPEG/PNG/WebP/HEIC/AVIF/EXIF, and persistent WebP storage), and **Phone Wallpaper** (zero-permission `FLAG_SHOW_WALLPAPER` + Android 12+ `blurBehindRadius`).
+  - Added **Background opacity** (`0–100%`), **Background color tint** (9 modes), **Tint intensity** (`0–90%`), and **Background blur** (`0–24 dp`, Android 12+) with live preview across both **Liquid Glass** and **Material You Expressive** modes.
+- **Feat (Flexible Multi-Select Audio Output — Client, Host, Both, or Muted):**
+  - Replaced the single *Play audio on PC* toggle with a 2-checkbox multi-select **Audio output** preference (`M3AudioOutputPreference`, key `pref_audio_output`) supporting **This device (Client)** and/or **PC (Host)** independently (`Client`, `Host`, `Client + Host`, or `None / Muted`), backed by **`SilentAudioRenderer`** when Client audio is disabled so no `AudioTrack` or system audio focus is taken.
+  - Localized all new audio output strings across all **29** language locales (`values*/strings.xml`), and full EN/TR localizations for all UI & Liquid Glass settings.
 
 ---
 

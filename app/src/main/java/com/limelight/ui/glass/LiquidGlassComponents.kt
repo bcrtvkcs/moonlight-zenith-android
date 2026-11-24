@@ -4,6 +4,8 @@ import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import androidx.activity.compose.BackHandler
 import androidx.annotation.DrawableRes
 import androidx.compose.animation.AnimatedVisibility
@@ -59,31 +61,46 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.BlurEffect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.GraphicsLayerScope
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.layer.GraphicsLayer
+import androidx.compose.ui.graphics.layer.drawLayer
+import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.backdrops.layerBackdrop
@@ -252,8 +269,8 @@ fun LiquidGlassScaffold(
             }
         }
 
-        val backgroundBackdrop = rememberLayerBackdrop()
-        val contentBackdrop = rememberLayerBackdrop()
+        val backgroundBackdrop = rememberFramePacedLayerBackdrop()
+        val contentBackdrop = rememberFramePacedLayerBackdrop()
         val combinedBackdrop = rememberCombinedBackdrop(backgroundBackdrop, contentBackdrop)
 
         CompositionLocalProvider(
@@ -266,14 +283,14 @@ fun LiquidGlassScaffold(
                     bgState = bgState,
                     modifier = Modifier
                         .fillMaxSize()
-                        .layerBackdrop(backgroundBackdrop)
+                        .framePacedLayerBackdrop(backgroundBackdrop)
                 )
 
                 // LAYER 2: Main scrollable content recorded into contentBackdrop
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .layerBackdrop(contentBackdrop)
+                        .framePacedLayerBackdrop(contentBackdrop)
                 ) {
                     body(backgroundBackdrop)
                 }
@@ -982,3 +999,112 @@ internal tailrec fun Context.findActivity(): Activity? = when (this) {
     is ContextWrapper -> baseContext?.findActivity()
     else -> null
 }
+
+/**
+ * Frame-paced [Backdrop] recorder that lets users cap dynamic Liquid Glass refraction refresh rate
+ * (15 / 30 / 60 / 90 / 120 / 144 / 144+ FPS) for battery & GPU savings while keeping scrolling and
+ * touch interactions at full native display refresh rate.
+ */
+@Stable
+class FramePacedLayerBackdrop(
+    val graphicsLayer: GraphicsLayer,
+    private val maxFpsProvider: () -> Int
+) : Backdrop {
+    override val isCoordinatesDependent: Boolean = true
+    internal var layerCoordinates: LayoutCoordinates? by mutableStateOf(null)
+    internal var catchUpTick by mutableIntStateOf(0)
+
+    private var lastRecordNanos: Long = 0L
+    private var hasRecorded: Boolean = false
+    private var catchUpScheduled: Boolean = false
+    private val mainHandler = Handler(Looper.getMainLooper())
+    private val catchUpRunnable = Runnable {
+        catchUpScheduled = false
+        catchUpTick++
+    }
+
+    internal fun cancelPending() {
+        mainHandler.removeCallbacks(catchUpRunnable)
+        catchUpScheduled = false
+    }
+
+    internal fun shouldRecordNow(): Boolean {
+        val fps = maxFpsProvider()
+        val now = System.nanoTime()
+        val minIntervalNs = if (fps > 0) 1_000_000_000L / fps else 0L
+        if (!hasRecorded || minIntervalNs <= 0L || (now - lastRecordNanos) >= minIntervalNs) {
+            lastRecordNanos = now
+            hasRecorded = true
+            if (catchUpScheduled) {
+                mainHandler.removeCallbacks(catchUpRunnable)
+                catchUpScheduled = false
+            }
+            return true
+        }
+        if (!catchUpScheduled) {
+            catchUpScheduled = true
+            val delayMs = ((minIntervalNs - (now - lastRecordNanos)) / 1_000_000L).coerceIn(1L, 120L)
+            mainHandler.postDelayed(catchUpRunnable, delayMs)
+        }
+        return false
+    }
+
+    override fun DrawScope.drawBackdrop(
+        density: Density,
+        coordinates: LayoutCoordinates?,
+        layerBlock: (GraphicsLayerScope.() -> Unit)?
+    ) {
+        @Suppress("UNUSED_VARIABLE")
+        val tick = catchUpTick
+        if (!hasRecorded) return
+        val coords = coordinates ?: return
+        val layerCoords = layerCoordinates ?: return
+        if (!coords.isAttached || !layerCoords.isAttached) return
+        val offset = try {
+            layerCoords.localPositionOf(coords)
+        } catch (_: Exception) {
+            coords.positionInWindow() - layerCoords.positionInWindow()
+        }
+        withTransform({
+            translate(-offset.x, -offset.y)
+        }) {
+            drawLayer(graphicsLayer)
+        }
+    }
+}
+
+@Composable
+fun rememberFramePacedLayerBackdrop(): FramePacedLayerBackdrop {
+    val tokensState = LocalGlassTokensState.current
+    val graphicsLayer = rememberGraphicsLayer()
+    val backdrop = remember(graphicsLayer) {
+        FramePacedLayerBackdrop(graphicsLayer) { tokensState.value.glassMaxFps }
+    }
+    DisposableEffect(backdrop) {
+        onDispose {
+            backdrop.cancelPending()
+            backdrop.layerCoordinates = null
+        }
+    }
+    return backdrop
+}
+
+fun Modifier.framePacedLayerBackdrop(backdrop: FramePacedLayerBackdrop): Modifier =
+    this
+        .onGloballyPositioned { coords ->
+            if (coords.isAttached) {
+                backdrop.layerCoordinates = coords
+            }
+        }
+        .drawWithContent {
+            @Suppress("UNUSED_VARIABLE")
+            val tick = backdrop.catchUpTick
+            drawContent()
+            val w = size.width.toInt()
+            val h = size.height.toInt()
+            if (w > 0 && h > 0 && backdrop.shouldRecordNow()) {
+                backdrop.graphicsLayer.record(size = IntSize(w, h)) {
+                    this@drawWithContent.drawContent()
+                }
+            }
+        }

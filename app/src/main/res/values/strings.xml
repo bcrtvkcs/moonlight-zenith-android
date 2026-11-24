@@ -399,6 +399,9 @@
     <string name="glass_live_preview_title">Live Liquid Glass Preview</string>
     <string name="glass_live_preview_subtitle">Drag the lens or adjust parameters below to inspect refraction, blur, and prism dispersion in real time</string>
     <string name="glass_wallpaper_refraction_notice">Use Custom Image for full optical refraction on cards</string>
+    <string name="title_glass_fps">Liquid Glass refresh rate</string>
+    <string name="summary_glass_fps">Limits how often dynamic Liquid Glass backdrop refraction updates to balance smoothness and battery</string>
+    <string name="glass_fps_unlimited">144+ FPS (Unlimited)</string>
     <string name="title_audio_output">Audio output</string>
     <string name="summary_audio_output">Choose where stream audio is played</string>
     <string name="audio_output_client">This device (Client)</string>

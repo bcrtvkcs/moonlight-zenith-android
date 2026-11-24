@@ -51,6 +51,7 @@ public class PreferenceConfiguration {
     public static final String GLASS_SURFACE_OPACITY_PREF_STRING = "seekbar_glass_surface_opacity";
     public static final String GLASS_HIGHLIGHT_INTENSITY_PREF_STRING = "seekbar_glass_highlight_intensity";
     public static final String GLASS_VIBRANCY_PREF_STRING = "checkbox_glass_vibrancy";
+    public static final String GLASS_FPS_PREF_STRING = "list_glass_fps";
     public static final String UI_BACKGROUND_SOURCE_PREF_STRING = "list_ui_background_source";
     public static final String UI_BACKGROUND_PICK_IMAGE_PREF_STRING = "pref_ui_background_pick_image";
     public static final String UI_BACKGROUND_OPACITY_PREF_STRING = "seekbar_ui_background_opacity";
@@ -74,6 +75,7 @@ public class PreferenceConfiguration {
     public static final int DEFAULT_GLASS_SURFACE_OPACITY = 24;
     public static final int DEFAULT_GLASS_HIGHLIGHT_INTENSITY = 78;
     public static final boolean DEFAULT_GLASS_VIBRANCY = true;
+    public static final String DEFAULT_GLASS_FPS = "0";
     public static final String DEFAULT_UI_BACKGROUND_SOURCE = "none";
     public static final String UI_BACKGROUND_SOURCE_CUSTOM = "custom_image";
     public static final String UI_BACKGROUND_SOURCE_WALLPAPER = "wallpaper";
@@ -197,6 +199,7 @@ public class PreferenceConfiguration {
     public int glassSurfaceOpacity;
     public int glassHighlightIntensity;
     public boolean glassVibrancy;
+    public int glassMaxFps;
     public String uiBackgroundSource;
     public int uiBackgroundOpacity;
     public String uiBackgroundTintMode;
@@ -676,6 +679,7 @@ public class PreferenceConfiguration {
         config.glassSurfaceOpacity = prefs.getInt(GLASS_SURFACE_OPACITY_PREF_STRING, DEFAULT_GLASS_SURFACE_OPACITY);
         config.glassHighlightIntensity = prefs.getInt(GLASS_HIGHLIGHT_INTENSITY_PREF_STRING, DEFAULT_GLASS_HIGHLIGHT_INTENSITY);
         config.glassVibrancy = prefs.getBoolean(GLASS_VIBRANCY_PREF_STRING, DEFAULT_GLASS_VIBRANCY);
+        try { config.glassMaxFps = Integer.parseInt(prefs.getString(GLASS_FPS_PREF_STRING, DEFAULT_GLASS_FPS)); } catch (NumberFormatException e) { config.glassMaxFps = 0; }
         config.uiBackgroundSource = prefs.getString(UI_BACKGROUND_SOURCE_PREF_STRING, DEFAULT_UI_BACKGROUND_SOURCE);
         config.uiBackgroundOpacity = prefs.getInt(UI_BACKGROUND_OPACITY_PREF_STRING, DEFAULT_UI_BACKGROUND_OPACITY);
         config.uiBackgroundTintMode = prefs.getString(UI_BACKGROUND_TINT_MODE_PREF_STRING, DEFAULT_UI_BACKGROUND_TINT_MODE);

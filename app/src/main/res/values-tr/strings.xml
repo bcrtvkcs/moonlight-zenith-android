@@ -370,6 +370,9 @@
     <string name="glass_live_preview_title">Canlı Liquid Glass Önizleme</string>
     <string name="glass_live_preview_subtitle">Lens kırılması, bulanıklık ve prizma dağılımını anlık görmek için merceği sürükleyin veya aşağıdaki ayarları değiştirin</string>
     <string name="glass_wallpaper_refraction_notice">Kartlarda tam optik kırılma için Özel Görsel seçeneğini kullanınız</string>
+    <string name="title_glass_fps">Liquid Glass yenileme hızı (FPS)</string>
+    <string name="summary_glass_fps">Akıcılık ve pil tasarrufu dengesi için dinamik Liquid Glass kırılma güncellemelerinin saniyedeki kare sınırını belirler</string>
+    <string name="glass_fps_unlimited">144+ FPS (Sınırsız)</string>
     <string name="title_audio_output">Ses çıkışı</string>
     <string name="summary_audio_output">Yayın sesinin nerede oynatılacağını seçin</string>
     <string name="audio_output_client">Bu cihaz (İstemci)</string>

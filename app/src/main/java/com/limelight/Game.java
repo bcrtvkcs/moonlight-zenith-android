@@ -37,6 +37,7 @@ import com.limelight.utils.Dialog;
 import com.limelight.utils.ServerHelper;
 import com.limelight.utils.ShortcutHelper;
 import com.limelight.utils.SpinnerDialog;
+import com.limelight.ui.glass.AttectGlassMenuHost;
 import com.limelight.utils.UiHelper;
 
 import android.annotation.SuppressLint;
@@ -184,6 +185,7 @@ public class Game extends GameAttectActivity implements SurfaceHolder.Callback,
     private TextView notificationOverlayView;
     private int requestedNotificationOverlayVisibility = View.GONE;
     private TextView performanceOverlayView;
+    private AttectGlassMenuHost attectGlassMenuHost;
 
     private MediaCodecDecoderRenderer decoderRenderer;
     private boolean reportedCrash;
@@ -634,7 +636,8 @@ public class Game extends GameAttectActivity implements SurfaceHolder.Callback,
                 }
         );
         if (UiHelper.isLiquidGlassEnabled(this)) {
-            applyAttectLiquidGlassStyle();
+            applyAttectLiquidGlassStyle(prefConfig.glassSurfaceOpacity, prefConfig.glassHighlightIntensity);
+            attectGlassMenuHost = AttectGlassMenuHost.attach(this);
         }
 
     }
@@ -1139,6 +1142,10 @@ public class Game extends GameAttectActivity implements SurfaceHolder.Callback,
 
     @Override
     protected void onDestroy() {
+        if (attectGlassMenuHost != null) {
+            attectGlassMenuHost.dismissImmediate();
+            attectGlassMenuHost = null;
+        }
         super.onDestroy();
 
         if (controllerHandler != null) {

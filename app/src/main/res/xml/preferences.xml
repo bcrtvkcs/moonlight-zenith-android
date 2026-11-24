@@ -332,6 +332,13 @@
             android:summary="@string/summary_glass_vibrancy"
             android:defaultValue="true" />
         <com.limelight.preferences.M3ListPreference
+            android:key="list_glass_fps"
+            android:title="@string/title_glass_fps"
+            android:summary="@string/summary_glass_fps"
+            android:entries="@array/glass_fps_names"
+            android:entryValues="@array/glass_fps_values"
+            android:defaultValue="0" />
+        <com.limelight.preferences.M3ListPreference
             android:key="list_theme_mode"
             android:title="@string/title_theme_mode"
             android:summary="@string/summary_theme_mode"

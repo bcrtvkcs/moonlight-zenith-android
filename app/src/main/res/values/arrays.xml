@@ -210,6 +210,24 @@
         <item>tinted</item>
         <item>custom</item>
     </string-array>
+    <string-array name="glass_fps_names">
+        <item>15 FPS</item>
+        <item>30 FPS</item>
+        <item>60 FPS</item>
+        <item>90 FPS</item>
+        <item>120 FPS</item>
+        <item>144 FPS</item>
+        <item>@string/glass_fps_unlimited</item>
+    </string-array>
+    <string-array name="glass_fps_values" translatable="false">
+        <item>15</item>
+        <item>30</item>
+        <item>60</item>
+        <item>90</item>
+        <item>120</item>
+        <item>144</item>
+        <item>0</item>
+    </string-array>
     <string-array name="ui_background_source_names">
         <item>@string/ui_background_source_none</item>
         <item>@string/ui_background_source_custom_image</item>

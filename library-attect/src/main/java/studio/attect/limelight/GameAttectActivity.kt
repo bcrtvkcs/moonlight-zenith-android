@@ -1,18 +1,9 @@
 package studio.attect.limelight
 
 import android.app.Activity
-import android.app.Dialog
-import android.graphics.Color
-import android.graphics.PixelFormat
-import android.graphics.drawable.ColorDrawable
-import android.os.Build
 import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.View
-import android.view.ViewGroup
-import android.view.Window
-import android.view.WindowManager
-import android.view.animation.DecelerateInterpolator
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.RelativeLayout
@@ -35,6 +26,9 @@ abstract class GameAttectActivity : Activity() {
     private lateinit var sendKeyboardInput: (translatedKeyCode: Short, keyDirection: Byte, modifierState: Byte, flags: Byte) -> Unit
     private lateinit var mouseButtonUp: (button: Byte) -> Unit
     private lateinit var mouseButtonDown: (button: Byte) -> Unit
+    private var toggleSoftKeyboardRunnerRef: (() -> Unit)? = null
+    private var updateTouchscreenTrackpadRef: ((Boolean) -> Unit)? = null
+    private var virtualControllerShowRef: (() -> Unit)? = null
 
     private lateinit var floatButton: ImageView
     private lateinit var overflowLayout: FrameLayout
@@ -72,127 +66,78 @@ abstract class GameAttectActivity : Activity() {
     private lateinit var virtualKeyNvidiaRecord: RelativeLayout
 
     private var isShowOverflowMenu = false
-    private var isLiquidGlassStyle = false
-    private var glassOverflowDialog: Dialog? = null
+
+    /**
+     * Optional external overlay host (used by Liquid Glass mode in `app` module to render
+     * all 28 Attect menu buttons with genuine Kyant0/AndroidLiquidGlass shaders & Frame-1 blur).
+     * Material You Expressive leaves this null and uses the native XML overflow card untouched.
+     */
+    var customOverflowMenuHandler: ((show: Boolean) -> Boolean)? = null
 
     var nativeTouchEventMode = false
 
-    /**
-     * Upgrades the Attect floating trigger button, overflow card, and all 28 shortcut chips to
-     * translucent specular Liquid Glass styling with smooth open/close animations and (on Android 12+)
-     * a non-focusable SurfaceFlinger blur-behind overlay that blurs the live game stream with zero
-     * added streaming latency. Material You Expressive mode never calls this method.
-     */
-    fun applyAttectLiquidGlassStyle() {
-        isLiquidGlassStyle = true
+    fun applyAttectLiquidGlassStyle(surfaceOpacityPercent: Int = 24, highlightIntensityPercent: Int = 78) {
         if (::floatButton.isInitialized) {
-            floatButton.setBackgroundResource(R.drawable.m3_glass_float_button_bg)
-            floatButton.alpha = 0.78f
+            // Zero-latency static glass badge reflecting user's surface opacity & specular highlight
+            // without running live AGSL shaders over the gameplay SurfaceView.
+            val bgAlpha = ((surfaceOpacityPercent.coerceIn(5, 75) / 100f) * 255f).toInt().coerceIn(28, 196)
+            val strokeAlpha = ((highlightIntensityPercent.coerceIn(0, 100) / 100f) * 210f).toInt().coerceIn(24, 220)
+            val fillColor = (bgAlpha shl 24) or 0x1E2332
+            val strokeColor = (strokeAlpha shl 24) or 0xFFFFFF
+            val drawable = android.graphics.drawable.GradientDrawable().apply {
+                shape = android.graphics.drawable.GradientDrawable.OVAL
+                setColor(fillColor)
+                setStroke((1.2f * resources.displayMetrics.density).toInt().coerceAtLeast(1), strokeColor)
+            }
+            floatButton.background = drawable
+            floatButton.alpha = 0.84f
         }
-        if (::overflowLayout.isInitialized) {
-            overflowLayout.setBackgroundColor(0x38000000)
-            if (overflowLayout.childCount > 0) {
-                val card = overflowLayout.getChildAt(0) as? com.google.android.material.card.MaterialCardView
-                if (card != null) {
-                    card.setCardBackgroundColor(Color.TRANSPARENT)
-                    card.strokeWidth = 0
-                    card.cardElevation = 0f
-                    card.setBackgroundResource(R.drawable.m3_glass_overflow_card_bg)
-                }
+    }
+
+    fun onExternalOverflowMenuDismissed() {
+        isShowOverflowMenu = false
+        if (::floatButton.isInitialized) {
+            floatButton.visibility = View.VISIBLE
+        }
+    }
+
+    fun performAttectAction(actionId: Int) {
+        when (actionId) {
+            ACTION_ESC -> pressKey(KeyEvent.KEYCODE_ESCAPE)
+            ACTION_WIN -> pressKey(KeyEvent.KEYCODE_META_LEFT)
+            ACTION_SYSTEM_MENU -> pressKeys(KeyEvent.KEYCODE_META_LEFT, KeyEvent.KEYCODE_X)
+            ACTION_MIDDLE_MOUSE -> pressMouseKey(MOUSE_BUTTON_MIDDLE)
+            ACTION_ONSCREEN_GAMEPAD -> virtualControllerShowRef?.invoke()
+            ACTION_TOUCHSCREEN_MODE -> {
+                nativeTouchEventMode = true
+                updateTouchscreenTrackpadRef?.invoke(false)
             }
-
-            // Style all 28 inner shortcut chips as translucent specular Liquid Glass pills
-            val primaryChips = listOf(
-                virtualKeyEsc,
-                virtualKeyWin,
-                onScreenGamePad,
-                touchScreenModeMenu,
-                touchPadModeMenu,
-                toggleSoftKeyboardMenu
-            )
-            primaryChips.forEach { it.setBackgroundResource(R.drawable.m3_glass_overflow_primary_chip_bg) }
-
-            virtualKeyExitProgram.setBackgroundResource(R.drawable.m3_glass_overflow_destructive_chip_bg)
-
-            val standardChips = listOf(
-                virtualKeySystemMenu,
-                virtualMouseMiddleButton,
-                virtualKeyScreenshot,
-                virtualKeyTaskManager,
-                virtualKeyExplorer,
-                virtualKeyCopy,
-                virtualKeyCut,
-                virtualKeyPaste,
-                virtualKeySelectAll,
-                virtualKeyShowDesktop,
-                virtualKeyTaskView,
-                virtualKeyNewDesktop,
-                virtualKeyDeleteDesktop,
-                virtualKeyLeftDesktop,
-                virtualKeyRightDesktop,
-                virtualKeyNvidiaOverflow,
-                virtualKeyNvidiaScreenshot,
-                virtualKeyNvidiaPhotoMode,
-                virtualKeyNvidiaGameFilter,
-                virtualKeyNvidiaInstantlyRelay,
-                virtualKeyNvidiaRecord
-            )
-            standardChips.forEach { it.setBackgroundResource(R.drawable.m3_glass_overflow_chip_bg) }
-
-            // On Android 12+, move overflowLayout into a non-focusable translucent Dialog so
-            // SurfaceFlinger natively blurs the live SurfaceView stream behind the Attect glass card
-            // without stealing pointer capture or window focus from Game!
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && glassOverflowDialog == null) {
-                try {
-                    (overflowLayout.parent as? ViewGroup)?.removeView(overflowLayout)
-                    val dlg = Dialog(this, android.R.style.Theme_Translucent_NoTitleBar_Fullscreen)
-                    dlg.requestWindowFeature(Window.FEATURE_NO_TITLE)
-                    dlg.setCancelable(false)
-                    dlg.setCanceledOnTouchOutside(false)
-                    overflowLayout.visibility = View.VISIBLE
-                    dlg.setContentView(
-                        overflowLayout,
-                        ViewGroup.LayoutParams(
-                            ViewGroup.LayoutParams.MATCH_PARENT,
-                            ViewGroup.LayoutParams.MATCH_PARENT
-                        )
-                    )
-                    dlg.window?.let { win ->
-                        win.setLayout(
-                            ViewGroup.LayoutParams.MATCH_PARENT,
-                            ViewGroup.LayoutParams.MATCH_PARENT
-                        )
-                        win.setFormat(PixelFormat.TRANSLUCENT)
-                        win.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-                        win.decorView.setBackgroundColor(Color.TRANSPARENT)
-                        // FLAG_NOT_FOCUSABLE keeps Game's pointer capture & immersive bars untouched
-                        win.addFlags(
-                            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
-                                    or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
-                                    or WindowManager.LayoutParams.FLAG_BLUR_BEHIND
-                        )
-                        val lp = win.attributes
-                        if (lp != null) {
-                            lp.blurBehindRadius = (22 * resources.displayMetrics.density)
-                                .toInt()
-                                .coerceIn(1, 110)
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                                lp.layoutInDisplayCutoutMode =
-                                    WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
-                            }
-                            win.attributes = lp
-                        }
-                    }
-                    glassOverflowDialog = dlg
-                } catch (_: Throwable) {
-                    // Fallback seamlessly to in-decorView animated glass card
-                    glassOverflowDialog = null
-                    if (overflowLayout.parent == null) {
-                        overflowLayout.visibility = View.GONE
-                        (window.decorView as? FrameLayout)?.addView(overflowLayout)
-                    }
-                }
+            ACTION_TOUCHPAD_MODE -> {
+                nativeTouchEventMode = false
+                updateTouchscreenTrackpadRef?.invoke(true)
             }
+            ACTION_TOGGLE_KEYBOARD -> toggleSoftKeyboardRunnerRef?.invoke()
+            ACTION_EXIT_PROGRAM -> pressKeys(KeyEvent.KEYCODE_ALT_LEFT, KeyEvent.KEYCODE_F4)
+            ACTION_SCREENSHOT -> pressKey(KeyEvent.KEYCODE_SYSRQ)
+            ACTION_SCREENSHOT_WIN -> pressKeys(KeyEvent.KEYCODE_META_LEFT, KeyEvent.KEYCODE_SYSRQ)
+            ACTION_TASK_MANAGER -> pressKeys(KeyEvent.KEYCODE_CTRL_LEFT, KeyEvent.KEYCODE_SHIFT_LEFT, KeyEvent.KEYCODE_ESCAPE)
+            ACTION_EXPLORER -> pressKeys(KeyEvent.KEYCODE_META_LEFT, KeyEvent.KEYCODE_E)
+            ACTION_COPY -> pressKeys(KeyEvent.KEYCODE_CTRL_LEFT, KeyEvent.KEYCODE_C)
+            ACTION_CUT -> pressKeys(KeyEvent.KEYCODE_CTRL_LEFT, KeyEvent.KEYCODE_X)
+            ACTION_PASTE -> pressKeys(KeyEvent.KEYCODE_CTRL_LEFT, KeyEvent.KEYCODE_V)
+            ACTION_SELECT_ALL -> pressKeys(KeyEvent.KEYCODE_CTRL_LEFT, KeyEvent.KEYCODE_A)
+            ACTION_SHOW_DESKTOP -> pressKeys(KeyEvent.KEYCODE_META_LEFT, KeyEvent.KEYCODE_D)
+            ACTION_TASK_VIEW -> pressKeys(KeyEvent.KEYCODE_META_LEFT, KeyEvent.KEYCODE_TAB)
+            ACTION_NEW_DESKTOP -> pressKeys(KeyEvent.KEYCODE_META_LEFT, KeyEvent.KEYCODE_CTRL_LEFT, KeyEvent.KEYCODE_D)
+            ACTION_DELETE_DESKTOP -> pressKeys(KeyEvent.KEYCODE_META_LEFT, KeyEvent.KEYCODE_CTRL_LEFT, KeyEvent.KEYCODE_F4)
+            ACTION_LEFT_DESKTOP -> pressKeys(KeyEvent.KEYCODE_META_LEFT, KeyEvent.KEYCODE_CTRL_LEFT, KeyEvent.KEYCODE_DPAD_LEFT)
+            ACTION_RIGHT_DESKTOP -> pressKeys(KeyEvent.KEYCODE_META_LEFT, KeyEvent.KEYCODE_CTRL_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT)
+            ACTION_NVIDIA_OVERFLOW -> pressKeys(KeyEvent.KEYCODE_ALT_LEFT, KeyEvent.KEYCODE_Z)
+            ACTION_NVIDIA_SCREENSHOT -> pressKeys(KeyEvent.KEYCODE_ALT_LEFT, KeyEvent.KEYCODE_F1)
+            ACTION_NVIDIA_PHOTO_MODE -> pressKeys(KeyEvent.KEYCODE_ALT_LEFT, KeyEvent.KEYCODE_F2)
+            ACTION_NVIDIA_GAME_FILTER -> pressKeys(KeyEvent.KEYCODE_ALT_LEFT, KeyEvent.KEYCODE_F3)
+            ACTION_NVIDIA_INSTANT_REPLAY -> pressKeys(KeyEvent.KEYCODE_ALT_LEFT, KeyEvent.KEYCODE_F10)
+            ACTION_NVIDIA_RECORD -> pressKeys(KeyEvent.KEYCODE_ALT_LEFT, KeyEvent.KEYCODE_F10)
         }
     }
 
@@ -210,6 +155,10 @@ abstract class GameAttectActivity : Activity() {
         this.sendKeyboardInput = sendKeyboardInput
         this.mouseButtonUp = mouseButtonUp
         this.mouseButtonDown = mouseButtonDown
+        this.toggleSoftKeyboardRunnerRef = toggleSoftKeyboardRunner
+        this.updateTouchscreenTrackpadRef = updateTouchscreenTrackpad
+        this.virtualControllerShowRef = virtualControllerShow
+
         val view = this.window.decorView as FrameLayout
         val appendView = LayoutInflater.from(this).inflate(R.layout.game_overflow_menu, view, true)
 
@@ -263,125 +212,123 @@ abstract class GameAttectActivity : Activity() {
         }
 
         virtualKeyEsc.setOnClickListener {
-            pressKey(KeyEvent.KEYCODE_ESCAPE)
+            performAttectAction(ACTION_ESC)
             toggleOverflowMenu()
         }
         virtualKeyWin.setOnClickListener {
-            pressKey(KeyEvent.KEYCODE_META_LEFT)
+            performAttectAction(ACTION_WIN)
             toggleOverflowMenu()
         }
         virtualKeySystemMenu.setOnClickListener {
-            pressKeys(KeyEvent.KEYCODE_META_LEFT, KeyEvent.KEYCODE_X)
+            performAttectAction(ACTION_SYSTEM_MENU)
             toggleOverflowMenu()
         }
         virtualMouseMiddleButton.setOnClickListener {
-            pressMouseKey(MOUSE_BUTTON_MIDDLE)
+            performAttectAction(ACTION_MIDDLE_MOUSE)
             toggleOverflowMenu()
         }
         onScreenGamePad.setOnClickListener {
-            virtualControllerShow()
+            performAttectAction(ACTION_ONSCREEN_GAMEPAD)
             toggleOverflowMenu()
         }
         touchScreenModeMenu.setOnClickListener {
-            nativeTouchEventMode = true
-            updateTouchscreenTrackpad(false)
+            performAttectAction(ACTION_TOUCHSCREEN_MODE)
             toggleOverflowMenu()
         }
         touchPadModeMenu.setOnClickListener {
-            nativeTouchEventMode = false
-            updateTouchscreenTrackpad(true)
+            performAttectAction(ACTION_TOUCHPAD_MODE)
             toggleOverflowMenu()
         }
         toggleSoftKeyboardMenu.setOnClickListener {
             toggleOverflowMenu()
-            toggleSoftKeyboardRunner()
+            performAttectAction(ACTION_TOGGLE_KEYBOARD)
         }
 
         virtualKeyExitProgram.setOnClickListener {
-            pressKeys(KeyEvent.KEYCODE_ALT_LEFT, KeyEvent.KEYCODE_F4)
+            performAttectAction(ACTION_EXIT_PROGRAM)
             toggleOverflowMenu()
         }
         virtualKeyScreenshot.setOnClickListener {
-            pressKey(KeyEvent.KEYCODE_SYSRQ)
+            performAttectAction(ACTION_SCREENSHOT)
             toggleOverflowMenu()
         }
         virtualKeyScreenshot.setOnLongClickListener {
-            pressKeys(KeyEvent.KEYCODE_META_LEFT, KeyEvent.KEYCODE_SYSRQ)
+            performAttectAction(ACTION_SCREENSHOT_WIN)
             toggleOverflowMenu()
             return@setOnLongClickListener true
         }
         virtualKeyTaskManager.setOnClickListener {
-            pressKeys(KeyEvent.KEYCODE_CTRL_LEFT, KeyEvent.KEYCODE_SHIFT_LEFT, KeyEvent.KEYCODE_ESCAPE)
+            performAttectAction(ACTION_TASK_MANAGER)
             toggleOverflowMenu()
         }
         virtualKeyExplorer.setOnClickListener {
-            pressKeys(KeyEvent.KEYCODE_META_LEFT, KeyEvent.KEYCODE_E)
+            performAttectAction(ACTION_EXPLORER)
             toggleOverflowMenu()
         }
         virtualKeyCopy.setOnClickListener {
-            pressKeys(KeyEvent.KEYCODE_CTRL_LEFT, KeyEvent.KEYCODE_C)
+            performAttectAction(ACTION_COPY)
             toggleOverflowMenu()
         }
         virtualKeyCut.setOnClickListener {
-            pressKeys(KeyEvent.KEYCODE_CTRL_LEFT, KeyEvent.KEYCODE_X)
+            performAttectAction(ACTION_CUT)
             toggleOverflowMenu()
         }
         virtualKeyPaste.setOnClickListener {
-            pressKeys(KeyEvent.KEYCODE_CTRL_LEFT, KeyEvent.KEYCODE_V)
+            performAttectAction(ACTION_PASTE)
             toggleOverflowMenu()
         }
         virtualKeySelectAll.setOnClickListener {
-            pressKeys(KeyEvent.KEYCODE_CTRL_LEFT, KeyEvent.KEYCODE_A)
+            performAttectAction(ACTION_SELECT_ALL)
             toggleOverflowMenu()
         }
 
         virtualKeyShowDesktop.setOnClickListener {
-            pressKeys(KeyEvent.KEYCODE_META_LEFT, KeyEvent.KEYCODE_D)
+            performAttectAction(ACTION_SHOW_DESKTOP)
             toggleOverflowMenu()
         }
         virtualKeyTaskView.setOnClickListener {
-            pressKeys(KeyEvent.KEYCODE_META_LEFT, KeyEvent.KEYCODE_TAB)
+            performAttectAction(ACTION_TASK_VIEW)
             toggleOverflowMenu()
         }
         virtualKeyNewDesktop.setOnClickListener {
-            pressKeys(KeyEvent.KEYCODE_META_LEFT, KeyEvent.KEYCODE_CTRL_LEFT, KeyEvent.KEYCODE_D)
+            performAttectAction(ACTION_NEW_DESKTOP)
             toggleOverflowMenu()
         }
         virtualKeyDeleteDesktop.setOnClickListener {
-            pressKeys(KeyEvent.KEYCODE_META_LEFT, KeyEvent.KEYCODE_CTRL_LEFT, KeyEvent.KEYCODE_F4)
+            performAttectAction(ACTION_DELETE_DESKTOP)
             toggleOverflowMenu()
         }
         virtualKeyLeftDesktop.setOnClickListener {
-            pressKeys(KeyEvent.KEYCODE_META_LEFT, KeyEvent.KEYCODE_CTRL_LEFT, KeyEvent.KEYCODE_DPAD_LEFT)
+            performAttectAction(ACTION_LEFT_DESKTOP)
             toggleOverflowMenu()
         }
         virtualKeyRightDesktop.setOnClickListener {
-            pressKeys(KeyEvent.KEYCODE_META_LEFT, KeyEvent.KEYCODE_CTRL_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT)
+            performAttectAction(ACTION_RIGHT_DESKTOP)
             toggleOverflowMenu()
         }
 
         virtualKeyNvidiaOverflow.setOnClickListener {
-            pressKeys(KeyEvent.KEYCODE_ALT_LEFT, KeyEvent.KEYCODE_Z)
+            performAttectAction(ACTION_NVIDIA_OVERFLOW)
             toggleOverflowMenu()
         }
         virtualKeyNvidiaScreenshot.setOnClickListener {
-            pressKeys(KeyEvent.KEYCODE_ALT_LEFT, KeyEvent.KEYCODE_F1)
+            performAttectAction(ACTION_NVIDIA_SCREENSHOT)
             toggleOverflowMenu()
         }
         virtualKeyNvidiaPhotoMode.setOnClickListener {
-            pressKeys(KeyEvent.KEYCODE_ALT_LEFT, KeyEvent.KEYCODE_F2)
+            performAttectAction(ACTION_NVIDIA_PHOTO_MODE)
             toggleOverflowMenu()
         }
         virtualKeyNvidiaGameFilter.setOnClickListener {
-            pressKeys(KeyEvent.KEYCODE_ALT_LEFT, KeyEvent.KEYCODE_F3)
+            performAttectAction(ACTION_NVIDIA_GAME_FILTER)
             toggleOverflowMenu()
         }
         virtualKeyNvidiaInstantlyRelay.setOnClickListener {
-            pressKeys(KeyEvent.KEYCODE_ALT_LEFT, KeyEvent.KEYCODE_F10)
+            performAttectAction(ACTION_NVIDIA_INSTANT_REPLAY)
             toggleOverflowMenu()
         }
         virtualKeyNvidiaRecord.setOnClickListener {
-            pressKeys(KeyEvent.KEYCODE_ALT_LEFT, KeyEvent.KEYCODE_F10)
+            performAttectAction(ACTION_NVIDIA_RECORD)
             toggleOverflowMenu()
         }
     }
@@ -438,89 +385,12 @@ abstract class GameAttectActivity : Activity() {
 
     private fun toggleOverflowMenu() {
         isShowOverflowMenu = !isShowOverflowMenu
-        val dlg = glassOverflowDialog
-        val card = if (overflowLayout.childCount > 0) overflowLayout.getChildAt(0) else null
-
-        if (isLiquidGlassStyle && dlg != null) {
-            if (isShowOverflowMenu) {
-                floatButton.visibility = View.GONE
-                overflowLayout.alpha = 0f
-                card?.apply {
-                    scaleX = 0.92f
-                    scaleY = 0.92f
-                }
-                if (!dlg.isShowing && !isFinishing) {
-                    dlg.show()
-                }
-                overflowLayout.animate().cancel()
-                overflowLayout.animate()
-                    .alpha(1f)
-                    .setDuration(180L)
-                    .setInterpolator(DecelerateInterpolator())
-                    .start()
-                card?.animate()?.cancel()
-                card?.animate()
-                    ?.scaleX(1f)
-                    ?.scaleY(1f)
-                    ?.setDuration(200L)
-                    ?.setInterpolator(DecelerateInterpolator())
-                    ?.start()
-            } else {
-                overflowLayout.animate().cancel()
-                card?.animate()?.cancel()
-                card?.animate()
-                    ?.scaleX(0.94f)
-                    ?.scaleY(0.94f)
-                    ?.setDuration(140L)
-                    ?.start()
-                overflowLayout.animate()
-                    .alpha(0f)
-                    .setDuration(140L)
-                    .withEndAction {
-                        if (!isShowOverflowMenu) {
-                            try {
-                                if (dlg.isShowing) dlg.dismiss()
-                            } catch (_: Throwable) {
-                            }
-                            floatButton.visibility = View.VISIBLE
-                        }
-                    }
-                    .start()
-            }
+        val handler = customOverflowMenuHandler
+        if (handler != null && handler.invoke(isShowOverflowMenu)) {
+            overflowLayout.visibility = View.GONE
+            floatButton.visibility = if (isShowOverflowMenu) View.GONE else View.VISIBLE
             return
         }
-
-        if (isLiquidGlassStyle) {
-            if (isShowOverflowMenu) {
-                overflowLayout.visibility = View.VISIBLE
-                overflowLayout.alpha = 0f
-                card?.apply {
-                    scaleX = 0.92f
-                    scaleY = 0.92f
-                }
-                overflowLayout.animate().cancel()
-                overflowLayout.animate().alpha(1f).setDuration(180L).start()
-                card?.animate()?.cancel()
-                card?.animate()?.scaleX(1f)?.scaleY(1f)?.setDuration(200L)?.start()
-                floatButton.visibility = View.GONE
-            } else {
-                overflowLayout.animate().cancel()
-                card?.animate()?.cancel()
-                card?.animate()?.scaleX(0.94f)?.scaleY(0.94f)?.setDuration(140L)?.start()
-                overflowLayout.animate()
-                    .alpha(0f)
-                    .setDuration(140L)
-                    .withEndAction {
-                        if (!isShowOverflowMenu) {
-                            overflowLayout.visibility = View.GONE
-                            floatButton.visibility = View.VISIBLE
-                        }
-                    }
-                    .start()
-            }
-            return
-        }
-
         overflowLayout.visibility = if (isShowOverflowMenu) View.VISIBLE else View.GONE
         floatButton.visibility = if (isShowOverflowMenu) View.GONE else View.VISIBLE
     }
@@ -531,13 +401,6 @@ abstract class GameAttectActivity : Activity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        try {
-            if (glassOverflowDialog?.isShowing == true) {
-                glassOverflowDialog?.dismiss()
-            }
-        } catch (_: Throwable) {
-        }
-        glassOverflowDialog = null
         kotlin.runCatching { myCoroutineContext.close() }
     }
 
@@ -560,5 +423,35 @@ abstract class GameAttectActivity : Activity() {
         const val MOUSE_BUTTON_RIGHT: Byte = 0x03
         const val MOUSE_BUTTON_X1: Byte = 0x04
         const val MOUSE_BUTTON_X2: Byte = 0x05
+
+        const val ACTION_ESC = 1
+        const val ACTION_WIN = 2
+        const val ACTION_SYSTEM_MENU = 3
+        const val ACTION_MIDDLE_MOUSE = 4
+        const val ACTION_ONSCREEN_GAMEPAD = 5
+        const val ACTION_TOUCHSCREEN_MODE = 6
+        const val ACTION_TOUCHPAD_MODE = 7
+        const val ACTION_TOGGLE_KEYBOARD = 8
+        const val ACTION_EXIT_PROGRAM = 9
+        const val ACTION_SCREENSHOT = 10
+        const val ACTION_SCREENSHOT_WIN = 11
+        const val ACTION_TASK_MANAGER = 12
+        const val ACTION_EXPLORER = 13
+        const val ACTION_COPY = 14
+        const val ACTION_CUT = 15
+        const val ACTION_PASTE = 16
+        const val ACTION_SELECT_ALL = 17
+        const val ACTION_SHOW_DESKTOP = 18
+        const val ACTION_TASK_VIEW = 19
+        const val ACTION_NEW_DESKTOP = 20
+        const val ACTION_DELETE_DESKTOP = 21
+        const val ACTION_LEFT_DESKTOP = 22
+        const val ACTION_RIGHT_DESKTOP = 23
+        const val ACTION_NVIDIA_OVERFLOW = 24
+        const val ACTION_NVIDIA_SCREENSHOT = 25
+        const val ACTION_NVIDIA_PHOTO_MODE = 26
+        const val ACTION_NVIDIA_GAME_FILTER = 27
+        const val ACTION_NVIDIA_INSTANT_REPLAY = 28
+        const val ACTION_NVIDIA_RECORD = 29
     }
 }

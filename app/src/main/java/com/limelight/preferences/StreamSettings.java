@@ -778,7 +778,8 @@ public class StreamSettings extends AppCompatActivity {
                     PreferenceConfiguration.GLASS_DEPTH_EFFECT_PREF_STRING,
                     PreferenceConfiguration.GLASS_SURFACE_OPACITY_PREF_STRING,
                     PreferenceConfiguration.GLASS_HIGHLIGHT_INTENSITY_PREF_STRING,
-                    PreferenceConfiguration.GLASS_VIBRANCY_PREF_STRING
+                    PreferenceConfiguration.GLASS_VIBRANCY_PREF_STRING,
+                    PreferenceConfiguration.GLASS_FPS_PREF_STRING
             };
             for (String key : glassKeys) {
                 Preference p = findPreference(key);
@@ -1183,6 +1184,10 @@ public class StreamSettings extends AppCompatActivity {
                 if (p != null) {
                     p.setOnPreferenceChangeListener(glassParamChangeListener);
                 }
+            }
+            Preference glassFpsPref = findPreference(PreferenceConfiguration.GLASS_FPS_PREF_STRING);
+            if (glassFpsPref != null) {
+                glassFpsPref.setOnPreferenceChangeListener(liveUiAppearanceListener);
             }
             Preference bgSourcePref = findPreference(PreferenceConfiguration.UI_BACKGROUND_SOURCE_PREF_STRING);
             if (bgSourcePref != null) {
