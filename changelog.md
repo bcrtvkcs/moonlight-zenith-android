@@ -17,8 +17,8 @@ All notable changes to **Moonlight Zenith Android** are documented in this file.
 
 ## [v3.0.0-zenith] - 2026-11-25
 
-### 🫧 Optional Liquid Glass UI (`Kyant0/AndroidLiquidGlass`), Floating Bottom Bar, Custom Tinted Backgrounds & Flexible Audio Output
-- **Feat (Optional Dual-Engine Liquid Glass Interface via `io.github.kyant0:backdrop:2.0.1`):**
+### 🫧 Liquid Glass UI (`Kyant0/AndroidLiquidGlass`), Floating Bottom Bar, Custom Tinted Backgrounds & Flexible Audio Output
+- **Feat (Dual-Engine Liquid Glass Interface via `io.github.kyant0:backdrop:2.0.1`):**
   - Integrated **Jetpack Compose (BOM `2026.09.00`)**, **Kotlin `2.4.10`** (`org.jetbrains.kotlin.plugin.compose`), and **`io.github.kyant0:backdrop:2.0.1`** (`Kyant0/AndroidLiquidGlass`) while keeping the existing **Material You Expressive** XML UI as the default with zero regressions (minimum SDK raised from `21` to `23` to align with Compose `1.12.1`, preserving `root` flavor `maxSdk 25`).
   - Added an **Interface style** selector (`list_ui_style`: **Material You Expressive** vs. **Liquid Glass**) under **UI Settings**.
   - Implemented a dual-layer `FramePacedLayerBackdrop` + `rememberCombinedBackdrop` rendering architecture (`LiquidGlassTheme.kt`, `LiquidGlassComponents.kt`, `LiquidGlassControls.kt`) with real-time AGSL optical lens refraction (`lens`), chromatic aberration, 3D depth effect, Gaussian backdrop blur, vibrancy, specular rim highlights, and depth shadows on Android 13+, hardware `RenderEffect` blur on Android 12, and a clean translucent fallback on older versions.

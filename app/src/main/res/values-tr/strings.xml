@@ -300,7 +300,7 @@
     <string name="duration_500ms_default">500ms (Varsayılan)</string>
     <string name="language_default">Varsayılan (Sistem Dili)</string>
     <string name="title_ui_style">Arayüz stili</string>
-    <string name="summary_ui_style">Material You Expressive ile opsiyonel Liquid Glass cam arayüzü arasında geçiş yapın</string>
+    <string name="summary_ui_style">Material You Expressive ile Liquid Glass cam arayüzü arasında geçiş yapın</string>
     <string name="ui_style_material3">Material You Expressive</string>
     <string name="ui_style_liquid_glass">Liquid Glass (Cam Arayüz)</string>
     <string name="title_liquid_glass_style">Liquid Glass görünümü</string>

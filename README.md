@@ -1,6 +1,6 @@
 # Moonlight Zenith
 
-**Moonlight Zenith** is a modernized, feature-rich fork of [Moonlight Android](https://github.com/moonlight-stream/moonlight-android) featuring a dual-engine **Material Design 3 (Material You Expressive)** and optional **Liquid Glass (`Kyant0/AndroidLiquidGlass`)** interface, **customizable tinted backgrounds & live wallpaper support**, an optional **floating bottom navigation bar**, **flexible multi-select audio output (Client / Host / Both / Muted)**, **Smart Keyboard Mode (Gboard glide typing & autocorrect)**, a **bulletproof multi-language keyboard & punctuation engine**, **in-stream floating quick actions**, **enhanced on-screen controls**, and **sensor-driven landscape orientation**.
+**Moonlight Zenith** is a modernized, feature-rich fork of [Moonlight Android](https://github.com/moonlight-stream/moonlight-android) featuring a dual-engine **Material Design 3 (Material You Expressive)** and **Liquid Glass (`Kyant0/AndroidLiquidGlass`)** interface, **customizable tinted backgrounds & live wallpaper support**, an optional **floating bottom navigation bar**, **flexible multi-select audio output (Client / Host / Both / Muted)**, **Smart Keyboard Mode (Gboard glide typing & autocorrect)**, a **bulletproof multi-language keyboard & punctuation engine**, **in-stream floating quick actions**, **enhanced on-screen controls**, and **sensor-driven landscape orientation**.
 
 ## 📸 Screenshots
 
@@ -14,7 +14,7 @@
 
 ## ✨ What's in the box?
 
-### 🫧 Optional Liquid Glass UI (`Kyant0/AndroidLiquidGlass`)
+### 🫧 Liquid Glass UI (`Kyant0/AndroidLiquidGlass`)
 - **Dual-Engine Interface Selector**: Keep the default **Material You Expressive** XML interface or switch anytime under **UI Settings** to the full **Liquid Glass** Jetpack Compose interface powered by [`io.github.kyant0:backdrop:2.0.1`](https://github.com/Kyant0/AndroidLiquidGlass).
 - **Real-Time Optical Glass Rendering**: Uses dual-layer backdrop sampling with real-time AGSL optical lens refraction (`lens`), chromatic aberration, 3D depth effect, Gaussian backdrop blur, vibrancy, specular rim highlights, and depth shadows on Android 13+ (`API 33+`), hardware `RenderEffect` blur on Android 12, and a clean translucent fallback on older devices (`minSdk 23`).
 - **Complete Screen & Control Parity**:

@@ -329,7 +329,7 @@
     <string name="duration_500ms_default">500ms (Default)</string>
     <string name="language_default">System Default</string>
     <string name="title_ui_style">Interface style</string>
-    <string name="summary_ui_style">Switch between Material You Expressive and optional Liquid Glass interface</string>
+    <string name="summary_ui_style">Switch between Material You Expressive and Liquid Glass interface</string>
     <string name="ui_style_material3">Material You Expressive</string>
     <string name="ui_style_liquid_glass">Liquid Glass</string>
     <string name="title_liquid_glass_style">Liquid Glass appearance</string>
