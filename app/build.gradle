@@ -229,6 +229,10 @@ def getLatestTag = { ->
     }
 
     packaging {
+        jniLibs {
+            // Preserve native library extraction for root (evdev_reader) and Fire TV 3 compatibility
+            useLegacyPackaging = true
+        }
         resources {
             // BouncyCastle includes duplicate LICENSE.md files
             excludes += '/META-INF/*.md'

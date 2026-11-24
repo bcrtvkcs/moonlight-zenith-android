@@ -2,9 +2,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <!-- Root application name -->
-    <!-- Ensure native libraries are always extracted for root builds,
-         since we must invoke the evdev_reader binary ourselves -->
-    <application
-        android:label="@string/app_label_root"
-        android:extractNativeLibs="true" />
+    <!-- Native library extraction for evdev_reader is configured via packaging.jniLibs.useLegacyPackaging in app/build.gradle -->
+    <application android:label="@string/app_label_root" />
 </manifest>
