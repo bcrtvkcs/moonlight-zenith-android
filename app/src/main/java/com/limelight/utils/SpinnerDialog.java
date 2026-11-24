@@ -14,12 +14,15 @@ import androidx.appcompat.app.AlertDialog;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.limelight.R;
+import com.limelight.ui.glass.GlassDialogHandle;
+import com.limelight.ui.glass.GlassDialogPortal;
 
 public class SpinnerDialog implements Runnable, OnCancelListener {
     private final String title;
     private String message;
     private final Activity activity;
     private AlertDialog progressDialog;
+    private GlassDialogHandle glassHandle;
     private TextView messageTextView;
     private final boolean finish;
 
@@ -31,6 +34,7 @@ public class SpinnerDialog implements Runnable, OnCancelListener {
         this.title = title;
         this.message = message;
         this.progressDialog = null;
+        this.glassHandle = null;
         this.finish = finish;
     }
 
@@ -52,6 +56,10 @@ public class SpinnerDialog implements Runnable, OnCancelListener {
                     if (dialog.progressDialog != null && dialog.progressDialog.isShowing()) {
                         dialog.progressDialog.dismiss();
                     }
+                    if (dialog.glassHandle != null) {
+                        dialog.glassHandle.dismiss();
+                        dialog.glassHandle = null;
+                    }
                 }
             }
         }
@@ -59,7 +67,7 @@ public class SpinnerDialog implements Runnable, OnCancelListener {
 
     public void dismiss()
     {
-        // Running again with progressDialog != null will destroy it
+        // Running again with progressDialog/glassHandle != null will destroy it
         activity.runOnUiThread(this);
     }
 
@@ -69,6 +77,9 @@ public class SpinnerDialog implements Runnable, OnCancelListener {
         activity.runOnUiThread(new Runnable() {
             @Override
             public void run() {
+                if (glassHandle != null) {
+                    glassHandle.updateMessage(message);
+                }
                 if (messageTextView != null) {
                     messageTextView.setText(message);
                 }
@@ -80,6 +91,34 @@ public class SpinnerDialog implements Runnable, OnCancelListener {
     public void run() {
         // If we're dying, don't bother doing anything
         if (activity.isFinishing()) {
+            return;
+        }
+
+        if (UiHelper.isLiquidGlassEnabled(activity)) {
+            if (glassHandle == null) {
+                synchronized (rundownDialogs) {
+                    rundownDialogs.add(this);
+                    glassHandle = GlassDialogPortal.showSpinner(
+                            activity,
+                            title,
+                            message,
+                            finish,
+                            new Runnable() {
+                                @Override
+                                public void run() {
+                                    onCancel(null);
+                                }
+                            }
+                    );
+                }
+            } else {
+                synchronized (rundownDialogs) {
+                    if (rundownDialogs.remove(this) && glassHandle != null) {
+                        glassHandle.dismiss();
+                        glassHandle = null;
+                    }
+                }
+            }
             return;
         }
 

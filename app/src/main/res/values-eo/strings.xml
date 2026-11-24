@@ -281,4 +281,10 @@
     <string name="summary_checkbox_sensor_landscape">Automatically switch between normal and reverse landscape while connecting and streaming, even when system auto-rotate is off</string>
     <string name="duration_500ms_default">500ms (Default)</string>
     <string name="language_default">System Default</string>
+    <string name="title_audio_output">Soneligo</string>
+    <string name="summary_audio_output">Elektu kie la flusono estas ludata</string>
+    <string name="audio_output_client">Ĉi tiu aparato (Kliento)</string>
+    <string name="audio_output_host">Komputilo (Gastiganto)</string>
+    <string name="audio_output_both">Ĉi tiu aparato + Komputilo</string>
+    <string name="audio_output_none">Neniu (Mutigita)</string>
 </resources>

@@ -299,4 +299,10 @@
     <string name="summary_checkbox_sensor_landscape">Αυτόματη εναλλαγή μεταξύ κανονικού και αντίστροφου οριζόντιου προσανατολισμού κατά τη σύνδεση και τη ροή, ακόμη και όταν η αυτόματη περιστροφή συστήματος είναι ανενεργή</string>
     <string name="duration_500ms_default">500ms (Προεπιλογή)</string>
     <string name="language_default">Προεπιλογή συστήματος</string>
+    <string name="title_audio_output">Έξοδος ήχου</string>
+    <string name="summary_audio_output">Επιλέξτε πού θα αναπαράγεται ο ήχος της ροής</string>
+    <string name="audio_output_client">Αυτή η συσκευή (Πελάτης)</string>
+    <string name="audio_output_host">Υπολογιστής (Κεντρικός)</string>
+    <string name="audio_output_both">Αυτή η συσκευή + Υπολογιστής</string>
+    <string name="audio_output_none">Κανένα (Σίγαση)</string>
 </resources>

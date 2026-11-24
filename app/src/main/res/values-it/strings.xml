@@ -313,4 +313,10 @@
     <string name="summary_checkbox_sensor_landscape">Passa automaticamente dall\'orientamento orizzontale normale a quello inverso durante la connessione e lo streaming, anche quando la rotazione automatica di sistema è disattivata</string>
     <string name="duration_500ms_default">500ms (Predefinito)</string>
     <string name="language_default">Predefinito di sistema</string>
+    <string name="title_audio_output">Uscita audio</string>
+    <string name="summary_audio_output">Scegli dove riprodurre l\'audio dello streaming</string>
+    <string name="audio_output_client">Questo dispositivo (Client)</string>
+    <string name="audio_output_host">PC (Host)</string>
+    <string name="audio_output_both">Questo dispositivo + PC</string>
+    <string name="audio_output_none">Nessuno (Muto)</string>
 </resources>

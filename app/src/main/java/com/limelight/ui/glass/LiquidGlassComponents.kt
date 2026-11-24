@@ -11,6 +11,7 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
@@ -38,11 +39,9 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.displayCutout
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -63,7 +62,9 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -107,8 +108,10 @@ enum class GlassElevationLevel {
 
 /**
  * Core Kyant0/AndroidLiquidGlass modifier wrapper.
- * Automatically uses full AGSL lens + chromatic aberration on API 33+, RenderEffect blur + vibrancy
- * on API 31-32, and a crisp translucent specular surface fallback on older Android versions.
+ * Reads Snapshot-tracked [LocalGlassTokensState] directly inside both `effects` and `onDrawSurface`
+ * so EVERY optical parameter change (blur, lens refraction amount/height, chromatic aberration,
+ * 3D depth effect, vibrancy, surface opacity, specular highlight) immediately triggers both
+ * `DrawBackdropNode.updateEffects()` and a live Compose draw invalidation at 60/120fps.
  */
 @Composable
 fun Modifier.liquidGlassSurface(
@@ -120,31 +123,9 @@ fun Modifier.liquidGlassSurface(
     enableLens: Boolean = true,
     enableShadow: Boolean = true
 ): Modifier {
-    val tokens = LocalGlassTokens.current
+    val tokensState = LocalGlassTokensState.current
+    val tokens = tokensState.value
     val primaryColor = MaterialTheme.colorScheme.primary
-
-    val blurDp = when (level) {
-        GlassElevationLevel.CARD -> tokens.cardBlur
-        GlassElevationLevel.CHROME -> tokens.chromeBlur
-        GlassElevationLevel.ACCENT -> tokens.chromeBlur
-        GlassElevationLevel.SHEET -> tokens.sheetBlur
-    }
-    val refractionHeight = when (level) {
-        GlassElevationLevel.CARD -> tokens.cardRefractionHeight
-        GlassElevationLevel.CHROME, GlassElevationLevel.ACCENT -> tokens.chromeRefractionHeight
-        GlassElevationLevel.SHEET -> tokens.chromeRefractionHeight
-    }
-    val refractionAmount = when (level) {
-        GlassElevationLevel.CARD -> tokens.cardRefractionAmount
-        GlassElevationLevel.CHROME, GlassElevationLevel.ACCENT -> tokens.chromeRefractionAmount
-        GlassElevationLevel.SHEET -> tokens.cardRefractionAmount
-    }
-    val surfaceTint = tintOverride ?: when (level) {
-        GlassElevationLevel.CARD -> tokens.cardTint
-        GlassElevationLevel.CHROME -> tokens.chromeTint
-        GlassElevationLevel.ACCENT -> tokens.accentTint
-        GlassElevationLevel.SHEET -> tokens.sheetTint
-    }
 
     val focusBorderMod = if (isFocused) {
         Modifier.border(2.dp, primaryColor, shape)
@@ -158,7 +139,22 @@ fun Modifier.liquidGlassSurface(
                 backdrop = backdrop,
                 shape = { shape },
                 effects = {
-                    if (tokens.vibrancyEnabled) {
+                    val t = tokensState.value
+                    val blurDp = when (level) {
+                        GlassElevationLevel.CARD -> t.cardBlur
+                        GlassElevationLevel.CHROME, GlassElevationLevel.ACCENT -> t.chromeBlur
+                        GlassElevationLevel.SHEET -> t.sheetBlur
+                    }
+                    val refractionHeight = when (level) {
+                        GlassElevationLevel.CARD -> t.cardRefractionHeight
+                        GlassElevationLevel.CHROME, GlassElevationLevel.ACCENT, GlassElevationLevel.SHEET -> t.chromeRefractionHeight
+                    }
+                    val refractionAmount = when (level) {
+                        GlassElevationLevel.CARD -> t.cardRefractionAmount
+                        GlassElevationLevel.CHROME, GlassElevationLevel.ACCENT -> t.chromeRefractionAmount
+                        GlassElevationLevel.SHEET -> t.cardRefractionAmount
+                    }
+                    if (t.vibrancyEnabled) {
                         vibrancy()
                     }
                     if (blurDp > 0.dp) {
@@ -168,38 +164,54 @@ fun Modifier.liquidGlassSurface(
                         lens(
                             refractionHeight = refractionHeight.toPx(),
                             refractionAmount = refractionAmount.toPx(),
-                            depthEffect = tokens.depthEffect,
-                            chromaticAberration = tokens.chromaticAberration
+                            depthEffect = t.depthEffect,
+                            chromaticAberration = t.chromaticAberration
                         )
                     }
                 },
-                highlight = if (tokens.highlightAlpha > 0.01f || isFocused) {
-                    {
+                highlight = {
+                    val t = tokensState.value
+                    if (t.highlightAlpha > 0.01f || isFocused) {
                         Highlight(
-                            width = if (isFocused) 1.25.dp else 0.75.dp,
-                            alpha = if (isFocused) 1f else tokens.highlightAlpha
+                            width = if (isFocused) 1.35.dp else 0.85.dp,
+                            alpha = if (isFocused) 1f else t.highlightAlpha
                         )
+                    } else {
+                        null
                     }
-                } else {
-                    null
                 },
                 shadow = if (enableShadow) {
                     {
                         Shadow(
                             radius = if (level == GlassElevationLevel.SHEET) 28.dp else 18.dp,
-                            color = Color.Black.copy(alpha = 0.26f)
+                            color = Color.Black.copy(alpha = 0.28f)
                         )
                     }
                 } else {
                     null
                 },
                 onDrawSurface = {
-                    drawRect(surfaceTint)
+                    // Reading tokensState.value here guarantees ContentDrawScope.draw() is invalidated
+                    // whenever any of the 8 optical parameters changes, fixing DrawBackdropNode's
+                    // updateEffects() redraw gap when padding stays unchanged.
+                    val t = tokensState.value
+                    val resolvedTint = tintOverride ?: when (level) {
+                        GlassElevationLevel.CARD -> t.cardTint
+                        GlassElevationLevel.CHROME -> t.chromeTint
+                        GlassElevationLevel.ACCENT -> t.accentTint
+                        GlassElevationLevel.SHEET -> t.sheetTint
+                    }
+                    drawRect(resolvedTint)
                 }
             )
             .then(focusBorderMod)
     } else {
-        // Clean frosted translucent fallback for API 23-30
+        val surfaceTint = tintOverride ?: when (level) {
+            GlassElevationLevel.CARD -> tokens.cardTint
+            GlassElevationLevel.CHROME -> tokens.chromeTint
+            GlassElevationLevel.ACCENT -> tokens.accentTint
+            GlassElevationLevel.SHEET -> tokens.sheetTint
+        }
         val fallbackAlpha = (surfaceTint.alpha + 0.34f).coerceAtMost(0.88f)
         this
             .clip(shape)
@@ -214,11 +226,6 @@ fun Modifier.liquidGlassSurface(
 
 /**
  * Root dual-backdrop Liquid Glass scaffold used by PcView, AppView, StreamSettings, and AddComputerManually.
- *
- * Layer 1 (backgroundBackdrop): Custom image / live phone wallpaper / ambient mesh gradient + tint + opacity + blur.
- * Layer 2 (contentBackdrop): Scrollable screen body (cards refract Layer 1).
- * Layer 3 (floatingChrome + overlays): TopBar, Pill TabBar, FAB, NavigationRail, BottomSheets & Dialogs
- *          (refract BOTH Layer 1 and Layer 2 via rememberCombinedBackdrop!).
  */
 @Composable
 fun LiquidGlassScaffold(
@@ -227,20 +234,20 @@ fun LiquidGlassScaffold(
     body: @Composable BoxScope.(backgroundBackdrop: Backdrop) -> Unit
 ) {
     val context = LocalContext.current
+    val activity = remember(context) { context.findActivity() }
     val bgState by UiBackgroundManager.state.collectAsState()
 
     MoonlightLiquidGlassTheme(bgState = bgState) {
         val colorScheme = MaterialTheme.colorScheme
         val surfaceArgb = colorScheme.surface.toArgb()
 
-        // Keep window wallpaper flags & Android 12+ window blur synchronized with live preference/preview changes
         LaunchedEffect(
             bgState.backgroundSource,
             bgState.effectiveBlurDp,
             bgState.pureBlackTheme,
             bgState.themeMode
         ) {
-            context.findActivity()?.let { act ->
+            activity?.let { act ->
                 UiBackgroundManager.applyWindowWallpaperFlags(act, surfaceArgb)
             }
         }
@@ -271,11 +278,17 @@ fun LiquidGlassScaffold(
                     body(backgroundBackdrop)
                 }
 
-                // LAYER 3A: Floating Liquid Glass chrome (TopBar, TabBar, NavRail, FAB)
+                // LAYER 3A: Floating Liquid Glass chrome (TopBar, Pill TabBar / Floating Bottom Bar, NavRail, FAB)
                 floatingChrome(combinedBackdrop)
 
-                // LAYER 3B: Modal Liquid Glass Bottom Sheets & Dialogs
+                // LAYER 3B: Screen-specific Modal Liquid Glass Bottom Sheets & Dialogs
                 overlayContent(combinedBackdrop)
+
+                // LAYER 3C: Global Portal for Quit / Delete / Alert / Spinner Liquid Glass Dialogs
+                GlassDialogPortalOverlay(
+                    activity = activity,
+                    backdrop = combinedBackdrop
+                )
             }
         }
     }
@@ -314,7 +327,6 @@ fun LiquidGlassBackgroundLayer(
     Box(modifier = modifier) {
         when {
             customBitmap != null && !customBitmap.isRecycled -> {
-                // Base theme color underneath so opacity < 100% blends gracefully into theme surface
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -339,8 +351,6 @@ fun LiquidGlassBackgroundLayer(
                 )
             }
             useLiveWindowWallpaper -> {
-                // System draws live/static phone wallpaper directly behind our transparent window.
-                // Lowering opacity darkens the wallpaper softly with the active theme surface color.
                 val inverseScrim = (1f - opacityFraction).coerceIn(0f, 1f)
                 if (inverseScrim > 0.005f) {
                     Box(
@@ -351,7 +361,6 @@ fun LiquidGlassBackgroundLayer(
                 }
             }
             else -> {
-                // Default Liquid Glass ambient mesh gradient derived from active Material You / Zenith palette
                 AmbientThemeMeshBackground(
                     surface = colorScheme.surface,
                     primary = colorScheme.primary,
@@ -362,7 +371,6 @@ fun LiquidGlassBackgroundLayer(
             }
         }
 
-        // User-selected tint overlay over custom image or phone wallpaper
         if ((bgState.isCustomImageActive || bgState.isWallpaperActive) &&
             tintColorInt != null && tintAlpha > 0.005f
         ) {
@@ -383,7 +391,7 @@ private fun AmbientThemeMeshBackground(
     secondaryContainer: Color,
     pureBlack: Boolean
 ) {
-    val glowScale = if (pureBlack) 0.22f else 0.42f
+    val glowScale = if (pureBlack) 0.34f else 0.62f
     Canvas(
         modifier = Modifier
             .fillMaxSize()
@@ -393,41 +401,61 @@ private fun AmbientThemeMeshBackground(
         val h = size.height
         val maxDim = maxOf(w, h)
 
+        // Luminous aurora orbs + diagonal specular light ribbon so lens refraction & RGB prism
+        // visibly bend high-contrast gradients even when no custom image is set.
         drawCircle(
             brush = Brush.radialGradient(
                 colors = listOf(
-                    primary.copy(alpha = 0.36f * glowScale * 2f),
+                    primary.copy(alpha = 0.55f * glowScale),
+                    primary.copy(alpha = 0.16f * glowScale),
                     Color.Transparent
                 ),
-                center = Offset(w * 0.16f, h * 0.14f),
-                radius = maxDim * 0.65f
+                center = Offset(w * 0.14f, h * 0.15f),
+                radius = maxDim * 0.52f
             ),
-            radius = maxDim * 0.65f,
-            center = Offset(w * 0.16f, h * 0.14f)
+            radius = maxDim * 0.52f,
+            center = Offset(w * 0.14f, h * 0.15f)
         )
         drawCircle(
             brush = Brush.radialGradient(
                 colors = listOf(
-                    tertiary.copy(alpha = 0.30f * glowScale * 2f),
+                    tertiary.copy(alpha = 0.52f * glowScale),
+                    tertiary.copy(alpha = 0.14f * glowScale),
                     Color.Transparent
                 ),
-                center = Offset(w * 0.88f, h * 0.36f),
-                radius = maxDim * 0.58f
+                center = Offset(w * 0.88f, h * 0.34f),
+                radius = maxDim * 0.48f
             ),
-            radius = maxDim * 0.58f,
-            center = Offset(w * 0.88f, h * 0.36f)
+            radius = maxDim * 0.48f,
+            center = Offset(w * 0.88f, h * 0.34f)
         )
         drawCircle(
             brush = Brush.radialGradient(
                 colors = listOf(
-                    secondaryContainer.copy(alpha = 0.45f * glowScale * 2f),
+                    secondaryContainer.copy(alpha = 0.65f * glowScale),
+                    primary.copy(alpha = 0.22f * glowScale),
                     Color.Transparent
                 ),
-                center = Offset(w * 0.42f, h * 0.88f),
-                radius = maxDim * 0.62f
+                center = Offset(w * 0.36f, h * 0.84f),
+                radius = maxDim * 0.54f
             ),
-            radius = maxDim * 0.62f,
-            center = Offset(w * 0.42f, h * 0.88f)
+            radius = maxDim * 0.54f,
+            center = Offset(w * 0.36f, h * 0.84f)
+        )
+        drawLine(
+            brush = Brush.linearGradient(
+                colors = listOf(
+                    Color.Transparent,
+                    primary.copy(alpha = 0.30f * glowScale),
+                    tertiary.copy(alpha = 0.28f * glowScale),
+                    Color.Transparent
+                ),
+                start = Offset(0f, h * 0.28f),
+                end = Offset(w, h * 0.68f)
+            ),
+            start = Offset(-w * 0.1f, h * 0.25f),
+            end = Offset(w * 1.1f, h * 0.72f),
+            strokeWidth = maxDim * 0.09f
         )
     }
 }
@@ -448,7 +476,7 @@ fun GlassIconButton(
     val isPressed by interactionSource.collectIsPressedAsState()
     val isFocused by interactionSource.collectIsFocusedAsState()
     val scale by animateFloatAsState(
-        targetValue = if (isPressed) 0.92f else if (isFocused) 1.05f else 1f,
+        targetValue = if (isPressed) 0.90f else if (isFocused) 1.06f else 1f,
         animationSpec = spring(stiffness = Spring.StiffnessMediumLow, dampingRatio = Spring.DampingRatioMediumBouncy),
         label = "glassIconScale"
     )
@@ -543,7 +571,7 @@ fun GlassExtendedFab(
     val isPressed by interactionSource.collectIsPressedAsState()
     val isFocused by interactionSource.collectIsFocusedAsState()
     val scale by animateFloatAsState(
-        targetValue = if (isPressed) 0.94f else if (isFocused) 1.04f else 1f,
+        targetValue = if (isPressed) 0.93f else if (isFocused) 1.05f else 1f,
         animationSpec = spring(stiffness = Spring.StiffnessMediumLow, dampingRatio = Spring.DampingRatioMediumBouncy),
         label = "glassFabScale"
     )
@@ -619,8 +647,8 @@ fun GlassPillTabBar(
             val isFocused by interactionSource.collectIsFocusedAsState()
             val isPressed by interactionSource.collectIsPressedAsState()
             val scale by animateFloatAsState(
-                targetValue = if (isPressed) 0.94f else if (isSelected) 1.02f else 1f,
-                animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+                targetValue = if (isPressed) 0.93f else if (isSelected) 1.03f else 1f,
+                animationSpec = spring(stiffness = Spring.StiffnessMediumLow, dampingRatio = Spring.DampingRatioMediumBouncy),
                 label = "glassTabScale"
             )
 
@@ -638,7 +666,7 @@ fun GlassPillTabBar(
                         level = if (isSelected) GlassElevationLevel.ACCENT else GlassElevationLevel.CHROME,
                         tintOverride = if (isSelected) tokens.pillTint else tokens.chromeTint.copy(alpha = tokens.chromeTint.alpha * 0.72f),
                         isFocused = isFocused,
-                        enableLens = isSelected,
+                        enableLens = true,
                         enableShadow = isSelected
                     )
                     .focusable(interactionSource = interactionSource)
@@ -665,50 +693,22 @@ fun GlassPillTabBar(
     }
 }
 
+/**
+ * Delegates to the authentic refractive [LiquidGlassSwitch] built with Kyant0/AndroidLiquidGlass.
+ */
 @Composable
 fun GlassSwitch(
     checked: Boolean,
     enabled: Boolean = true,
+    backdrop: Backdrop = LocalContentBackdrop.current,
     onCheckedChange: (Boolean) -> Unit
 ) {
-    val thumbOffset by animateDpAsState(
-        targetValue = if (checked) 24.dp else 4.dp,
-        animationSpec = spring(stiffness = Spring.StiffnessMediumLow, dampingRatio = Spring.DampingRatioMediumBouncy),
-        label = "glassSwitchOffset"
+    LiquidGlassSwitch(
+        checked = checked,
+        enabled = enabled,
+        backdrop = backdrop,
+        onCheckedChange = onCheckedChange
     )
-    val trackColor = if (checked) {
-        MaterialTheme.colorScheme.primary.copy(alpha = if (enabled) 0.85f else 0.35f)
-    } else {
-        MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = if (enabled) 0.75f else 0.35f)
-    }
-    val thumbColor = if (checked) {
-        MaterialTheme.colorScheme.onPrimary
-    } else {
-        MaterialTheme.colorScheme.onSurfaceVariant
-    }
-
-    Box(
-        contentAlignment = Alignment.CenterStart,
-        modifier = Modifier
-            .width(52.dp)
-            .height(30.dp)
-            .clip(RoundedCornerShape(15.dp))
-            .background(trackColor)
-            .border(
-                width = 1.dp,
-                color = Color.White.copy(alpha = if (checked) 0.35f else 0.16f),
-                shape = RoundedCornerShape(15.dp)
-            )
-            .clickable(enabled = enabled) { onCheckedChange(!checked) }
-    ) {
-        Box(
-            modifier = Modifier
-                .padding(start = thumbOffset)
-                .size(22.dp)
-                .clip(CircleShape)
-                .background(thumbColor)
-        )
-    }
 }
 
 @Composable
@@ -723,13 +723,13 @@ fun GlassBottomSheetOverlay(
     }
     AnimatedVisibility(
         visible = visible,
-        enter = fadeIn(),
-        exit = fadeOut()
+        enter = fadeIn(animationSpec = tween(200)),
+        exit = fadeOut(animationSpec = tween(160))
     ) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.45f))
+                .background(Color.Black.copy(alpha = 0.42f))
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
@@ -742,9 +742,12 @@ fun GlassBottomSheetOverlay(
         visible = visible,
         enter = slideInVertically(
             initialOffsetY = { it / 2 },
-            animationSpec = spring(stiffness = Spring.StiffnessMediumLow, dampingRatio = Spring.DampingRatioNoBouncy)
-        ) + fadeIn(),
-        exit = slideOutVertically(targetOffsetY = { it / 2 }) + fadeOut()
+            animationSpec = spring(stiffness = Spring.StiffnessMediumLow, dampingRatio = 0.82f)
+        ) + fadeIn(animationSpec = tween(200)),
+        exit = slideOutVertically(
+            targetOffsetY = { it / 2 },
+            animationSpec = tween(170)
+        ) + fadeOut(animationSpec = tween(150))
     ) {
         val navPadding = WindowInsets.navigationBars.asPaddingValues()
         Box(
@@ -792,54 +795,121 @@ fun GlassModalDialog(
     visible: Boolean,
     onDismiss: () -> Unit,
     backdrop: Backdrop = LocalContentBackdrop.current,
-    scrimAlpha: Float = 0.45f,
+    scrimAlpha: Float = 0.42f,
+    cancelable: Boolean = true,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    if (visible) {
+    if (visible && cancelable) {
         BackHandler(onBack = onDismiss)
     }
     AnimatedVisibility(
         visible = visible,
-        enter = fadeIn(),
-        exit = fadeOut()
+        enter = fadeIn(animationSpec = tween(190)),
+        exit = fadeOut(animationSpec = tween(150))
     ) {
         Box(
-            contentAlignment = Alignment.Center,
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color.Black.copy(alpha = scrimAlpha))
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
-                    onClick = onDismiss
+                    onClick = { if (cancelable) onDismiss() }
                 )
-                .padding(24.dp)
+        )
+    }
+
+    AnimatedVisibility(
+        visible = visible,
+        enter = scaleIn(
+            initialScale = 0.88f,
+            animationSpec = spring(stiffness = Spring.StiffnessMediumLow, dampingRatio = 0.78f)
+        ) + fadeIn(animationSpec = tween(190)),
+        exit = scaleOut(
+            targetScale = 0.91f,
+            animationSpec = tween(150)
+        ) + fadeOut(animationSpec = tween(140))
+    ) {
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier.fillMaxSize()
         ) {
-            AnimatedVisibility(
-                visible = visible,
-                enter = scaleIn(initialScale = 0.92f) + fadeIn(),
-                exit = scaleOut(targetScale = 0.94f) + fadeOut()
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth(0.90f)
+                    .widthIn(max = 460.dp)
+                    .liquidGlassSurface(
+                        backdrop = backdrop,
+                        shape = RoundedCornerShape(28.dp),
+                        level = GlassElevationLevel.SHEET
+                    )
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = {}
+                    )
+                    .padding(22.dp)
             ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .widthIn(max = 460.dp)
-                        .heightIn(max = 580.dp)
-                        .liquidGlassSurface(
-                            backdrop = backdrop,
-                            shape = RoundedCornerShape(28.dp),
-                            level = GlassElevationLevel.SHEET
-                        )
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null,
-                            onClick = {}
-                        )
-                        .padding(22.dp)
-                ) {
-                    content()
-                }
+                content()
             }
+        }
+    }
+}
+
+/**
+ * State-retaining animated Liquid Glass modal dialog so both enter AND exit spring animations
+ * always play smoothly instead of snapping out of the composition tree on dismiss.
+ */
+@Composable
+fun <T : Any> GlassAnimatedModalDialog(
+    targetState: T?,
+    onDismiss: () -> Unit,
+    backdrop: Backdrop = LocalContentBackdrop.current,
+    scrimAlpha: (T) -> Float = { 0.42f },
+    cancelable: (T) -> Boolean = { true },
+    content: @Composable ColumnScope.(T) -> Unit
+) {
+    var retained by remember { mutableStateOf(targetState) }
+    if (targetState != null) {
+        retained = targetState
+    }
+    val active = targetState ?: retained
+    GlassModalDialog(
+        visible = targetState != null,
+        onDismiss = onDismiss,
+        backdrop = backdrop,
+        scrimAlpha = active?.let(scrimAlpha) ?: 0.42f,
+        cancelable = active?.let(cancelable) ?: true
+    ) {
+        if (active != null) {
+            content(active)
+        }
+    }
+}
+
+/**
+ * State-retaining animated Liquid Glass bottom sheet so both slide-in AND slide-out animations
+ * play smoothly when dismissing.
+ */
+@Composable
+fun <T : Any> GlassAnimatedBottomSheet(
+    targetState: T?,
+    onDismiss: () -> Unit,
+    backdrop: Backdrop = LocalContentBackdrop.current,
+    content: @Composable ColumnScope.(T) -> Unit
+) {
+    var retained by remember { mutableStateOf(targetState) }
+    if (targetState != null) {
+        retained = targetState
+    }
+    val active = targetState ?: retained
+    GlassBottomSheetOverlay(
+        visible = targetState != null,
+        onDismiss = onDismiss,
+        backdrop = backdrop
+    ) {
+        if (active != null) {
+            content(active)
         }
     }
 }
@@ -854,11 +924,18 @@ fun GlassActionButton(
     backdrop: Backdrop = LocalContentBackdrop.current
 ) {
     val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
     val isFocused by interactionSource.collectIsFocusedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.94f else if (isFocused) 1.04f else 1f,
+        animationSpec = spring(stiffness = Spring.StiffnessMediumLow, dampingRatio = Spring.DampingRatioMediumBouncy),
+        label = "glassBtnScale"
+    )
+
     val tint = when {
-        destructive -> MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.65f)
-        primary -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.72f)
-        else -> LocalGlassTokens.current.chromeTint
+        destructive -> MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.56f)
+        primary -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.62f)
+        else -> null
     }
     val textColor = when {
         destructive -> MaterialTheme.colorScheme.onErrorContainer
@@ -869,14 +946,18 @@ fun GlassActionButton(
     Box(
         contentAlignment = Alignment.Center,
         modifier = modifier
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
             .height(46.dp)
             .liquidGlassSurface(
                 backdrop = backdrop,
                 shape = RoundedCornerShape(23.dp),
-                level = if (primary) GlassElevationLevel.ACCENT else GlassElevationLevel.CHROME,
+                level = if (primary || destructive) GlassElevationLevel.ACCENT else GlassElevationLevel.CHROME,
                 tintOverride = tint,
                 isFocused = isFocused,
-                enableLens = primary,
+                enableLens = true,
                 enableShadow = false
             )
             .focusable(interactionSource = interactionSource)
@@ -896,7 +977,7 @@ fun GlassActionButton(
     }
 }
 
-private tailrec fun Context.findActivity(): Activity? = when (this) {
+internal tailrec fun Context.findActivity(): Activity? = when (this) {
     is Activity -> this
     is ContextWrapper -> baseContext?.findActivity()
     else -> null

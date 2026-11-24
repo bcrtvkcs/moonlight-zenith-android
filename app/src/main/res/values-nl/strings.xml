@@ -297,4 +297,10 @@
     <string name="summary_checkbox_sensor_landscape">Schakel automatisch tussen normale en omgekeerde liggende stand tijdens verbinden en streamen, zelfs als automatisch draaien van het systeem is uitgeschakeld</string>
     <string name="duration_500ms_default">500ms (Standaard)</string>
     <string name="language_default">Systeemstandaard</string>
+    <string name="title_audio_output">Audio-uitvoer</string>
+    <string name="summary_audio_output">Kies waar het streamgeluid wordt afgespeeld</string>
+    <string name="audio_output_client">Dit apparaat (Client)</string>
+    <string name="audio_output_host">PC (Host)</string>
+    <string name="audio_output_both">Dit apparaat + PC</string>
+    <string name="audio_output_none">Geen (Gedempt)</string>
 </resources>

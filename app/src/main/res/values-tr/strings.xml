@@ -356,4 +356,24 @@
     <string name="title_ui_background_blur">Arka plan bulanıklığı</string>
     <string name="summary_ui_background_blur">Karmaşık arka plan fotoğraflarını yumuşatarak metin okunabilirliğini artırın (Android 12+)</string>
     <string name="suffix_dp">dp</string>
+    <string name="title_settings_nav_style">Ayarlar gezinme stili</string>
+    <string name="summary_settings_nav_style">Ayarlar ekranında üst sekmeler veya yüzen alt gezinme çubuğu arasında seçim yapın</string>
+    <string name="settings_nav_style_tabs">Sekmeli</string>
+    <string name="settings_nav_style_floating_bottom_bar">Yüzen Alt Çubuk</string>
+    <string name="nav_short_basic">Temel</string>
+    <string name="nav_short_audio">Ses</string>
+    <string name="nav_short_gamepad">Kumanda</string>
+    <string name="nav_short_input">Giriş</string>
+    <string name="nav_short_osc">Dokunmatik</string>
+    <string name="nav_short_ui">Arayüz</string>
+    <string name="nav_short_advanced">Gelişmiş</string>
+    <string name="glass_live_preview_title">Canlı Liquid Glass Önizleme</string>
+    <string name="glass_live_preview_subtitle">Lens kırılması, bulanıklık ve prizma dağılımını anlık görmek için merceği sürükleyin veya aşağıdaki ayarları değiştirin</string>
+    <string name="glass_wallpaper_refraction_notice">Kartlarda tam optik kırılma için Özel Görsel seçeneğini kullanınız</string>
+    <string name="title_audio_output">Ses çıkışı</string>
+    <string name="summary_audio_output">Yayın sesinin nerede oynatılacağını seçin</string>
+    <string name="audio_output_client">Bu cihaz (İstemci)</string>
+    <string name="audio_output_host">Bilgisayar (Host)</string>
+    <string name="audio_output_both">Bu cihaz + Bilgisayar</string>
+    <string name="audio_output_none">Hiçbiri (Sessiz)</string>
 </resources>

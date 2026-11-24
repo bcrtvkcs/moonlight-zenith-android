@@ -288,4 +288,10 @@
     <string name="summary_checkbox_sensor_landscape">Beralih otomatis antara lanskap normal dan lanskap terbalik saat menghubungkan dan melakukan streaming, meskipun putar otomatis sistem dimatikan</string>
     <string name="duration_500ms_default">500ms (Default)</string>
     <string name="language_default">Default Sistem</string>
+    <string name="title_audio_output">Output audio</string>
+    <string name="summary_audio_output">Pilih tempat pemutaran audio stream</string>
+    <string name="audio_output_client">Perangkat ini (Klien)</string>
+    <string name="audio_output_host">PC (Host)</string>
+    <string name="audio_output_both">Perangkat ini + PC</string>
+    <string name="audio_output_none">Tidak ada (Bisu)</string>
 </resources>

@@ -276,4 +276,10 @@
     <string name="summary_checkbox_sensor_landscape">Automatikusan vált a normál és a fordított fekvő tájolás között csatlakozáskor és közvetítés közben, még akkor is, ha a rendszer automatikus forgatása ki van kapcsolva</string>
     <string name="duration_500ms_default">500ms (Alapértelmezett)</string>
     <string name="language_default">Rendszer alapértelmezett</string>
+    <string name="title_audio_output">Hangkimenet</string>
+    <string name="summary_audio_output">Válassza ki, hol szólaljon meg a stream hangja</string>
+    <string name="audio_output_client">Ez az eszköz (Kliens)</string>
+    <string name="audio_output_host">Számítógép (Gazdagép)</string>
+    <string name="audio_output_both">Ez az eszköz + Számítógép</string>
+    <string name="audio_output_none">Nincs (Némítva)</string>
 </resources>

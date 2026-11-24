@@ -310,4 +310,10 @@
     <string name="summary_checkbox_sensor_landscape">Cambia automáticamente entre horizontal normal e invertido al conectar y transmitir, incluso cuando el giro automático del sistema está desactivado</string>
     <string name="duration_500ms_default">500ms (Predeterminado)</string>
     <string name="language_default">Predeterminado del sistema</string>
+    <string name="title_audio_output">Salida de audio</string>
+    <string name="summary_audio_output">Elige dónde se reproduce el audio de la transmisión</string>
+    <string name="audio_output_client">Este dispositivo (Cliente)</string>
+    <string name="audio_output_host">PC (Host)</string>
+    <string name="audio_output_both">Este dispositivo + PC</string>
+    <string name="audio_output_none">Ninguno (Silenciado)</string>
 </resources>

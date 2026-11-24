@@ -296,4 +296,10 @@
     <string name="summary_checkbox_sensor_landscape">מעבר אוטומטי בין מצב אופקי רגיל להפוך בזמן התחברות והזרמה, גם כאשר הסיבוב האוטומטי במערכת כבוי</string>
     <string name="duration_500ms_default">500ms (ברירת מחדל)</string>
     <string name="language_default">ברירת מחדל של המערכת</string>
+    <string name="title_audio_output">פלט שמע</string>
+    <string name="summary_audio_output">בחר היכן יושמע שמע השידור</string>
+    <string name="audio_output_client">מכשיר זה (לקוח)</string>
+    <string name="audio_output_host">מחשב (מארח)</string>
+    <string name="audio_output_both">מכשיר זה + מחשב</string>
+    <string name="audio_output_none">ללא (מושתק)</string>
 </resources>

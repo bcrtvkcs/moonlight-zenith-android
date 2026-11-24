@@ -68,11 +68,10 @@
             android:entries="@array/audio_config_names"
             android:entryValues="@array/audio_config_values"
             android:defaultValue="2" />
-        <com.limelight.preferences.M3SwitchPreference
-            android:key="checkbox_host_audio"
-            android:title="@string/title_checkbox_host_audio"
-            android:summary="@string/summary_checkbox_host_audio"
-            android:defaultValue="false" />
+        <com.limelight.preferences.M3AudioOutputPreference
+            android:key="pref_audio_output"
+            android:title="@string/title_audio_output"
+            android:summary="@string/summary_audio_output" />
         <com.limelight.preferences.M3SwitchPreference
             android:key="checkbox_enable_audiofx"
             android:title="@string/title_checkbox_enable_audiofx"
@@ -254,6 +253,13 @@
             android:entryValues="@array/ui_style_values"
             android:defaultValue="material3" />
         <com.limelight.preferences.M3ListPreference
+            android:key="list_settings_nav_style"
+            android:title="@string/title_settings_nav_style"
+            android:summary="@string/summary_settings_nav_style"
+            android:entries="@array/settings_nav_style_names"
+            android:entryValues="@array/settings_nav_style_values"
+            android:defaultValue="tabs" />
+        <com.limelight.preferences.M3ListPreference
             android:key="list_liquid_glass_style"
             android:title="@string/title_liquid_glass_style"
             android:summary="@string/summary_liquid_glass_style"
@@ -266,7 +272,7 @@
             seekbar:min="0"
             seekbar:step="1"
             android:max="32"
-            android:defaultValue="16"
+            android:defaultValue="10"
             android:summary="@string/summary_glass_blur"
             android:text="@string/suffix_dp"
             android:title="@string/title_glass_blur" />
@@ -275,8 +281,8 @@
             android:dialogMessage="@string/summary_glass_refraction_amount"
             seekbar:min="0"
             seekbar:step="1"
-            android:max="48"
-            android:defaultValue="18"
+            android:max="72"
+            android:defaultValue="26"
             android:summary="@string/summary_glass_refraction_amount"
             android:text="@string/suffix_dp"
             android:title="@string/title_glass_refraction_amount" />
@@ -285,8 +291,8 @@
             android:dialogMessage="@string/summary_glass_refraction_height"
             seekbar:min="0"
             seekbar:step="1"
-            android:max="28"
-            android:defaultValue="11"
+            android:max="40"
+            android:defaultValue="16"
             android:summary="@string/summary_glass_refraction_height"
             android:text="@string/suffix_dp"
             android:title="@string/title_glass_refraction_height" />
@@ -306,7 +312,7 @@
             seekbar:min="5"
             seekbar:step="5"
             android:max="75"
-            android:defaultValue="38"
+            android:defaultValue="24"
             android:summary="@string/summary_glass_surface_opacity"
             android:text="@string/suffix_osc_opacity"
             android:title="@string/title_glass_surface_opacity" />

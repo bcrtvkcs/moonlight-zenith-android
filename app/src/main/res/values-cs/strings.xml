@@ -298,4 +298,10 @@
     <string name="summary_checkbox_sensor_landscape">Automaticky přepínat mezi normální a obrácenou orientací na šířku při připojování a streamování, i když je systémové automatické otáčení vypnuté</string>
     <string name="duration_500ms_default">500ms (Výchozí)</string>
     <string name="language_default">Výchozí systémový</string>
+    <string name="title_audio_output">Zvukový výstup</string>
+    <string name="summary_audio_output">Vyberte, kde se má přehrávat zvuk streamu</string>
+    <string name="audio_output_client">Toto zařízení (Klient)</string>
+    <string name="audio_output_host">Počítač (Hostitel)</string>
+    <string name="audio_output_both">Toto zařízení + Počítač</string>
+    <string name="audio_output_none">Žádný (Ztlumeno)</string>
 </resources>

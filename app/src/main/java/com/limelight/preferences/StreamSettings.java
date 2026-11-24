@@ -29,20 +29,27 @@ import android.view.DisplayCutout;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.graphics.Color;
+import android.graphics.drawable.GradientDrawable;
+import android.view.Gravity;
 import android.view.WindowInsets;
 import android.widget.FrameLayout;
+import android.widget.HorizontalScrollView;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.TextView;
 
-import androidx.activity.result.ActivityResult;
 import androidx.activity.result.ActivityResultCallback;
 import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.PickVisualMediaRequest;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.viewpager2.widget.ViewPager2;
 
+import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.tabs.TabLayout;
 import com.google.android.material.tabs.TabLayoutMediator;
@@ -69,11 +76,17 @@ public class StreamSettings extends AppCompatActivity {
     private String currentCategoryKey = "category_basic_settings";
     private TabLayout settingsTabLayout;
     private TextView settingsTitleText;
+    private MaterialCardView m3FloatingBottomBarCard;
+    private HorizontalScrollView m3FloatingBottomBarScroll;
+    private LinearLayout m3FloatingBottomBarContainer;
+    private List<CategoryTab> loadedCategories;
+    private ViewPager2 activeViewPager;
     private SettingsFragment activeFragment;
     private TabLayoutMediator tabLayoutMediator;
     private boolean isGlassUi;
     private StreamSettingsGlassController glassController;
-    private ActivityResultLauncher<Intent> backgroundImagePickerLauncher;
+    private ActivityResultLauncher<PickVisualMediaRequest> photoPickerLauncher;
+    private ActivityResultLauncher<String[]> documentImagePickerLauncher;
 
     // HACK for Android 9
     static DisplayCutout displayCutoutP;
@@ -94,31 +107,217 @@ public class StreamSettings extends AppCompatActivity {
         return currentCategoryKey;
     }
 
-    public void launchBackgroundImagePicker() {
-        if (backgroundImagePickerLauncher == null) {
+    boolean isFloatingBottomBarNav() {
+        PreferenceConfiguration prefs = PreferenceConfiguration.readPreferences(this);
+        return PreferenceConfiguration.SETTINGS_NAV_STYLE_FLOATING_BOTTOM_BAR.equals(prefs.settingsNavStyle);
+    }
+
+    private int resolveCategoryIconRes(String key) {
+        if ("category_basic_settings".equals(key)) return R.drawable.ic_nav_basic;
+        if ("category_audio_settings".equals(key)) return R.drawable.ic_nav_audio;
+        if ("category_gamepad_settings".equals(key)) return R.drawable.ic_nav_gamepad;
+        if ("category_input_settings".equals(key)) return R.drawable.ic_nav_input;
+        if ("category_onscreen_controls".equals(key)) return R.drawable.ic_nav_osc;
+        if ("category_ui_settings".equals(key)) return R.drawable.ic_nav_ui;
+        if ("category_advanced_settings".equals(key)) return R.drawable.ic_nav_advanced;
+        return R.drawable.ic_settings;
+    }
+
+    private String resolveCategoryShortLabel(String key, CharSequence fallbackTitle) {
+        if ("category_basic_settings".equals(key)) return getString(R.string.nav_short_basic);
+        if ("category_audio_settings".equals(key)) return getString(R.string.nav_short_audio);
+        if ("category_gamepad_settings".equals(key)) return getString(R.string.nav_short_gamepad);
+        if ("category_input_settings".equals(key)) return getString(R.string.nav_short_input);
+        if ("category_onscreen_controls".equals(key)) return getString(R.string.nav_short_osc);
+        if ("category_ui_settings".equals(key)) return getString(R.string.nav_short_ui);
+        if ("category_advanced_settings".equals(key)) return getString(R.string.nav_short_advanced);
+        return fallbackTitle != null ? fallbackTitle.toString() : "";
+    }
+
+    private void buildM3FloatingBottomBarItems(final List<CategoryTab> categories, final ViewPager2 viewPager) {
+        if (m3FloatingBottomBarContainer == null || categories == null) {
             return;
         }
-        Intent pickerIntent;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            pickerIntent = new Intent(MediaStore.ACTION_PICK_IMAGES);
-            pickerIntent.setType("image/*");
-        } else {
-            pickerIntent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
-            pickerIntent.addCategory(Intent.CATEGORY_OPENABLE);
-            pickerIntent.setType("image/*");
+        m3FloatingBottomBarContainer.removeAllViews();
+        float density = getResources().getDisplayMetrics().density;
+        int itemWidth = (int) (74 * density + 0.5f);
+        int itemHeight = (int) (54 * density + 0.5f);
+        int iconSize = (int) (21 * density + 0.5f);
+        int marginH = (int) (2 * density + 0.5f);
+
+        for (int i = 0; i < categories.size(); i++) {
+            final int position = i;
+            CategoryTab cat = categories.get(i);
+
+            LinearLayout item = new LinearLayout(this);
+            item.setOrientation(LinearLayout.VERTICAL);
+            item.setGravity(Gravity.CENTER);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(itemWidth, itemHeight);
+            lp.setMargins(marginH, 0, marginH, 0);
+            item.setLayoutParams(lp);
+            item.setClickable(true);
+            item.setFocusable(true);
+            item.setTag(position);
+
+            ImageView icon = new ImageView(this);
+            icon.setLayoutParams(new LinearLayout.LayoutParams(iconSize, iconSize));
+            icon.setImageResource(resolveCategoryIconRes(cat.key));
+            icon.setTag("nav_icon");
+            item.addView(icon);
+
+            TextView label = new TextView(this);
+            LinearLayout.LayoutParams labelLp = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+            );
+            labelLp.topMargin = (int) (2 * density + 0.5f);
+            label.setLayoutParams(labelLp);
+            label.setText(resolveCategoryShortLabel(cat.key, cat.title));
+            label.setTextSize(10.5f);
+            label.setMaxLines(1);
+            label.setTag("nav_label");
+            item.addView(label);
+
+            item.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    if (viewPager != null) {
+                        viewPager.setCurrentItem(position, true);
+                    }
+                }
+            });
+            item.setOnFocusChangeListener(new View.OnFocusChangeListener() {
+                @Override
+                public void onFocusChange(View v, boolean hasFocus) {
+                    if (hasFocus && viewPager != null && viewPager.getCurrentItem() != position) {
+                        viewPager.setCurrentItem(position, true);
+                    }
+                }
+            });
+
+            m3FloatingBottomBarContainer.addView(item);
         }
-        try {
-            backgroundImagePickerLauncher.launch(pickerIntent);
-        } catch (Exception e) {
-            // Fallback to generic ACTION_GET_CONTENT on OEM ROMs lacking system Photo Picker
-            Intent fallback = new Intent(Intent.ACTION_GET_CONTENT);
-            fallback.setType("image/*");
-            try {
-                backgroundImagePickerLauncher.launch(fallback);
-            } catch (Exception ignored) {
-                Toast.makeText(this, R.string.ui_background_image_failed, Toast.LENGTH_SHORT).show();
+    }
+
+    private void updateM3FloatingBottomBarSelection(int selectedIndex) {
+        if (m3FloatingBottomBarContainer == null) {
+            return;
+        }
+        float density = getResources().getDisplayMetrics().density;
+        int pillRadius = (int) (27 * density + 0.5f);
+        int selectedBg = UiHelper.resolveThemeColor(this, com.google.android.material.R.attr.colorSecondaryContainer, 0xFF434659);
+        int selectedFg = UiHelper.resolveThemeColor(this, com.google.android.material.R.attr.colorOnSecondaryContainer, 0xFFE0E1F9);
+        int unselectedFg = UiHelper.resolveThemeColor(this, com.google.android.material.R.attr.colorOnSurfaceVariant, 0xFFC6C5D0);
+
+        for (int i = 0; i < m3FloatingBottomBarContainer.getChildCount(); i++) {
+            View child = m3FloatingBottomBarContainer.getChildAt(i);
+            boolean selected = (i == selectedIndex);
+            if (selected) {
+                GradientDrawable pill = new GradientDrawable();
+                pill.setColor(selectedBg);
+                pill.setCornerRadius(pillRadius);
+                child.setBackground(pill);
+            } else {
+                child.setBackgroundColor(Color.TRANSPARENT);
+            }
+            ImageView icon = child.findViewWithTag("nav_icon");
+            if (icon != null) {
+                icon.setColorFilter(selected ? selectedFg : unselectedFg);
+            }
+            TextView label = child.findViewWithTag("nav_label");
+            if (label != null) {
+                label.setTextColor(selected ? selectedFg : unselectedFg);
+                label.setTypeface(null, selected ? android.graphics.Typeface.BOLD : android.graphics.Typeface.NORMAL);
             }
         }
+
+        if (m3FloatingBottomBarScroll != null && selectedIndex >= 0 && selectedIndex < m3FloatingBottomBarContainer.getChildCount()) {
+            final View target = m3FloatingBottomBarContainer.getChildAt(selectedIndex);
+            m3FloatingBottomBarScroll.post(new Runnable() {
+                @Override
+                public void run() {
+                    if (m3FloatingBottomBarScroll != null && target != null) {
+                        int scrollX = target.getLeft() - (m3FloatingBottomBarScroll.getWidth() - target.getWidth()) / 2;
+                        m3FloatingBottomBarScroll.smoothScrollTo(Math.max(0, scrollX), 0);
+                    }
+                }
+            });
+        }
+    }
+
+    void applyM3NavigationStyle() {
+        if (isGlassUi) {
+            return;
+        }
+        boolean floating = isFloatingBottomBarNav();
+        if (settingsTabLayout != null) {
+            settingsTabLayout.setVisibility(floating ? View.GONE : View.VISIBLE);
+        }
+        if (m3FloatingBottomBarCard != null) {
+            m3FloatingBottomBarCard.setVisibility(floating ? View.VISIBLE : View.GONE);
+            if (floating && loadedCategories != null && activeViewPager != null) {
+                if (m3FloatingBottomBarContainer != null && m3FloatingBottomBarContainer.getChildCount() != loadedCategories.size()) {
+                    buildM3FloatingBottomBarItems(loadedCategories, activeViewPager);
+                }
+                updateM3FloatingBottomBarSelection(activeViewPager.getCurrentItem());
+            }
+        }
+        if (activeFragment != null) {
+            activeFragment.refreshVisibleListViewPadding();
+        }
+    }
+
+    private void handlePickedBackgroundImageUri(Uri uri) {
+        if (uri == null) {
+            return;
+        }
+        UiBackgroundManager.importCustomImage(StreamSettings.this, uri, new kotlin.jvm.functions.Function1<Boolean, kotlin.Unit>() {
+            @Override
+            public kotlin.Unit invoke(Boolean success) {
+                if (Boolean.TRUE.equals(success)) {
+                    SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(StreamSettings.this);
+                    sp.edit().putString(
+                            PreferenceConfiguration.UI_BACKGROUND_SOURCE_PREF_STRING,
+                            PreferenceConfiguration.UI_BACKGROUND_SOURCE_CUSTOM
+                    ).apply();
+                    UiBackgroundManager.refreshFromPreferences(StreamSettings.this);
+                    UiHelper.applyWindowSurfaceColors(StreamSettings.this);
+                    if (activeFragment != null) {
+                        activeFragment.syncBackgroundSourceListValue(PreferenceConfiguration.UI_BACKGROUND_SOURCE_CUSTOM);
+                        activeFragment.refreshUiBackgroundPreferenceStates();
+                    }
+                    if (glassController != null) {
+                        glassController.bumpRevision();
+                    }
+                    Toast.makeText(StreamSettings.this, R.string.ui_background_image_saved, Toast.LENGTH_SHORT).show();
+                } else {
+                    Toast.makeText(StreamSettings.this, R.string.ui_background_image_failed, Toast.LENGTH_SHORT).show();
+                }
+                return kotlin.Unit.INSTANCE;
+            }
+        });
+    }
+
+    public void launchBackgroundImagePicker() {
+        if (photoPickerLauncher != null) {
+            try {
+                PickVisualMediaRequest request = new PickVisualMediaRequest.Builder()
+                        .setMediaType(ActivityResultContracts.PickVisualMedia.ImageOnly.INSTANCE)
+                        .build();
+                photoPickerLauncher.launch(request);
+                return;
+            } catch (Exception ignored) {
+                // Fall back to OpenDocument on devices without system Photo Picker
+            }
+        }
+        if (documentImagePickerLauncher != null) {
+            try {
+                documentImagePickerLauncher.launch(new String[]{"image/*"});
+                return;
+            } catch (Exception ignored) {
+            }
+        }
+        Toast.makeText(this, R.string.ui_background_image_failed, Toast.LENGTH_SHORT).show();
     }
 
     public void clearCustomBackgroundImage() {
@@ -159,6 +358,8 @@ public class StreamSettings extends AppCompatActivity {
 
     void onCategoriesLoaded(final List<CategoryTab> categories, SettingsFragment fragment, final ViewPager2 viewPager) {
         this.activeFragment = fragment;
+        this.loadedCategories = categories;
+        this.activeViewPager = viewPager;
         if (categories == null || categories.isEmpty()) {
             return;
         }
@@ -212,6 +413,8 @@ public class StreamSettings extends AppCompatActivity {
                 });
         tabLayoutMediator.attach();
 
+        buildM3FloatingBottomBarItems(categories, viewPager);
+
         viewPager.registerOnPageChangeCallback(new ViewPager2.OnPageChangeCallback() {
             @Override
             public void onPageSelected(int position) {
@@ -221,6 +424,7 @@ public class StreamSettings extends AppCompatActivity {
                     if (settingsTitleText != null) {
                         settingsTitleText.setText(cat.title);
                     }
+                    updateM3FloatingBottomBarSelection(position);
                 }
             }
         });
@@ -238,6 +442,8 @@ public class StreamSettings extends AppCompatActivity {
                 }
             }
         });
+
+        applyM3NavigationStyle();
     }
 
     void reloadSettings() {
@@ -267,43 +473,22 @@ public class StreamSettings extends AppCompatActivity {
 
         previousPrefs = PreferenceConfiguration.readPreferences(this);
 
-        backgroundImagePickerLauncher = registerForActivityResult(
-                new ActivityResultContracts.StartActivityForResult(),
-                new ActivityResultCallback<ActivityResult>() {
+        photoPickerLauncher = registerForActivityResult(
+                new ActivityResultContracts.PickVisualMedia(),
+                new ActivityResultCallback<Uri>() {
                     @Override
-                    public void onActivityResult(ActivityResult result) {
-                        if (result.getResultCode() != Activity.RESULT_OK || result.getData() == null) {
-                            return;
-                        }
-                        Uri uri = result.getData().getData();
-                        if (uri == null) {
-                            return;
-                        }
-                        UiBackgroundManager.importCustomImage(StreamSettings.this, uri, new kotlin.jvm.functions.Function1<Boolean, kotlin.Unit>() {
-                            @Override
-                            public kotlin.Unit invoke(Boolean success) {
-                                if (Boolean.TRUE.equals(success)) {
-                                    SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(StreamSettings.this);
-                                    sp.edit().putString(
-                                            PreferenceConfiguration.UI_BACKGROUND_SOURCE_PREF_STRING,
-                                            PreferenceConfiguration.UI_BACKGROUND_SOURCE_CUSTOM
-                                    ).apply();
-                                    UiBackgroundManager.refreshFromPreferences(StreamSettings.this);
-                                    UiHelper.applyWindowSurfaceColors(StreamSettings.this);
-                                    if (activeFragment != null) {
-                                        activeFragment.syncBackgroundSourceListValue(PreferenceConfiguration.UI_BACKGROUND_SOURCE_CUSTOM);
-                                        activeFragment.refreshUiBackgroundPreferenceStates();
-                                    }
-                                    if (glassController != null) {
-                                        glassController.bumpRevision();
-                                    }
-                                    Toast.makeText(StreamSettings.this, R.string.ui_background_image_saved, Toast.LENGTH_SHORT).show();
-                                } else {
-                                    Toast.makeText(StreamSettings.this, R.string.ui_background_image_failed, Toast.LENGTH_SHORT).show();
-                                }
-                                return kotlin.Unit.INSTANCE;
-                            }
-                        });
+                    public void onActivityResult(Uri uri) {
+                        handlePickedBackgroundImageUri(uri);
+                    }
+                }
+        );
+
+        documentImagePickerLauncher = registerForActivityResult(
+                new ActivityResultContracts.OpenDocument(),
+                new ActivityResultCallback<Uri>() {
+                    @Override
+                    public void onActivityResult(Uri uri) {
+                        handlePickedBackgroundImageUri(uri);
                     }
                 }
         );
@@ -366,6 +551,9 @@ public class StreamSettings extends AppCompatActivity {
             setContentView(R.layout.activity_stream_settings);
             settingsTitleText = findViewById(R.id.settingsTitleText);
             settingsTabLayout = findViewById(R.id.settingsTabLayout);
+            m3FloatingBottomBarCard = findViewById(R.id.m3FloatingBottomBarCard);
+            m3FloatingBottomBarScroll = findViewById(R.id.m3FloatingBottomBarScroll);
+            m3FloatingBottomBarContainer = findViewById(R.id.m3FloatingBottomBarContainer);
 
             View backButton = findViewById(R.id.settingsBackButton);
             if (backButton != null) {
@@ -483,14 +671,25 @@ public class StreamSettings extends AppCompatActivity {
             }
         }
 
+        void refreshVisibleListViewPadding() {
+            if (settingsViewPager == null || !isAdded()) {
+                return;
+            }
+            if (settingsViewPager.getAdapter() != null) {
+                settingsViewPager.getAdapter().notifyDataSetChanged();
+            }
+        }
+
         private void configureListView(ListView list) {
             if (list == null || !isAdded()) {
                 return;
             }
             float density = getResources().getDisplayMetrics().density;
+            boolean floatingBottomBar = (getActivity() instanceof StreamSettings)
+                    && ((StreamSettings) getActivity()).isFloatingBottomBarNav();
             int hPad = (int) (16 * density + 0.5f);
             int tPad = (int) (4 * density + 0.5f);
-            int bPad = (int) (24 * density + 0.5f);
+            int bPad = (int) ((floatingBottomBar ? 98 : 24) * density + 0.5f);
             list.setDivider(null);
             list.setDividerHeight(0);
             list.setSelector(android.R.color.transparent);
@@ -589,7 +788,7 @@ public class StreamSettings extends AppCompatActivity {
             }
             Preference pickPref = findPreference(PreferenceConfiguration.UI_BACKGROUND_PICK_IMAGE_PREF_STRING);
             if (pickPref != null) {
-                pickPref.setEnabled(isCustomImage);
+                pickPref.setEnabled(true);
                 pickPref.setSummary(UiBackgroundManager.hasCustomImage(act)
                         ? R.string.summary_ui_background_pick_image_set
                         : R.string.summary_ui_background_pick_image_empty);
@@ -834,6 +1033,30 @@ public class StreamSettings extends AppCompatActivity {
             Preference uiStylePref = findPreference(PreferenceConfiguration.UI_STYLE_PREF_STRING);
             if (uiStylePref != null) {
                 uiStylePref.setOnPreferenceChangeListener(themeReloadListener);
+            }
+            Preference settingsNavStylePref = findPreference(PreferenceConfiguration.SETTINGS_NAV_STYLE_PREF_STRING);
+            if (settingsNavStylePref != null) {
+                settingsNavStylePref.setOnPreferenceChangeListener(new Preference.OnPreferenceChangeListener() {
+                    @Override
+                    public boolean onPreferenceChange(Preference preference, Object newValue) {
+                        new Handler().post(new Runnable() {
+                            @Override
+                            public void run() {
+                                Activity act = SettingsFragment.this.getActivity();
+                                if (act != null && !act.isFinishing()) {
+                                    UiBackgroundManager.refreshFromPreferences(act);
+                                    if (act instanceof StreamSettings) {
+                                        ((StreamSettings) act).applyM3NavigationStyle();
+                                        if (((StreamSettings) act).glassController != null) {
+                                            ((StreamSettings) act).glassController.bumpRevision();
+                                        }
+                                    }
+                                }
+                            }
+                        });
+                        return true;
+                    }
+                });
             }
 
             // Instant reactive listeners for Liquid Glass style & background customization

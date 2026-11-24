@@ -10,6 +10,8 @@ import androidx.appcompat.app.AlertDialog;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.limelight.R;
+import com.limelight.ui.glass.GlassDialogHandle;
+import com.limelight.ui.glass.GlassDialogPortal;
 
 public class Dialog implements Runnable {
     private final String title;
@@ -18,6 +20,7 @@ public class Dialog implements Runnable {
     private final Runnable runOnDismiss;
 
     private AlertDialog alert;
+    private GlassDialogHandle glassHandle;
 
     private static final ArrayList<Dialog> rundownDialogs = new ArrayList<>();
 
@@ -35,6 +38,10 @@ public class Dialog implements Runnable {
             for (Dialog d : rundownDialogs) {
                 if (d.alert != null && d.alert.isShowing()) {
                     d.alert.dismiss();
+                }
+                if (d.glassHandle != null) {
+                    d.glassHandle.dismiss();
+                    d.glassHandle = null;
                 }
             }
 
@@ -64,6 +71,41 @@ public class Dialog implements Runnable {
         // If we're dying, don't bother creating a dialog
         if (activity.isFinishing())
             return;
+
+        if (UiHelper.isLiquidGlassEnabled(activity)) {
+            synchronized (rundownDialogs) {
+                rundownDialogs.add(this);
+                glassHandle = GlassDialogPortal.showAlert(
+                        activity,
+                        title,
+                        message,
+                        activity.getResources().getString(android.R.string.ok),
+                        activity.getResources().getString(R.string.help),
+                        new Runnable() {
+                            @Override
+                            public void run() {
+                                synchronized (rundownDialogs) {
+                                    rundownDialogs.remove(Dialog.this);
+                                    glassHandle = null;
+                                }
+                                runOnDismiss.run();
+                            }
+                        },
+                        new Runnable() {
+                            @Override
+                            public void run() {
+                                synchronized (rundownDialogs) {
+                                    rundownDialogs.remove(Dialog.this);
+                                    glassHandle = null;
+                                }
+                                runOnDismiss.run();
+                                HelpLauncher.launchTroubleshooting(activity);
+                            }
+                        }
+                );
+            }
+            return;
+        }
 
         alert = new MaterialAlertDialogBuilder(activity)
                 .setTitle(title)

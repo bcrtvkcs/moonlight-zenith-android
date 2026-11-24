@@ -1,10 +1,13 @@
 package com.limelight.ui.glass
 
-import androidx.compose.foundation.background
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -27,8 +30,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -73,50 +76,55 @@ fun GlassMenuOverlay(
     isTv: Boolean,
     backdrop: Backdrop = LocalContentBackdrop.current
 ) {
-    val visible = menuData != null
     val dismiss = {
         menuData?.onDismiss?.invoke()
         Unit
     }
 
     if (isTv) {
-        GlassModalDialog(
-            visible = visible,
+        GlassAnimatedModalDialog(
+            targetState = menuData,
             onDismiss = dismiss,
             backdrop = backdrop
-        ) {
-            if (menuData != null) {
-                GlassMenuContent(menuData = menuData)
-            }
+        ) { activeMenu ->
+            GlassMenuContent(menuData = activeMenu, backdrop = backdrop)
         }
     } else {
-        GlassBottomSheetOverlay(
-            visible = visible,
+        GlassAnimatedBottomSheet(
+            targetState = menuData,
             onDismiss = dismiss,
             backdrop = backdrop
-        ) {
-            if (menuData != null) {
-                GlassMenuContent(menuData = menuData)
-            }
+        ) { activeMenu ->
+            GlassMenuContent(menuData = activeMenu, backdrop = backdrop)
         }
     }
 }
 
 @Composable
-private fun GlassMenuContent(menuData: GlassMenuData) {
-    // Header
+private fun GlassMenuContent(
+    menuData: GlassMenuData,
+    backdrop: Backdrop
+) {
+    val tokens = LocalGlassTokens.current
+
+    // Header with Liquid Glass icon pill
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 6.dp, vertical = 4.dp)
+            .padding(horizontal = 4.dp, vertical = 4.dp)
     ) {
         Box(
             contentAlignment = Alignment.Center,
             modifier = Modifier
-                .size(44.dp)
-                .clip(RoundedCornerShape(14.dp))
-                .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.72f))
+                .size(46.dp)
+                .liquidGlassSurface(
+                    backdrop = backdrop,
+                    shape = RoundedCornerShape(15.dp),
+                    level = GlassElevationLevel.ACCENT,
+                    tintOverride = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.44f),
+                    enableShadow = false
+                )
         ) {
             Icon(
                 painter = painterResource(
@@ -149,28 +157,35 @@ private fun GlassMenuContent(menuData: GlassMenuData) {
         }
     }
 
-    Spacer(modifier = Modifier.height(12.dp))
+    Spacer(modifier = Modifier.height(14.dp))
 
+    // All menu options rendered as true translucent Liquid Glass pills with specular highlights & lens refraction
     Column(
-        verticalArrangement = Arrangement.spacedBy(6.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
         modifier = Modifier
             .fillMaxWidth()
-            .heightIn(max = 380.dp)
+            .heightIn(max = 390.dp)
             .verticalScroll(rememberScrollState())
     ) {
         menuData.options.forEach { option ->
             val interactionSource = remember { MutableInteractionSource() }
             val isFocused by interactionSource.collectIsFocusedAsState()
+            val isPressed by interactionSource.collectIsPressedAsState()
+            val scale by animateFloatAsState(
+                targetValue = if (isPressed) 0.96f else if (isFocused) 1.02f else 1f,
+                animationSpec = spring(stiffness = Spring.StiffnessMediumLow, dampingRatio = Spring.DampingRatioMediumBouncy),
+                label = "glassMenuRowScale"
+            )
 
-            val rowBg = when {
-                isFocused -> MaterialTheme.colorScheme.primary.copy(alpha = 0.24f)
-                option.isDestructive -> MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.28f)
-                option.isPrimary -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.34f)
-                else -> Color.White.copy(alpha = 0.08f)
+            val rowTint = when {
+                isFocused -> MaterialTheme.colorScheme.primary.copy(alpha = 0.30f)
+                option.isDestructive -> MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.32f)
+                option.isPrimary -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.36f)
+                else -> tokens.cardTint.copy(alpha = (tokens.cardTint.alpha * 0.78f).coerceIn(0.08f, 0.36f))
             }
             val contentColor = when {
                 option.isDestructive -> MaterialTheme.colorScheme.error
-                option.isPrimary -> MaterialTheme.colorScheme.primary
+                option.isPrimary -> MaterialTheme.colorScheme.onPrimaryContainer
                 else -> MaterialTheme.colorScheme.onSurface
             }
 
@@ -178,8 +193,19 @@ private fun GlassMenuContent(menuData: GlassMenuData) {
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(rowBg)
+                    .graphicsLayer {
+                        scaleX = scale
+                        scaleY = scale
+                    }
+                    .liquidGlassSurface(
+                        backdrop = backdrop,
+                        shape = RoundedCornerShape(18.dp),
+                        level = if (option.isPrimary || option.isDestructive) GlassElevationLevel.ACCENT else GlassElevationLevel.CHROME,
+                        tintOverride = rowTint,
+                        isFocused = isFocused,
+                        enableLens = true,
+                        enableShadow = false
+                    )
                     .focusable(interactionSource = interactionSource)
                     .clickable(interactionSource = interactionSource, indication = null) {
                         menuData.onOptionSelected(option)
@@ -207,8 +233,9 @@ private fun GlassMenuContent(menuData: GlassMenuData) {
                 )
                 if (option.isCheckable) {
                     Spacer(modifier = Modifier.width(10.dp))
-                    GlassSwitch(
+                    LiquidGlassSwitch(
                         checked = option.isChecked,
+                        backdrop = backdrop,
                         onCheckedChange = { menuData.onOptionSelected(option) }
                     )
                 }

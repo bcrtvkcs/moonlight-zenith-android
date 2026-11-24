@@ -296,4 +296,10 @@
     <string name="summary_checkbox_sensor_landscape">Bytt automatisk mellom vanlig og omvendt liggende retning under tilkobling og strømming, selv når automatisk rotasjon i systemet er slått av</string>
     <string name="duration_500ms_default">500ms (Standard)</string>
     <string name="language_default">Systemstandard</string>
+    <string name="title_audio_output">Lydutgang</string>
+    <string name="summary_audio_output">Velg hvor strømmelyden skal spilles av</string>
+    <string name="audio_output_client">Denne enheten (Klient)</string>
+    <string name="audio_output_host">PC (Vert)</string>
+    <string name="audio_output_both">Denne enheten + PC</string>
+    <string name="audio_output_none">Ingen (Dempet)</string>
 </resources>

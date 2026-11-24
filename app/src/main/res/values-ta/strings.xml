@@ -276,4 +276,10 @@
     <string name="summary_checkbox_sensor_landscape">கணினியின் தானியங்கி சுழற்சி முடக்கப்பட்டிருந்தாலும், இணைக்கும்போதும் ஸ்ட்ரீமிங் செய்யும்போதும் கிடைமட்டத் திரையைத் தானாக மாற்றும்</string>
     <string name="duration_500ms_default">500ms (இயல்புநிலை)</string>
     <string name="language_default">கணினி இயல்புநிலை</string>
+    <string name="title_audio_output">ஆடியோ வெளியீடு</string>
+    <string name="summary_audio_output">ஸ்ட்ரீம் ஆடியோ எங்கு இயக்கப்பட வேண்டும் என்பதைத் தேர்ந்தெடுக்கவும்</string>
+    <string name="audio_output_client">இந்த சாதனம் (கிளையன்ட்)</string>
+    <string name="audio_output_host">கணினி (ஹோஸ்ட்)</string>
+    <string name="audio_output_both">இந்த சாதனம் + கணினி</string>
+    <string name="audio_output_none">ஏதுமில்லை (ஒலியடக்கப்பட்டது)</string>
 </resources>

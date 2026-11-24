@@ -309,4 +309,10 @@
     <string name="summary_checkbox_sensor_landscape">在连接和串流期间自动在正向横屏与反向横屏之间切换，即使系统自动旋转已关闭</string>
     <string name="duration_500ms_default">500ms（默认）</string>
     <string name="language_default">系统默认</string>
+    <string name="title_audio_output">音频输出</string>
+    <string name="summary_audio_output">选择串流音频的播放位置</string>
+    <string name="audio_output_client">本设备 (客户端)</string>
+    <string name="audio_output_host">电脑 (主机)</string>
+    <string name="audio_output_both">本设备 + 电脑</string>
+    <string name="audio_output_none">无 (静音)</string>
 </resources>

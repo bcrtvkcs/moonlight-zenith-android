@@ -26,6 +26,7 @@ import com.limelight.R;
 import com.limelight.nvstream.http.ComputerDetails;
 import com.limelight.preferences.PreferenceConfiguration;
 import com.limelight.ui.background.UiBackgroundManager;
+import com.limelight.ui.glass.GlassDialogPortal;
 
 import java.util.Locale;
 
@@ -326,6 +327,19 @@ public class UiHelper {
     }
 
     public static void displayQuitConfirmationDialog(Activity parent, final Runnable onYes, final Runnable onNo) {
+        if (isLiquidGlassEnabled(parent)) {
+            GlassDialogPortal.showConfirmation(
+                    parent,
+                    null,
+                    parent.getResources().getString(R.string.applist_quit_confirmation),
+                    parent.getResources().getString(R.string.yes),
+                    parent.getResources().getString(R.string.no),
+                    true,
+                    onYes,
+                    onNo
+            );
+            return;
+        }
         DialogInterface.OnClickListener dialogClickListener = new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
@@ -355,6 +369,19 @@ public class UiHelper {
     }
 
     public static void displayDeletePcConfirmationDialog(Activity parent, ComputerDetails computer, final Runnable onYes, final Runnable onNo) {
+        if (isLiquidGlassEnabled(parent)) {
+            GlassDialogPortal.showConfirmation(
+                    parent,
+                    computer != null ? computer.name : null,
+                    parent.getResources().getString(R.string.delete_pc_msg),
+                    parent.getResources().getString(R.string.yes),
+                    parent.getResources().getString(R.string.no),
+                    true,
+                    onYes,
+                    onNo
+            );
+            return;
+        }
         DialogInterface.OnClickListener dialogClickListener = new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {

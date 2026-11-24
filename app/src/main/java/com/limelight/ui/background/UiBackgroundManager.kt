@@ -6,6 +6,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Color
+import android.graphics.ImageDecoder
 import android.graphics.Matrix
 import android.graphics.PixelFormat
 import android.graphics.RenderEffect
@@ -41,6 +42,7 @@ import kotlin.math.roundToInt
  */
 data class UiBackgroundState(
     val uiStyle: String = PreferenceConfiguration.DEFAULT_UI_STYLE,
+    val settingsNavStyle: String = PreferenceConfiguration.DEFAULT_SETTINGS_NAV_STYLE,
     val liquidGlassStyle: String = PreferenceConfiguration.DEFAULT_LIQUID_GLASS_STYLE,
     val glassBlurDp: Int = PreferenceConfiguration.DEFAULT_GLASS_BLUR,
     val glassRefractionAmountDp: Int = PreferenceConfiguration.DEFAULT_GLASS_REFRACTION_AMOUNT,
@@ -72,13 +74,16 @@ data class UiBackgroundState(
     val effectiveTintOpacity: Int get() = (previewTintOpacity ?: tintOpacity).coerceIn(0, 90)
     val effectiveBlurDp: Int get() = (previewBlurDp ?: blurDp).coerceIn(0, 24)
     val effectiveGlassBlurDp: Int get() = (previewGlassBlurDp ?: glassBlurDp).coerceIn(0, 32)
-    val effectiveGlassRefractionAmountDp: Int get() = (previewGlassRefractionAmountDp ?: glassRefractionAmountDp).coerceIn(0, 48)
-    val effectiveGlassRefractionHeightDp: Int get() = (previewGlassRefractionHeightDp ?: glassRefractionHeightDp).coerceIn(0, 28)
+    val effectiveGlassRefractionAmountDp: Int get() = (previewGlassRefractionAmountDp ?: glassRefractionAmountDp).coerceIn(0, 72)
+    val effectiveGlassRefractionHeightDp: Int get() = (previewGlassRefractionHeightDp ?: glassRefractionHeightDp).coerceIn(0, 40)
     val effectiveGlassSurfaceOpacity: Int get() = (previewGlassSurfaceOpacity ?: glassSurfaceOpacity).coerceIn(5, 75)
     val effectiveGlassHighlightIntensity: Int get() = (previewGlassHighlightIntensity ?: glassHighlightIntensity).coerceIn(0, 100)
 
     val isLiquidGlass: Boolean
         get() = uiStyle == PreferenceConfiguration.UI_STYLE_LIQUID_GLASS
+
+    val isFloatingBottomBarNav: Boolean
+        get() = settingsNavStyle == PreferenceConfiguration.SETTINGS_NAV_STYLE_FLOATING_BOTTOM_BAR
 
     val isCustomImageActive: Boolean
         get() = backgroundSource == PreferenceConfiguration.UI_BACKGROUND_SOURCE_CUSTOM && hasCustomImage
@@ -88,9 +93,10 @@ data class UiBackgroundState(
 }
 
 /**
- * Centralized manager for custom background image persistence, safe downsampling + EXIF rotation,
- * phone wallpaper handling (zero-permission FLAG_SHOW_WALLPAPER on Android 13+, bitmap fallback on <=12),
- * color tinting, opacity, blur, and live settings preview.
+ * Centralized manager for custom background image persistence (supporting local gallery + Google Photos
+ * cloud media picker via single-stream copy + API 28+ ImageDecoder), phone wallpaper handling
+ * (zero-permission FLAG_SHOW_WALLPAPER + Android 12+ blurBehindRadius), color tinting, opacity, blur,
+ * and live settings preview.
  */
 object UiBackgroundManager {
     private const val CUSTOM_BG_FILENAME = "ui_background_custom.webp"
@@ -137,6 +143,7 @@ object UiBackgroundManager {
         initialized = true
         _state.value = UiBackgroundState(
             uiStyle = prefs.uiStyle ?: PreferenceConfiguration.DEFAULT_UI_STYLE,
+            settingsNavStyle = prefs.settingsNavStyle ?: PreferenceConfiguration.DEFAULT_SETTINGS_NAV_STYLE,
             liquidGlassStyle = prefs.liquidGlassStyle ?: PreferenceConfiguration.DEFAULT_LIQUID_GLASS_STYLE,
             glassBlurDp = prefs.glassBlurDp,
             glassRefractionAmountDp = prefs.glassRefractionAmountDp,
@@ -229,33 +236,33 @@ object UiBackgroundManager {
         val editor = prefs.edit()
         when (preset) {
             "clear" -> {
-                editor.putInt(PreferenceConfiguration.GLASS_BLUR_PREF_STRING, 8)
-                editor.putInt(PreferenceConfiguration.GLASS_REFRACTION_AMOUNT_PREF_STRING, 28)
-                editor.putInt(PreferenceConfiguration.GLASS_REFRACTION_HEIGHT_PREF_STRING, 14)
+                editor.putInt(PreferenceConfiguration.GLASS_BLUR_PREF_STRING, 3)
+                editor.putInt(PreferenceConfiguration.GLASS_REFRACTION_AMOUNT_PREF_STRING, 36)
+                editor.putInt(PreferenceConfiguration.GLASS_REFRACTION_HEIGHT_PREF_STRING, 20)
                 editor.putBoolean(PreferenceConfiguration.GLASS_CHROMATIC_ABERRATION_PREF_STRING, true)
                 editor.putBoolean(PreferenceConfiguration.GLASS_DEPTH_EFFECT_PREF_STRING, true)
-                editor.putInt(PreferenceConfiguration.GLASS_SURFACE_OPACITY_PREF_STRING, 22)
-                editor.putInt(PreferenceConfiguration.GLASS_HIGHLIGHT_INTENSITY_PREF_STRING, 85)
+                editor.putInt(PreferenceConfiguration.GLASS_SURFACE_OPACITY_PREF_STRING, 10)
+                editor.putInt(PreferenceConfiguration.GLASS_HIGHLIGHT_INTENSITY_PREF_STRING, 88)
                 editor.putBoolean(PreferenceConfiguration.GLASS_VIBRANCY_PREF_STRING, true)
             }
             "tinted" -> {
-                editor.putInt(PreferenceConfiguration.GLASS_BLUR_PREF_STRING, 16)
-                editor.putInt(PreferenceConfiguration.GLASS_REFRACTION_AMOUNT_PREF_STRING, 20)
-                editor.putInt(PreferenceConfiguration.GLASS_REFRACTION_HEIGHT_PREF_STRING, 12)
+                editor.putInt(PreferenceConfiguration.GLASS_BLUR_PREF_STRING, 10)
+                editor.putInt(PreferenceConfiguration.GLASS_REFRACTION_AMOUNT_PREF_STRING, 28)
+                editor.putInt(PreferenceConfiguration.GLASS_REFRACTION_HEIGHT_PREF_STRING, 18)
                 editor.putBoolean(PreferenceConfiguration.GLASS_CHROMATIC_ABERRATION_PREF_STRING, true)
                 editor.putBoolean(PreferenceConfiguration.GLASS_DEPTH_EFFECT_PREF_STRING, false)
-                editor.putInt(PreferenceConfiguration.GLASS_SURFACE_OPACITY_PREF_STRING, 34)
-                editor.putInt(PreferenceConfiguration.GLASS_HIGHLIGHT_INTENSITY_PREF_STRING, 72)
+                editor.putInt(PreferenceConfiguration.GLASS_SURFACE_OPACITY_PREF_STRING, 22)
+                editor.putInt(PreferenceConfiguration.GLASS_HIGHLIGHT_INTENSITY_PREF_STRING, 78)
                 editor.putBoolean(PreferenceConfiguration.GLASS_VIBRANCY_PREF_STRING, true)
             }
             "frosted" -> {
-                editor.putInt(PreferenceConfiguration.GLASS_BLUR_PREF_STRING, 16)
-                editor.putInt(PreferenceConfiguration.GLASS_REFRACTION_AMOUNT_PREF_STRING, 18)
-                editor.putInt(PreferenceConfiguration.GLASS_REFRACTION_HEIGHT_PREF_STRING, 11)
+                editor.putInt(PreferenceConfiguration.GLASS_BLUR_PREF_STRING, 10)
+                editor.putInt(PreferenceConfiguration.GLASS_REFRACTION_AMOUNT_PREF_STRING, 26)
+                editor.putInt(PreferenceConfiguration.GLASS_REFRACTION_HEIGHT_PREF_STRING, 16)
                 editor.putBoolean(PreferenceConfiguration.GLASS_CHROMATIC_ABERRATION_PREF_STRING, true)
                 editor.putBoolean(PreferenceConfiguration.GLASS_DEPTH_EFFECT_PREF_STRING, false)
-                editor.putInt(PreferenceConfiguration.GLASS_SURFACE_OPACITY_PREF_STRING, 38)
-                editor.putInt(PreferenceConfiguration.GLASS_HIGHLIGHT_INTENSITY_PREF_STRING, 75)
+                editor.putInt(PreferenceConfiguration.GLASS_SURFACE_OPACITY_PREF_STRING, 24)
+                editor.putInt(PreferenceConfiguration.GLASS_HIGHLIGHT_INTENSITY_PREF_STRING, 78)
                 editor.putBoolean(PreferenceConfiguration.GLASS_VIBRANCY_PREF_STRING, true)
             }
             else -> return
@@ -265,53 +272,105 @@ object UiBackgroundManager {
     }
 
     /**
-     * Imports a user-picked image URI on a background thread, normalizes EXIF rotation and size
-     * (max 2160px long edge), compresses to WebP inside app internal storage, and updates state.
+     * Imports a user-picked image URI (local gallery OR Google Photos cloud media) on a background
+     * thread using a single sequential stream copy to cacheDir followed by API 28+ ImageDecoder
+     * (handling JPEG, PNG, WebP, HEIC, AVIF, UltraHDR & EXIF rotation cleanly) or BitmapFactory
+     * fallback on older versions.
      */
     @JvmStatic
     fun importCustomImage(context: Context, uri: Uri, onComplete: (Boolean) -> Unit) {
         val appCtx = context.applicationContext
         ioExecutor.execute {
+            val stagedFile = File(appCtx.cacheDir, "ui_bg_import_${System.nanoTime()}.tmp")
             val success = try {
-                val decoded = decodeSampledAndRotatedBitmap(appCtx, uri)
-                if (decoded != null) {
-                    val outFile = getCustomImageFile(appCtx)
-                    val tmpFile = File(appCtx.filesDir, "$CUSTOM_BG_FILENAME.tmp")
-                    FileOutputStream(tmpFile).use { fos ->
-                        val format = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                            Bitmap.CompressFormat.WEBP_LOSSY
-                        } else {
-                            @Suppress("DEPRECATION")
-                            Bitmap.CompressFormat.WEBP
-                        }
-                        decoded.compress(format, 88, fos)
-                        fos.flush()
-                    }
-                    if (outFile.exists()) {
-                        outFile.delete()
-                    }
-                    tmpFile.renameTo(outFile)
-
-                    val newVersion = System.currentTimeMillis()
-                    cachedCustomBitmap = decoded
-                    cachedCustomBitmapVersion = newVersion
-
-                    val prefs = PreferenceConfiguration.readPreferences(appCtx)
-                    _state.value = _state.value.copy(
-                        backgroundSource = prefs.uiBackgroundSource ?: PreferenceConfiguration.UI_BACKGROUND_SOURCE_CUSTOM,
-                        hasCustomImage = true,
-                        imageVersion = newVersion
-                    )
-                    true
-                } else {
+                val copied = copyUriToTempFile(appCtx, uri, stagedFile)
+                if (!copied || !stagedFile.exists() || stagedFile.length() <= 0L) {
+                    LimeLog.warning("Failed to copy selected image stream from URI: $uri")
                     false
+                } else {
+                    val decoded = decodeSampledAndRotatedFile(stagedFile)
+                    if (decoded != null) {
+                        val outFile = getCustomImageFile(appCtx)
+                        val tmpOut = File(appCtx.filesDir, "$CUSTOM_BG_FILENAME.tmp")
+                        FileOutputStream(tmpOut).use { fos ->
+                            val format = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                                Bitmap.CompressFormat.WEBP_LOSSY
+                            } else {
+                                @Suppress("DEPRECATION")
+                                Bitmap.CompressFormat.WEBP
+                            }
+                            decoded.compress(format, 90, fos)
+                            fos.flush()
+                        }
+                        if (outFile.exists()) {
+                            outFile.delete()
+                        }
+                        if (!tmpOut.renameTo(outFile)) {
+                            tmpOut.copyTo(outFile, overwrite = true)
+                            tmpOut.delete()
+                        }
+
+                        val newVersion = System.currentTimeMillis()
+                        cachedCustomBitmap = decoded
+                        cachedCustomBitmapVersion = newVersion
+
+                        val prefs = PreferenceConfiguration.readPreferences(appCtx)
+                        _state.value = _state.value.copy(
+                            backgroundSource = PreferenceConfiguration.UI_BACKGROUND_SOURCE_CUSTOM,
+                            hasCustomImage = true,
+                            imageVersion = newVersion,
+                            backgroundOpacity = prefs.uiBackgroundOpacity,
+                            tintMode = prefs.uiBackgroundTintMode ?: PreferenceConfiguration.DEFAULT_UI_BACKGROUND_TINT_MODE,
+                            tintOpacity = prefs.uiBackgroundTintOpacity,
+                            blurDp = prefs.uiBackgroundBlur
+                        )
+                        true
+                    } else {
+                        LimeLog.warning("Decoded bitmap was null for custom background URI: $uri")
+                        false
+                    }
                 }
             } catch (t: Throwable) {
-                LimeLog.warning("Failed to import custom UI background image: ${t.message}")
+                LimeLog.warning("Failed to import custom UI background image ($uri): ${t.message}")
                 false
+            } finally {
+                try {
+                    if (stagedFile.exists()) {
+                        stagedFile.delete()
+                    }
+                } catch (_: Throwable) {
+                }
             }
             mainHandler.post { onComplete(success) }
         }
+    }
+
+    private fun copyUriToTempFile(context: Context, uri: Uri, target: File): Boolean {
+        val resolver = context.contentResolver
+        // Try openInputStream first (works with Photo Picker, Google Photos cloud provider, SAF)
+        val stream = try {
+            resolver.openInputStream(uri)
+        } catch (_: Throwable) {
+            null
+        } ?: try {
+            // Fallback via openAssetFileDescriptor for providers that expose virtual/cloud streams
+            resolver.openAssetFileDescriptor(uri, "r")?.createInputStream()
+        } catch (_: Throwable) {
+            null
+        } ?: return false
+
+        stream.use { input ->
+            FileOutputStream(target).use { output ->
+                val buffer = ByteArray(16 * 1024)
+                while (true) {
+                    val read = input.read(buffer)
+                    if (read <= 0) break
+                    output.write(buffer, 0, read)
+                }
+                output.flush()
+            }
+        }
+        return target.exists() && target.length() > 0L
     }
 
     @JvmStatic
@@ -375,7 +434,6 @@ object UiBackgroundManager {
         return try {
             val wm = WallpaperManager.getInstance(context.applicationContext)
             if (wm.wallpaperInfo != null) {
-                // Live wallpaper active — use FLAG_SHOW_WALLPAPER so live animations keep playing!
                 return null
             }
             val drawable = wm.drawable
@@ -393,20 +451,12 @@ object UiBackgroundManager {
         }
     }
 
-    /**
-     * Returns true when we should use Android's native FLAG_SHOW_WALLPAPER window mode
-     * (always on Android 13+ when wallpaper background is chosen, or whenever a live wallpaper is set).
-     */
     @JvmStatic
     fun shouldUseWindowWallpaperFlag(context: Context, bgState: UiBackgroundState = _state.value): Boolean {
         if (!bgState.isWallpaperActive) return false
         return tryLoadWallpaperBitmap(context) == null
     }
 
-    /**
-     * Resolves the ARGB tint color (with full alpha; caller multiplies by effectiveTintOpacity)
-     * or null when tintMode is "none".
-     */
     @JvmStatic
     @ColorInt
     fun resolveTintColorInt(
@@ -441,7 +491,7 @@ object UiBackgroundManager {
     }
 
     /**
-     * Applies or clears FLAG_SHOW_WALLPAPER and optional Android 12+ window background blur
+     * Applies or clears FLAG_SHOW_WALLPAPER and optional Android 12+ window blur-behind
      * for non-streaming UI activities.
      */
     @JvmStatic
@@ -503,8 +553,7 @@ object UiBackgroundManager {
 
     /**
      * Attaches or updates a custom image / tinted wallpaper background layer behind standard
-     * Material 3 XML Activity layouts (when UI style is Material You Expressive and user picked
-     * a custom image or phone wallpaper).
+     * Material 3 XML Activity layouts.
      */
     @JvmStatic
     fun applyBackgroundToXmlActivity(
@@ -527,7 +576,6 @@ object UiBackgroundManager {
             return
         }
 
-        // Make content & root layout transparent so the background layer shines through cleanly
         content.setBackgroundColor(Color.TRANSPARENT)
         for (i in 0 until content.childCount) {
             val child = content.getChildAt(i)
@@ -551,7 +599,6 @@ object UiBackgroundManager {
         val opacityFraction = bgState.effectiveOpacity / 100f
         val useWindowWallpaper = shouldUseWindowWallpaperFlag(activity, bgState)
 
-        // Base dark surface behind custom bitmap (so lowering opacity blends smoothly into theme surface)
         if (!useWindowWallpaper) {
             bgContainer.setBackgroundColor(themeSurfaceColor)
             val bitmap = if (bgState.isCustomImageActive) {
@@ -579,13 +626,11 @@ object UiBackgroundManager {
                 bgContainer.addView(imgView)
             }
         } else {
-            // Live system wallpaper via FLAG_SHOW_WALLPAPER: inverse opacity dims the live wallpaper cleanly
             val dimAlpha = ((1f - opacityFraction) * 255f).roundToInt().coerceIn(0, 255)
             val dimColor = ColorUtils.setAlphaComponent(themeSurfaceColor, dimAlpha)
             bgContainer.setBackgroundColor(dimColor)
         }
 
-        // Optional color tint scrim overlay
         val tintBase = resolveTintColorInt(bgState.tintMode, themeSurfaceColor, themePrimaryColor)
         if (tintBase != null && bgState.effectiveTintOpacity > 0) {
             val tintAlpha = ((bgState.effectiveTintOpacity / 100f) * 255f).roundToInt().coerceIn(0, 255)
@@ -600,15 +645,31 @@ object UiBackgroundManager {
         }
     }
 
-    private fun decodeSampledAndRotatedBitmap(context: Context, uri: Uri): Bitmap? {
-        val resolver = context.contentResolver
+    private fun decodeSampledAndRotatedFile(file: File): Bitmap? {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            try {
+                val source = ImageDecoder.createSource(file)
+                return ImageDecoder.decodeBitmap(source) { decoder, info, _ ->
+                    decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
+                    decoder.isMutableRequired = false
+                    val srcW = info.size.width
+                    val srcH = info.size.height
+                    val maxDim = max(srcW, srcH)
+                    if (maxDim > MAX_IMAGE_DIMENSION_PX && srcW > 0 && srcH > 0) {
+                        val scale = MAX_IMAGE_DIMENSION_PX.toFloat() / maxDim.toFloat()
+                        val targetW = (srcW * scale).roundToInt().coerceAtLeast(1)
+                        val targetH = (srcH * scale).roundToInt().coerceAtLeast(1)
+                        decoder.setTargetSize(targetW, targetH)
+                    }
+                }
+            } catch (t: Throwable) {
+                LimeLog.warning("ImageDecoder failed, falling back to BitmapFactory: ${t.message}")
+            }
+        }
 
-        // Pass 1: Read bounds only
+        // Fallback for API 23-27 (or if ImageDecoder threw)
         val boundsOpts = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-        resolver.openInputStream(uri)?.use { stream ->
-            BitmapFactory.decodeStream(stream, null, boundsOpts)
-        } ?: return null
-
+        BitmapFactory.decodeFile(file.absolutePath, boundsOpts)
         val srcW = boundsOpts.outWidth
         val srcH = boundsOpts.outHeight
         if (srcW <= 0 || srcH <= 0) return null
@@ -619,23 +680,17 @@ object UiBackgroundManager {
             inSampleSize *= 2
         }
 
-        // Pass 2: Decode downsampled bitmap
         val decodeOpts = BitmapFactory.Options().apply {
             this.inSampleSize = inSampleSize
             inPreferredConfig = Bitmap.Config.ARGB_8888
         }
-        val rawBitmap = resolver.openInputStream(uri)?.use { stream ->
-            BitmapFactory.decodeStream(stream, null, decodeOpts)
-        } ?: return null
+        val rawBitmap = BitmapFactory.decodeFile(file.absolutePath, decodeOpts) ?: return null
 
-        // Pass 3: Read EXIF orientation
         val orientation = try {
-            resolver.openInputStream(uri)?.use { stream ->
-                ExifInterface(stream).getAttributeInt(
-                    ExifInterface.TAG_ORIENTATION,
-                    ExifInterface.ORIENTATION_NORMAL
-                )
-            } ?: ExifInterface.ORIENTATION_NORMAL
+            ExifInterface(file.absolutePath).getAttributeInt(
+                ExifInterface.TAG_ORIENTATION,
+                ExifInterface.ORIENTATION_NORMAL
+            )
         } catch (_: Throwable) {
             ExifInterface.ORIENTATION_NORMAL
         }

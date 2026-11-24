@@ -292,4 +292,10 @@
     <string name="summary_checkbox_sensor_landscape">Comută automat între orientarea peisaj normală și inversată în timpul conectării și transmisiunii, chiar și atunci când rotirea automată a sistemului este oprită</string>
     <string name="duration_500ms_default">500ms (Implicit)</string>
     <string name="language_default">Implicit (Sistem)</string>
+    <string name="title_audio_output">Ieșire audio</string>
+    <string name="summary_audio_output">Alegeți unde să fie redat sunetul fluxului</string>
+    <string name="audio_output_client">Acest dispozitiv (Client)</string>
+    <string name="audio_output_host">PC (Gazdă)</string>
+    <string name="audio_output_both">Acest dispozitiv + PC</string>
+    <string name="audio_output_none">Niciuna (Mut)</string>
 </resources>

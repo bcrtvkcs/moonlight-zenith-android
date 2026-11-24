@@ -385,4 +385,24 @@
     <string name="title_ui_background_blur">Background blur</string>
     <string name="summary_ui_background_blur">Soften busy background photos for clearer text legibility (Android 12+)</string>
     <string name="suffix_dp">dp</string>
+    <string name="title_settings_nav_style">Settings navigation style</string>
+    <string name="summary_settings_nav_style">Choose between top tabs or a floating bottom navigation bar in Settings</string>
+    <string name="settings_nav_style_tabs">Tabbed</string>
+    <string name="settings_nav_style_floating_bottom_bar">Floating Bottom Bar</string>
+    <string name="nav_short_basic">Basic</string>
+    <string name="nav_short_audio">Audio</string>
+    <string name="nav_short_gamepad">Gamepad</string>
+    <string name="nav_short_input">Input</string>
+    <string name="nav_short_osc">Touch</string>
+    <string name="nav_short_ui">UI</string>
+    <string name="nav_short_advanced">Advanced</string>
+    <string name="glass_live_preview_title">Live Liquid Glass Preview</string>
+    <string name="glass_live_preview_subtitle">Drag the lens or adjust parameters below to inspect refraction, blur, and prism dispersion in real time</string>
+    <string name="glass_wallpaper_refraction_notice">Use Custom Image for full optical refraction on cards</string>
+    <string name="title_audio_output">Audio output</string>
+    <string name="summary_audio_output">Choose where stream audio is played</string>
+    <string name="audio_output_client">This device (Client)</string>
+    <string name="audio_output_host">PC (Host)</string>
+    <string name="audio_output_both">This device + PC</string>
+    <string name="audio_output_none">None (Muted)</string>
 </resources>

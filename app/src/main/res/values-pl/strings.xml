@@ -297,4 +297,10 @@
     <string name="summary_checkbox_sensor_landscape">Automatycznie przełączaj między zwykłą a odwróconą orientacją poziomą podczas łączenia i strumieniowania, nawet gdy autoobracanie systemowe jest wyłączone</string>
     <string name="duration_500ms_default">500ms (Domyślnie)</string>
     <string name="language_default">Domyślny systemowy</string>
+    <string name="title_audio_output">Wyjście dźwięku</string>
+    <string name="summary_audio_output">Wybierz, gdzie ma być odtwarzany dźwięk strumienia</string>
+    <string name="audio_output_client">To urządzenie (Klient)</string>
+    <string name="audio_output_host">Komputer (Host)</string>
+    <string name="audio_output_both">To urządzenie + Komputer</string>
+    <string name="audio_output_none">Brak (Wyciszony)</string>
 </resources>

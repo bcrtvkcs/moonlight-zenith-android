@@ -276,4 +276,10 @@
     <string name="summary_checkbox_sensor_landscape">Автоматично превключване между нормален и обърнат пейзажен режим при свързване и стрийминг, дори когато системното автозавъртане е изключено</string>
     <string name="duration_500ms_default">500ms (По подразбиране)</string>
     <string name="language_default">Системен по подразбиране</string>
+    <string name="title_audio_output">Аудио изход</string>
+    <string name="summary_audio_output">Изберете къде да се възпроизвежда звукът от потока</string>
+    <string name="audio_output_client">Това устройство (Клиент)</string>
+    <string name="audio_output_host">Компютър (Хост)</string>
+    <string name="audio_output_both">Това устройство + Компютър</string>
+    <string name="audio_output_none">Няма (Заглушен)</string>
 </resources>

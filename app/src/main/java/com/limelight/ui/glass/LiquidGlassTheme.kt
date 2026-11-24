@@ -8,6 +8,9 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.State
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -70,8 +73,17 @@ data class GlassTokens(
     val fallbackCardBorder: Color
 )
 
-val LocalGlassTokens = staticCompositionLocalOf {
-    buildGlassTokens(UiBackgroundState(), ZenithDarkColorScheme)
+private val DefaultGlassTokens = buildGlassTokens(UiBackgroundState(), ZenithDarkColorScheme)
+
+val LocalGlassTokens = staticCompositionLocalOf { DefaultGlassTokens }
+
+/**
+ * Snapshot-observable holder for GlassTokens. Reading `.value` inside DrawBackdropNode's
+ * `effects` and `onDrawSurface` guarantees immediate GPU RenderEffect update + redraw
+ * on every single slider frame without waiting for padding changes.
+ */
+val LocalGlassTokensState = staticCompositionLocalOf<State<GlassTokens>> {
+    mutableStateOf(DefaultGlassTokens)
 }
 
 val LocalBackgroundBackdrop = staticCompositionLocalOf<Backdrop> { emptyBackdrop() }
@@ -89,25 +101,30 @@ fun buildGlassTokens(bgState: UiBackgroundState, scheme: ColorScheme): GlassToke
     val surfaceAlpha = (bgState.effectiveGlassSurfaceOpacity / 100f).coerceIn(0.05f, 0.75f)
     val highlightAlpha = (bgState.effectiveGlassHighlightIntensity / 100f).coerceIn(0f, 1f)
 
+    // Keep 0dp blur truly 0dp everywhere so pure crystal refraction is razor-sharp when requested
+    val cardBlur = blurVal.dp
+    val chromeBlur = if (blurVal <= 0.1f) 0.dp else (blurVal + 2f).coerceAtMost(36f).dp
+    val sheetBlur = if (blurVal <= 0.1f) 0.dp else (blurVal + 4f).coerceAtMost(38f).dp
+
     return GlassTokens(
-        cardBlur = blurVal.dp,
-        chromeBlur = (blurVal + 2f).coerceAtMost(36f).dp,
-        sheetBlur = (blurVal + 6f).coerceAtMost(40f).dp,
+        cardBlur = cardBlur,
+        chromeBlur = chromeBlur,
+        sheetBlur = sheetBlur,
         cardRefractionHeight = refHeight.dp,
         cardRefractionAmount = refAmount.dp,
-        chromeRefractionHeight = (refHeight * 1.18f).coerceAtMost(32f).dp,
-        chromeRefractionAmount = (refAmount * 1.25f).coerceAtMost(56f).dp,
+        chromeRefractionHeight = if (refHeight <= 0.1f) 0.dp else (refHeight * 1.15f).coerceAtMost(44f).dp,
+        chromeRefractionAmount = if (refAmount <= 0.1f) 0.dp else (refAmount * 1.20f).coerceAtMost(84f).dp,
         chromaticAberration = bgState.glassChromaticAberration,
         depthEffect = bgState.glassDepthEffect,
         vibrancyEnabled = bgState.glassVibrancy,
         cardTint = baseGlassColor.copy(alpha = surfaceAlpha),
-        chromeTint = baseGlassColor.copy(alpha = (surfaceAlpha + 0.06f).coerceAtMost(0.82f)),
-        pillTint = primary.copy(alpha = (surfaceAlpha * 0.65f).coerceIn(0.16f, 0.42f)),
-        accentTint = primaryContainer.copy(alpha = (surfaceAlpha + 0.14f).coerceAtMost(0.84f)),
-        sheetTint = scheme.surfaceContainer.copy(alpha = (surfaceAlpha + 0.18f).coerceAtMost(0.86f)),
+        chromeTint = baseGlassColor.copy(alpha = (surfaceAlpha + 0.04f).coerceAtMost(0.78f)),
+        pillTint = primary.copy(alpha = (surfaceAlpha * 0.62f).coerceIn(0.14f, 0.38f)),
+        accentTint = primaryContainer.copy(alpha = (surfaceAlpha + 0.12f).coerceAtMost(0.80f)),
+        sheetTint = scheme.surfaceContainer.copy(alpha = (surfaceAlpha + 0.08f).coerceAtMost(0.80f)),
         highlightAlpha = highlightAlpha,
         fallbackCardBorder = (if (isTintedBase) primary else Color.White)
-            .copy(alpha = (highlightAlpha * 0.34f).coerceIn(0.06f, 0.45f))
+            .copy(alpha = (highlightAlpha * 0.38f).coerceIn(0.08f, 0.50f))
     )
 }
 
@@ -140,8 +157,13 @@ fun MoonlightLiquidGlassTheme(
     }
 
     val glassTokens = buildGlassTokens(bgState, colorScheme)
+    val tokensState = remember { mutableStateOf(glassTokens) }
+    tokensState.value = glassTokens
 
-    CompositionLocalProvider(LocalGlassTokens provides glassTokens) {
+    CompositionLocalProvider(
+        LocalGlassTokens provides glassTokens,
+        LocalGlassTokensState provides tokensState
+    ) {
         MaterialTheme(
             colorScheme = colorScheme,
             content = content

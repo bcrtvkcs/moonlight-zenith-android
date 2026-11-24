@@ -190,6 +190,14 @@
         <item>material3</item>
         <item>liquid_glass</item>
     </string-array>
+    <string-array name="settings_nav_style_names">
+        <item>@string/settings_nav_style_tabs</item>
+        <item>@string/settings_nav_style_floating_bottom_bar</item>
+    </string-array>
+    <string-array name="settings_nav_style_values" translatable="false">
+        <item>tabs</item>
+        <item>floating_bottom_bar</item>
+    </string-array>
     <string-array name="liquid_glass_style_names">
         <item>@string/liquid_glass_style_frosted</item>
         <item>@string/liquid_glass_style_clear</item>

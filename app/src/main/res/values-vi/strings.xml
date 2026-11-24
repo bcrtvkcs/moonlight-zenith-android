@@ -298,4 +298,10 @@
     <string name="summary_checkbox_sensor_landscape">Tự động chuyển đổi giữa màn hình ngang thường và ngang ngược khi đang kết nối và truyền phát, ngay cả khi tự động xoay hệ thống đang tắt</string>
     <string name="duration_500ms_default">500ms (Mặc định)</string>
     <string name="language_default">Mặc định hệ thống</string>
+    <string name="title_audio_output">Đầu ra âm thanh</string>
+    <string name="summary_audio_output">Chọn nơi phát âm thanh luồng</string>
+    <string name="audio_output_client">Thiết bị này (Máy khách)</string>
+    <string name="audio_output_host">PC (Máy chủ)</string>
+    <string name="audio_output_both">Thiết bị này + PC</string>
+    <string name="audio_output_none">Không có (Tắt tiếng)</string>
 </resources>

@@ -3,6 +3,8 @@ package com.limelight;
 
 import com.limelight.binding.PlatformBinding;
 import com.limelight.binding.audio.AndroidAudioRenderer;
+import com.limelight.binding.audio.SilentAudioRenderer;
+import com.limelight.nvstream.av.audio.AudioRenderer;
 import com.limelight.binding.input.ControllerHandler;
 import com.limelight.binding.input.KeyboardTranslator;
 import com.limelight.binding.input.StreamInputConnection;
@@ -2872,7 +2874,10 @@ public class Game extends GameAttectActivity implements SurfaceHolder.Callback,
             UiHelper.notifyStreamConnecting(Game.this);
 
             decoderRenderer.setRenderTarget(holder);
-            conn.start(new AndroidAudioRenderer(Game.this, prefConfig.enableAudioFx),
+            AudioRenderer audioRenderer = prefConfig.playClientAudio
+                    ? new AndroidAudioRenderer(Game.this, prefConfig.enableAudioFx)
+                    : new SilentAudioRenderer();
+            conn.start(audioRenderer,
                     decoderRenderer, Game.this);
         }
     }

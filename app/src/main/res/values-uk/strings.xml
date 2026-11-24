@@ -308,4 +308,10 @@
     <string name="summary_checkbox_sensor_landscape">Автоматично перемикати між звичайною та зворотною альбомною орієнтацією під час підключення та трансляції, навіть коли системний автоповорот вимкнено</string>
     <string name="duration_500ms_default">500 мс (За замовчуванням)</string>
     <string name="language_default">Системна за замовчуванням</string>
+    <string name="title_audio_output">Виведення звуку</string>
+    <string name="summary_audio_output">Виберіть, де відтворювати звук трансляції</string>
+    <string name="audio_output_client">Цей пристрій (Клієнт)</string>
+    <string name="audio_output_host">ПК (Хост)</string>
+    <string name="audio_output_both">Цей пристрій + ПК</string>
+    <string name="audio_output_none">Немає (Без звуку)</string>
 </resources>

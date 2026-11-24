@@ -307,4 +307,10 @@
     <string name="summary_checkbox_sensor_landscape">システムの自動回転がオフでも、接続中およびストリーミング中にセンサーで通常の横向きと逆の横向きを自動的に切り替えます</string>
     <string name="duration_500ms_default">500ms (デフォルト)</string>
     <string name="language_default">システムのデフォルト</string>
+    <string name="title_audio_output">音声出力</string>
+    <string name="summary_audio_output">ストリーム音声の再生先を選択します</string>
+    <string name="audio_output_client">このデバイス (クライアント)</string>
+    <string name="audio_output_host">PC (ホスト)</string>
+    <string name="audio_output_both">このデバイス + PC</string>
+    <string name="audio_output_none">なし (ミュート)</string>
 </resources>

@@ -311,4 +311,10 @@
     <string name="summary_checkbox_sensor_landscape">Wechselt beim Verbinden und Streamen automatisch zwischen normalem und umgekehrtem Querformat, auch wenn die automatische Systemdrehung deaktiviert ist</string>
     <string name="duration_500ms_default">500ms (Standard)</string>
     <string name="language_default">Systemstandard</string>
+    <string name="title_audio_output">Audioausgabe</string>
+    <string name="summary_audio_output">Wählen Sie aus, wo der Stream-Ton wiedergegeben wird</string>
+    <string name="audio_output_client">Dieses Gerät (Client)</string>
+    <string name="audio_output_host">PC (Host)</string>
+    <string name="audio_output_both">Dieses Gerät + PC</string>
+    <string name="audio_output_none">Keine (Stumm)</string>
 </resources>

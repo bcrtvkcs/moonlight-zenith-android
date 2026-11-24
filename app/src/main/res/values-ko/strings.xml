@@ -312,4 +312,10 @@
     <string name="summary_checkbox_sensor_landscape">시스템 자동 회전이 꺼져 있어도 연결 및 스트리밍 중에 일반 가로 방향과 역방향 가로 방향을 자동으로 전환합니다</string>
     <string name="duration_500ms_default">500ms (기본값)</string>
     <string name="language_default">시스템 기본값</string>
+    <string name="title_audio_output">오디오 출력</string>
+    <string name="summary_audio_output">스트림 오디오를 재생할 위치를 선택하세요</string>
+    <string name="audio_output_client">이 기기 (클라이언트)</string>
+    <string name="audio_output_host">PC (호스트)</string>
+    <string name="audio_output_both">이 기기 + PC</string>
+    <string name="audio_output_none">없음 (음소거)</string>
 </resources>

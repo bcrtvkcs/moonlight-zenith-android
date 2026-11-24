@@ -281,4 +281,10 @@
     <string name="summary_checkbox_sensor_landscape">Automatically switch between normal and reverse landscape while connecting and streaming, even when system auto-rotate is off</string>
     <string name="duration_500ms_default">500ms (Default)</string>
     <string name="language_default">System Default</string>
+    <string name="title_audio_output">Audio izvade</string>
+    <string name="summary_audio_output">Izvēlieties, kur atskaņot straumes audio</string>
+    <string name="audio_output_client">Šī ierīce (Klients)</string>
+    <string name="audio_output_host">Dators (Resursdators)</string>
+    <string name="audio_output_both">Šī ierīce + Dators</string>
+    <string name="audio_output_none">Nav (Izslēgts)</string>
 </resources>

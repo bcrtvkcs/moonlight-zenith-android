@@ -297,4 +297,10 @@
     <string name="summary_checkbox_sensor_landscape">Växla automatiskt mellan normalt och omvänt liggande läge vid anslutning och streaming, även när systemets automatiska rotation är avstängd</string>
     <string name="duration_500ms_default">500ms (Standard)</string>
     <string name="language_default">Systemstandard</string>
+    <string name="title_audio_output">Ljudutgång</string>
+    <string name="summary_audio_output">Välj var strömljudet ska spelas upp</string>
+    <string name="audio_output_client">Den här enheten (Klient)</string>
+    <string name="audio_output_host">Dator (Värd)</string>
+    <string name="audio_output_both">Den här enheten + Dator</string>
+    <string name="audio_output_none">Ingen (Ljudlös)</string>
 </resources>

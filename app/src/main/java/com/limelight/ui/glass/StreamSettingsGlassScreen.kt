@@ -1,9 +1,13 @@
 package com.limelight.ui.glass
 
 import android.content.Context
+import android.os.Build
 import android.preference.CheckBoxPreference
 import android.preference.ListPreference
 import android.preference.Preference
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -11,6 +15,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -40,8 +45,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -58,6 +61,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalContext
@@ -70,15 +74,16 @@ import androidx.compose.ui.unit.dp
 import com.kyant.backdrop.Backdrop
 import com.limelight.R
 import com.limelight.preferences.ConfirmDeleteOscPreference
+import com.limelight.preferences.M3AudioOutputPreference
 import com.limelight.preferences.PreferenceConfiguration
 import com.limelight.preferences.SeekBarPreference
 import com.limelight.preferences.StreamSettings
 import com.limelight.ui.background.UiBackgroundManager
+import com.limelight.ui.background.UiBackgroundState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import kotlin.math.roundToInt
 
 data class StreamSettingsGlassUiState(
     val categories: List<StreamSettings.CategoryTab> = emptyList(),
@@ -129,8 +134,24 @@ object StreamSettingsGlassHost {
 
 private sealed class SettingsDialogState {
     data class SingleChoice(val pref: ListPreference) : SettingsDialogState()
+    data class AudioOutput(val pref: M3AudioOutputPreference) : SettingsDialogState()
     data class SliderDialog(val pref: SeekBarPreference) : SettingsDialogState()
     data class ConfirmOscReset(val pref: ConfirmDeleteOscPreference) : SettingsDialogState()
+}
+
+private fun isGlassOpticalSliderKey(key: String?): Boolean {
+    return key == PreferenceConfiguration.GLASS_BLUR_PREF_STRING ||
+            key == PreferenceConfiguration.GLASS_REFRACTION_AMOUNT_PREF_STRING ||
+            key == PreferenceConfiguration.GLASS_REFRACTION_HEIGHT_PREF_STRING ||
+            key == PreferenceConfiguration.GLASS_SURFACE_OPACITY_PREF_STRING ||
+            key == PreferenceConfiguration.GLASS_HIGHLIGHT_INTENSITY_PREF_STRING
+}
+
+private fun isLivePreviewSliderKey(key: String?): Boolean {
+    return isGlassOpticalSliderKey(key) ||
+            key == PreferenceConfiguration.UI_BACKGROUND_OPACITY_PREF_STRING ||
+            key == PreferenceConfiguration.UI_BACKGROUND_TINT_OPACITY_PREF_STRING ||
+            key == PreferenceConfiguration.UI_BACKGROUND_BLUR_PREF_STRING
 }
 
 @Composable
@@ -141,6 +162,7 @@ fun StreamSettingsGlassScreen(
     val uiState by controller.uiState.collectAsState()
     val bgState by UiBackgroundManager.state.collectAsState()
     val categories = uiState.categories
+    val useFloatingBottomBar = bgState.isFloatingBottomBarNav
 
     val initialPage = remember(categories, uiState.initialCategoryKey) {
         val idx = categories.indexOfFirst { it.key == uiState.initialCategoryKey }
@@ -173,6 +195,10 @@ fun StreamSettingsGlassScreen(
         stringResource(R.string.category_basic_settings)
     }
 
+    val navTabItems = categories.map { cat ->
+        resolveSettingsNavTabItem(cat.key, cat.title?.toString().orEmpty())
+    }
+
     val topInsets = WindowInsets.statusBars.union(WindowInsets.displayCutout).asPaddingValues()
     val navInsets = WindowInsets.navigationBars.asPaddingValues()
 
@@ -197,7 +223,7 @@ fun StreamSettingsGlassScreen(
                         )
                     }
                 )
-                if (categories.isNotEmpty()) {
+                if (!useFloatingBottomBar && categories.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(10.dp))
                     GlassPillTabBar(
                         tabs = categories.map { it.title?.toString().orEmpty() },
@@ -211,49 +237,91 @@ fun StreamSettingsGlassScreen(
                     )
                 }
             }
+
+            if (useFloatingBottomBar && navTabItems.isNotEmpty()) {
+                LiquidFloatingBottomBar(
+                    tabs = navTabItems,
+                    selectedIndex = pagerState.currentPage.coerceIn(0, navTabItems.lastIndex),
+                    pageOffsetFraction = pagerState.currentPageOffsetFraction,
+                    onTabSelected = { targetIndex ->
+                        coroutineScope.launch {
+                            pagerState.animateScrollToPage(targetIndex)
+                        }
+                    },
+                    backdrop = combinedBackdrop,
+                    modifier = Modifier.align(Alignment.BottomCenter)
+                )
+            }
         },
         overlayContent = { combinedBackdrop ->
-            when (val dlg = activeDialog) {
-                is SettingsDialogState.SingleChoice -> {
-                    GlassSingleChoicePrefDialog(
-                        pref = dlg.pref,
-                        backdrop = combinedBackdrop,
-                        onDismiss = { activeDialog = null },
-                        onSelected = { newValue ->
-                            val listener = dlg.pref.onPreferenceChangeListener
-                            val allow = listener?.onPreferenceChange(dlg.pref, newValue) ?: true
-                            if (allow) {
-                                dlg.pref.value = newValue
+            // State-retaining animated dialog so both enter AND exit spring transitions always play smoothly!
+            GlassAnimatedModalDialog(
+                targetState = activeDialog,
+                onDismiss = {
+                    if (activeDialog is SettingsDialogState.SliderDialog) {
+                        UiBackgroundManager.clearLivePreview()
+                    }
+                    activeDialog = null
+                },
+                backdrop = combinedBackdrop,
+                scrimAlpha = { dlg ->
+                    if (dlg is SettingsDialogState.SliderDialog && isLivePreviewSliderKey(dlg.pref.key)) {
+                        0.16f
+                    } else {
+                        0.42f
+                    }
+                }
+            ) { dlg ->
+                when (dlg) {
+                    is SettingsDialogState.SingleChoice -> {
+                        GlassSingleChoicePrefBody(
+                            pref = dlg.pref,
+                            backdrop = combinedBackdrop,
+                            onDismiss = { activeDialog = null },
+                            onSelected = { newValue ->
+                                val listener = dlg.pref.onPreferenceChangeListener
+                                val allow = listener?.onPreferenceChange(dlg.pref, newValue) ?: true
+                                if (allow) {
+                                    dlg.pref.value = newValue
+                                    callbacks.onPreferenceMutated(dlg.pref.key)
+                                    controller.bumpRevision()
+                                }
+                                activeDialog = null
+                            }
+                        )
+                    }
+                    is SettingsDialogState.AudioOutput -> {
+                        GlassAudioOutputPrefBody(
+                            pref = dlg.pref,
+                            backdrop = combinedBackdrop,
+                            onDismiss = { activeDialog = null },
+                            onConfirm = { clientEnabled, hostEnabled ->
+                                dlg.pref.applySelection(clientEnabled, hostEnabled)
                                 callbacks.onPreferenceMutated(dlg.pref.key)
                                 controller.bumpRevision()
+                                activeDialog = null
                             }
-                            activeDialog = null
-                        }
-                    )
-                }
-                is SettingsDialogState.SliderDialog -> {
-                    GlassSeekBarPrefDialog(
-                        pref = dlg.pref,
-                        backdrop = combinedBackdrop,
-                        onDismiss = {
-                            UiBackgroundManager.clearLivePreview()
-                            activeDialog = null
-                        },
-                        onConfirm = { finalVal ->
-                            UiBackgroundManager.clearLivePreview()
-                            dlg.pref.applyValueFromExternal(finalVal)
-                            callbacks.onPreferenceMutated(dlg.pref.key)
-                            controller.bumpRevision()
-                            activeDialog = null
-                        }
-                    )
-                }
-                is SettingsDialogState.ConfirmOscReset -> {
-                    GlassModalDialog(
-                        visible = true,
-                        onDismiss = { activeDialog = null },
-                        backdrop = combinedBackdrop
-                    ) {
+                        )
+                    }
+                    is SettingsDialogState.SliderDialog -> {
+                        GlassSeekBarPrefBody(
+                            pref = dlg.pref,
+                            bgState = bgState,
+                            backdrop = combinedBackdrop,
+                            onDismiss = {
+                                UiBackgroundManager.clearLivePreview()
+                                activeDialog = null
+                            },
+                            onConfirm = { finalVal ->
+                                UiBackgroundManager.clearLivePreview()
+                                dlg.pref.applyValueFromExternal(finalVal)
+                                callbacks.onPreferenceMutated(dlg.pref.key)
+                                controller.bumpRevision()
+                                activeDialog = null
+                            }
+                        )
+                    }
+                    is SettingsDialogState.ConfirmOscReset -> {
                         Text(
                             text = (dlg.pref.dialogTitle ?: dlg.pref.title)?.toString().orEmpty(),
                             style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
@@ -289,11 +357,13 @@ fun StreamSettingsGlassScreen(
                         }
                     }
                 }
-                null -> Unit
             }
         }
     ) { backgroundBackdrop ->
         if (categories.isNotEmpty()) {
+            val topPad = topInsets.calculateTopPadding() + if (useFloatingBottomBar) 82.dp else 132.dp
+            val bottomPad = navInsets.calculateBottomPadding() + if (useFloatingBottomBar) 98.dp else 28.dp
+
             HorizontalPager(
                 state = pagerState,
                 modifier = Modifier.fillMaxSize()
@@ -312,8 +382,8 @@ fun StreamSettingsGlassScreen(
                     contentPadding = PaddingValues(
                         start = 16.dp,
                         end = 16.dp,
-                        top = topInsets.calculateTopPadding() + 132.dp,
-                        bottom = navInsets.calculateBottomPadding() + 28.dp
+                        top = topPad,
+                        bottom = bottomPad
                     ),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                     modifier = Modifier.fillMaxSize()
@@ -322,15 +392,36 @@ fun StreamSettingsGlassScreen(
                         items = prefsList,
                         key = { idx, pref -> "${pref.key ?: pref.title?.toString() ?: "pref"}_$idx" }
                     ) { _, pref ->
-                        if (pref.key == PreferenceConfiguration.UI_BACKGROUND_PICK_IMAGE_PREF_STRING) {
-                            GlassCustomBackgroundPickerCard(
-                                enabled = pref.isEnabled,
-                                hasCustomImage = bgState.hasCustomImage,
-                                imageVersion = bgState.imageVersion,
-                                backdrop = backgroundBackdrop,
-                                onPickImage = callbacks::onPickCustomBackgroundImage,
-                                onClearImage = callbacks::onClearCustomBackgroundImage
-                            )
+                        if (pref.key == PreferenceConfiguration.LIQUID_GLASS_STYLE_PREF_STRING) {
+                            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                LiquidGlassLivePreviewCard(bgState = bgState, compact = false)
+                                GlassPreferenceItemRow(
+                                    preference = pref,
+                                    revision = uiState.revision,
+                                    backdrop = backgroundBackdrop,
+                                    onClick = {
+                                        if (pref is ListPreference) {
+                                            activeDialog = SettingsDialogState.SingleChoice(pref)
+                                        }
+                                    }
+                                )
+                            }
+                        } else if (pref.key == PreferenceConfiguration.UI_BACKGROUND_PICK_IMAGE_PREF_STRING) {
+                            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && bgState.isWallpaperActive) {
+                                    GlassWallpaperNoticeCard(
+                                        backdrop = backgroundBackdrop,
+                                        onPickCustomImage = callbacks::onPickCustomBackgroundImage
+                                    )
+                                }
+                                GlassCustomBackgroundPickerCard(
+                                    hasCustomImage = bgState.hasCustomImage,
+                                    imageVersion = bgState.imageVersion,
+                                    backdrop = backgroundBackdrop,
+                                    onPickImage = callbacks::onPickCustomBackgroundImage,
+                                    onClearImage = callbacks::onClearCustomBackgroundImage
+                                )
+                            }
                         } else {
                             GlassPreferenceItemRow(
                                 preference = pref,
@@ -350,6 +441,9 @@ fun StreamSettingsGlassScreen(
                                         }
                                         is ListPreference -> {
                                             activeDialog = SettingsDialogState.SingleChoice(pref)
+                                        }
+                                        is M3AudioOutputPreference -> {
+                                            activeDialog = SettingsDialogState.AudioOutput(pref)
                                         }
                                         is SeekBarPreference -> {
                                             activeDialog = SettingsDialogState.SliderDialog(pref)
@@ -375,7 +469,6 @@ fun StreamSettingsGlassScreen(
 
 @Composable
 private fun GlassCustomBackgroundPickerCard(
-    enabled: Boolean,
     hasCustomImage: Boolean,
     imageVersion: Long,
     backdrop: Backdrop,
@@ -390,7 +483,6 @@ private fun GlassCustomBackgroundPickerCard(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .alpha(if (enabled) 1f else 0.42f)
             .liquidGlassSurface(
                 backdrop = backdrop,
                 shape = RoundedCornerShape(22.dp),
@@ -440,7 +532,7 @@ private fun GlassCustomBackgroundPickerCard(
         ) {
             GlassActionButton(
                 text = stringResource(R.string.ui_background_pick_action),
-                onClick = { if (enabled) onPickImage() },
+                onClick = onPickImage,
                 primary = true,
                 backdrop = backdrop,
                 modifier = Modifier.weight(1f)
@@ -448,7 +540,7 @@ private fun GlassCustomBackgroundPickerCard(
             if (hasCustomImage) {
                 GlassActionButton(
                     text = stringResource(R.string.ui_background_clear_action),
-                    onClick = { if (enabled) onClearImage() },
+                    onClick = onClearImage,
                     destructive = true,
                     backdrop = backdrop,
                     modifier = Modifier.weight(1f)
@@ -465,7 +557,6 @@ private fun GlassPreferenceItemRow(
     backdrop: Backdrop,
     onClick: () -> Unit
 ) {
-    // Reference revision to ensure Compose reads updated preference state cleanly
     val _rev = revision
     val enabled = preference.isEnabled
     val interactionSource = remember { MutableInteractionSource() }
@@ -474,6 +565,7 @@ private fun GlassPreferenceItemRow(
     val valueBadgeText = remember(preference, _rev) {
         when (preference) {
             is ListPreference -> preference.entry?.toString()
+            is M3AudioOutputPreference -> preference.displayBadgeText
             is SeekBarPreference -> preference.formatDisplayValue(preference.progress)
             else -> null
         }
@@ -516,7 +608,8 @@ private fun GlassPreferenceItemRow(
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(10.dp))
-                        .background(MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.65f))
+                        .background(MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.56f))
+                        .border(0.75.dp, Color.White.copy(alpha = 0.18f), RoundedCornerShape(10.dp))
                         .padding(horizontal = 10.dp, vertical = 3.dp)
                 ) {
                     Text(
@@ -541,9 +634,10 @@ private fun GlassPreferenceItemRow(
         }
 
         if (preference is CheckBoxPreference) {
-            GlassSwitch(
+            LiquidGlassSwitch(
                 checked = preference.isChecked,
                 enabled = enabled,
+                backdrop = backdrop,
                 onCheckedChange = { onClick() }
             )
         }
@@ -551,7 +645,7 @@ private fun GlassPreferenceItemRow(
 }
 
 @Composable
-private fun GlassSingleChoicePrefDialog(
+private fun GlassSingleChoicePrefBody(
     pref: ListPreference,
     backdrop: Backdrop,
     onDismiss: () -> Unit,
@@ -560,113 +654,124 @@ private fun GlassSingleChoicePrefDialog(
     val entries = pref.entries ?: emptyArray()
     val values = pref.entryValues ?: emptyArray()
     val currentVal = pref.value
+    val tokens = LocalGlassTokens.current
 
-    GlassModalDialog(
-        visible = true,
-        onDismiss = onDismiss,
-        backdrop = backdrop
+    Text(
+        text = (pref.dialogTitle ?: pref.title)?.toString().orEmpty(),
+        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+        color = MaterialTheme.colorScheme.onSurface
+    )
+    Spacer(modifier = Modifier.height(14.dp))
+
+    Column(
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(max = 380.dp)
+            .verticalScroll(rememberScrollState())
     ) {
-        Text(
-            text = (pref.dialogTitle ?: pref.title)?.toString().orEmpty(),
-            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-            color = MaterialTheme.colorScheme.onSurface
-        )
-        Spacer(modifier = Modifier.height(14.dp))
+        entries.forEachIndexed { idx, label ->
+            if (idx >= values.size) return@forEachIndexed
+            val itemVal = values[idx]?.toString().orEmpty()
+            val isSelected = itemVal == currentVal
+            val interactionSource = remember { MutableInteractionSource() }
+            val isFocused by interactionSource.collectIsFocusedAsState()
+            val isPressed by interactionSource.collectIsPressedAsState()
+            val scale by animateFloatAsState(
+                targetValue = if (isPressed) 0.97f else 1f,
+                animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+                label = "choiceRowScale"
+            )
 
-        Column(
-            verticalArrangement = Arrangement.spacedBy(6.dp),
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(max = 380.dp)
-                .verticalScroll(rememberScrollState())
-        ) {
-            entries.forEachIndexed { idx, label ->
-                if (idx >= values.size) return@forEachIndexed
-                val itemVal = values[idx]?.toString().orEmpty()
-                val isSelected = itemVal == currentVal
-                val interactionSource = remember { MutableInteractionSource() }
-                val isFocused by interactionSource.collectIsFocusedAsState()
-
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(
-                            when {
-                                isSelected -> MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.65f)
-                                isFocused -> Color.White.copy(alpha = 0.16f)
-                                else -> Color.White.copy(alpha = 0.06f)
-                            }
-                        )
-                        .focusable(interactionSource = interactionSource)
-                        .clickable(interactionSource = interactionSource, indication = null) {
-                            onSelected(itemVal)
-                        }
-                        .padding(horizontal = 14.dp, vertical = 13.dp)
-                ) {
-                    Box(
-                        contentAlignment = Alignment.Center,
-                        modifier = Modifier
-                            .size(20.dp)
-                            .clip(CircleShape)
-                            .border(
-                                width = 2.dp,
-                                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                                shape = CircleShape
-                            )
-                    ) {
-                        if (isSelected) {
-                            Box(
-                                modifier = Modifier
-                                    .size(10.dp)
-                                    .clip(CircleShape)
-                                    .background(MaterialTheme.colorScheme.primary)
-                            )
-                        }
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .graphicsLayer {
+                        scaleX = scale
+                        scaleY = scale
                     }
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Text(
-                        text = label?.toString().orEmpty(),
-                        style = MaterialTheme.typography.bodyLarge.copy(
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                        ),
-                        color = if (isSelected) {
-                            MaterialTheme.colorScheme.onSecondaryContainer
-                        } else {
-                            MaterialTheme.colorScheme.onSurface
+                    .liquidGlassSurface(
+                        backdrop = backdrop,
+                        shape = RoundedCornerShape(16.dp),
+                        level = if (isSelected) GlassElevationLevel.ACCENT else GlassElevationLevel.CHROME,
+                        tintOverride = when {
+                            isSelected -> MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.44f)
+                            isFocused -> Color.White.copy(alpha = 0.16f)
+                            else -> tokens.cardTint.copy(alpha = (tokens.cardTint.alpha * 0.65f).coerceIn(0.06f, 0.28f))
                         },
-                        modifier = Modifier.weight(1f)
+                        isFocused = isFocused,
+                        enableLens = true,
+                        enableShadow = false
                     )
+                    .focusable(interactionSource = interactionSource)
+                    .clickable(interactionSource = interactionSource, indication = null) {
+                        onSelected(itemVal)
+                    }
+                    .padding(horizontal = 14.dp, vertical = 13.dp)
+            ) {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier
+                        .size(20.dp)
+                        .clip(CircleShape)
+                        .border(
+                            width = 2.dp,
+                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            shape = CircleShape
+                        )
+                ) {
                     if (isSelected) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_m3_check),
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(20.dp)
+                        Box(
+                            modifier = Modifier
+                                .size(10.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primary)
                         )
                     }
                 }
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(
+                    text = label?.toString().orEmpty(),
+                    style = MaterialTheme.typography.bodyLarge.copy(
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                    ),
+                    color = if (isSelected) {
+                        MaterialTheme.colorScheme.onSecondaryContainer
+                    } else {
+                        MaterialTheme.colorScheme.onSurface
+                    },
+                    modifier = Modifier.weight(1f)
+                )
+                if (isSelected) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_m3_check),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
             }
         }
+    }
 
-        Spacer(modifier = Modifier.height(14.dp))
-        Row(
-            horizontalArrangement = Arrangement.End,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            GlassActionButton(
-                text = stringResource(android.R.string.cancel),
-                onClick = onDismiss,
-                backdrop = backdrop
-            )
-        }
+    Spacer(modifier = Modifier.height(14.dp))
+    Row(
+        horizontalArrangement = Arrangement.End,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        GlassActionButton(
+            text = stringResource(android.R.string.cancel),
+            onClick = onDismiss,
+            backdrop = backdrop
+        )
     }
 }
 
 @Composable
-private fun GlassSeekBarPrefDialog(
+private fun GlassSeekBarPrefBody(
     pref: SeekBarPreference,
+    bgState: UiBackgroundState,
     backdrop: Backdrop,
     onDismiss: () -> Unit,
     onConfirm: (Int) -> Unit
@@ -676,47 +781,45 @@ private fun GlassSeekBarPrefDialog(
     val step = pref.stepSize.coerceAtLeast(1)
     var currentVal by remember(pref) { mutableIntStateOf(pref.progress.coerceIn(minVal, maxVal)) }
 
-    val isLivePreview = pref.key == PreferenceConfiguration.UI_BACKGROUND_OPACITY_PREF_STRING ||
-            pref.key == PreferenceConfiguration.UI_BACKGROUND_TINT_OPACITY_PREF_STRING ||
-            pref.key == PreferenceConfiguration.UI_BACKGROUND_BLUR_PREF_STRING ||
-            pref.key == PreferenceConfiguration.GLASS_BLUR_PREF_STRING ||
-            pref.key == PreferenceConfiguration.GLASS_REFRACTION_AMOUNT_PREF_STRING ||
-            pref.key == PreferenceConfiguration.GLASS_REFRACTION_HEIGHT_PREF_STRING ||
-            pref.key == PreferenceConfiguration.GLASS_SURFACE_OPACITY_PREF_STRING ||
-            pref.key == PreferenceConfiguration.GLASS_HIGHLIGHT_INTENSITY_PREF_STRING
+    Text(
+        text = (pref.dialogTitle ?: pref.title)?.toString().orEmpty(),
+        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+        color = MaterialTheme.colorScheme.onSurface
+    )
 
-    GlassModalDialog(
-        visible = true,
-        onDismiss = onDismiss,
-        backdrop = backdrop,
-        // Keep scrim light during background & glass slider live-preview so the user sees live optical changes!
-        scrimAlpha = if (isLivePreview) 0.14f else 0.45f
-    ) {
+    val msg = pref.dialogMessageText
+    if (!msg.isNullOrEmpty()) {
+        Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = (pref.dialogTitle ?: pref.title)?.toString().orEmpty(),
-            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-            color = MaterialTheme.colorScheme.onSurface
+            text = msg,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+    }
 
-        val msg = pref.dialogMessageText
-        if (!msg.isNullOrEmpty()) {
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = msg,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
+    if (isGlassOpticalSliderKey(pref.key)) {
+        Spacer(modifier = Modifier.height(14.dp))
+        LiquidGlassLivePreviewCard(bgState = bgState, compact = true)
+    }
 
-        Spacer(modifier = Modifier.height(18.dp))
+    Spacer(modifier = Modifier.height(16.dp))
 
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier
+            .fillMaxWidth()
+    ) {
         Box(
             contentAlignment = Alignment.Center,
             modifier = Modifier
-                .align(Alignment.CenterHorizontally)
-                .clip(RoundedCornerShape(14.dp))
-                .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.72f))
-                .padding(horizontal = 18.dp, vertical = 8.dp)
+                .liquidGlassSurface(
+                    backdrop = backdrop,
+                    shape = RoundedCornerShape(16.dp),
+                    level = GlassElevationLevel.ACCENT,
+                    tintOverride = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.42f),
+                    enableShadow = false
+                )
+                .padding(horizontal = 20.dp, vertical = 8.dp)
         ) {
             Text(
                 text = pref.formatDisplayValue(currentVal).orEmpty(),
@@ -724,64 +827,187 @@ private fun GlassSeekBarPrefDialog(
                 color = MaterialTheme.colorScheme.onPrimaryContainer
             )
         }
+    }
 
-        Spacer(modifier = Modifier.height(12.dp))
+    Spacer(modifier = Modifier.height(14.dp))
 
-        Slider(
-            value = currentVal.toFloat(),
-            onValueChange = { raw ->
-                val stepped = (((raw.roundToInt() - minVal + step / 2) / step) * step + minVal)
-                    .coerceIn(minVal, maxVal)
-                if (stepped != currentVal) {
-                    currentVal = stepped
-                    when (pref.key) {
-                        PreferenceConfiguration.UI_BACKGROUND_OPACITY_PREF_STRING ->
-                            UiBackgroundManager.setLivePreview(opacity = stepped)
-                        PreferenceConfiguration.UI_BACKGROUND_TINT_OPACITY_PREF_STRING ->
-                            UiBackgroundManager.setLivePreview(tintOpacity = stepped)
-                        PreferenceConfiguration.UI_BACKGROUND_BLUR_PREF_STRING ->
-                            UiBackgroundManager.setLivePreview(blurDp = stepped)
-                        PreferenceConfiguration.GLASS_BLUR_PREF_STRING ->
-                            UiBackgroundManager.setGlassLivePreview(glassBlurDp = stepped)
-                        PreferenceConfiguration.GLASS_REFRACTION_AMOUNT_PREF_STRING ->
-                            UiBackgroundManager.setGlassLivePreview(refractionAmountDp = stepped)
-                        PreferenceConfiguration.GLASS_REFRACTION_HEIGHT_PREF_STRING ->
-                            UiBackgroundManager.setGlassLivePreview(refractionHeightDp = stepped)
-                        PreferenceConfiguration.GLASS_SURFACE_OPACITY_PREF_STRING ->
-                            UiBackgroundManager.setGlassLivePreview(surfaceOpacity = stepped)
-                        PreferenceConfiguration.GLASS_HIGHLIGHT_INTENSITY_PREF_STRING ->
-                            UiBackgroundManager.setGlassLivePreview(highlightIntensity = stepped)
+    LiquidGlassSlider(
+        value = currentVal,
+        minValue = minVal,
+        maxValue = maxVal,
+        step = step,
+        backdrop = backdrop,
+        onValueChange = { stepped ->
+            currentVal = stepped
+            when (pref.key) {
+                PreferenceConfiguration.UI_BACKGROUND_OPACITY_PREF_STRING ->
+                    UiBackgroundManager.setLivePreview(opacity = stepped)
+                PreferenceConfiguration.UI_BACKGROUND_TINT_OPACITY_PREF_STRING ->
+                    UiBackgroundManager.setLivePreview(tintOpacity = stepped)
+                PreferenceConfiguration.UI_BACKGROUND_BLUR_PREF_STRING ->
+                    UiBackgroundManager.setLivePreview(blurDp = stepped)
+                PreferenceConfiguration.GLASS_BLUR_PREF_STRING ->
+                    UiBackgroundManager.setGlassLivePreview(glassBlurDp = stepped)
+                PreferenceConfiguration.GLASS_REFRACTION_AMOUNT_PREF_STRING ->
+                    UiBackgroundManager.setGlassLivePreview(refractionAmountDp = stepped)
+                PreferenceConfiguration.GLASS_REFRACTION_HEIGHT_PREF_STRING ->
+                    UiBackgroundManager.setGlassLivePreview(refractionHeightDp = stepped)
+                PreferenceConfiguration.GLASS_SURFACE_OPACITY_PREF_STRING ->
+                    UiBackgroundManager.setGlassLivePreview(surfaceOpacity = stepped)
+                PreferenceConfiguration.GLASS_HIGHLIGHT_INTENSITY_PREF_STRING ->
+                    UiBackgroundManager.setGlassLivePreview(highlightIntensity = stepped)
+            }
+        }
+    )
+
+    Spacer(modifier = Modifier.height(18.dp))
+
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        GlassActionButton(
+            text = stringResource(android.R.string.cancel),
+            onClick = onDismiss,
+            backdrop = backdrop,
+            modifier = Modifier.weight(1f)
+        )
+        GlassActionButton(
+            text = stringResource(android.R.string.ok),
+            onClick = { onConfirm(currentVal) },
+            primary = true,
+            backdrop = backdrop,
+            modifier = Modifier.weight(1f)
+        )
+    }
+}
+
+@Composable
+private fun GlassAudioOutputPrefBody(
+    pref: M3AudioOutputPreference,
+    backdrop: Backdrop,
+    onDismiss: () -> Unit,
+    onConfirm: (clientEnabled: Boolean, hostEnabled: Boolean) -> Unit
+) {
+    var clientChecked by remember(pref) { mutableStateOf(pref.isClientEnabled) }
+    var hostChecked by remember(pref) { mutableStateOf(pref.isHostEnabled) }
+    val tokens = LocalGlassTokens.current
+
+    Text(
+        text = pref.title?.toString().orEmpty(),
+        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+        color = MaterialTheme.colorScheme.onSurface
+    )
+    Spacer(modifier = Modifier.height(6.dp))
+    Text(
+        text = stringResource(R.string.summary_audio_output),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant
+    )
+    Spacer(modifier = Modifier.height(16.dp))
+
+    val rows = listOf(
+        Triple(stringResource(R.string.audio_output_client), clientChecked) { clientChecked = !clientChecked },
+        Triple(stringResource(R.string.audio_output_host), hostChecked) { hostChecked = !hostChecked }
+    )
+
+    Column(
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        rows.forEach { (label, checked, onToggle) ->
+            val interactionSource = remember { MutableInteractionSource() }
+            val isFocused by interactionSource.collectIsFocusedAsState()
+            val isPressed by interactionSource.collectIsPressedAsState()
+            val scale by animateFloatAsState(
+                targetValue = if (isPressed) 0.97f else 1f,
+                animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+                label = "audioCheckRowScale"
+            )
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .graphicsLayer {
+                        scaleX = scale
+                        scaleY = scale
+                    }
+                    .liquidGlassSurface(
+                        backdrop = backdrop,
+                        shape = RoundedCornerShape(18.dp),
+                        level = if (checked) GlassElevationLevel.ACCENT else GlassElevationLevel.CHROME,
+                        tintOverride = when {
+                            checked -> MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.44f)
+                            isFocused -> Color.White.copy(alpha = 0.16f)
+                            else -> tokens.cardTint.copy(alpha = (tokens.cardTint.alpha * 0.65f).coerceIn(0.06f, 0.28f))
+                        },
+                        isFocused = isFocused,
+                        enableLens = true,
+                        enableShadow = false
+                    )
+                    .focusable(interactionSource = interactionSource)
+                    .clickable(interactionSource = interactionSource, indication = null, onClick = onToggle)
+                    .padding(horizontal = 16.dp, vertical = 14.dp)
+            ) {
+                // Rounded Liquid Glass checkbox indicator
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier
+                        .size(22.dp)
+                        .clip(RoundedCornerShape(7.dp))
+                        .background(
+                            if (checked) MaterialTheme.colorScheme.primary else Color.Transparent
+                        )
+                        .border(
+                            width = 2.dp,
+                            color = if (checked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            shape = RoundedCornerShape(7.dp)
+                        )
+                ) {
+                    if (checked) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_m3_check),
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onPrimary,
+                            modifier = Modifier.size(15.dp)
+                        )
                     }
                 }
-            },
-            valueRange = minVal.toFloat()..maxVal.toFloat(),
-            colors = SliderDefaults.colors(
-                thumbColor = MaterialTheme.colorScheme.primary,
-                activeTrackColor = MaterialTheme.colorScheme.primary,
-                inactiveTrackColor = Color.White.copy(alpha = 0.24f)
-            ),
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(modifier = Modifier.height(18.dp))
-
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            GlassActionButton(
-                text = stringResource(android.R.string.cancel),
-                onClick = onDismiss,
-                backdrop = backdrop,
-                modifier = Modifier.weight(1f)
-            )
-            GlassActionButton(
-                text = stringResource(android.R.string.ok),
-                onClick = { onConfirm(currentVal) },
-                primary = true,
-                backdrop = backdrop,
-                modifier = Modifier.weight(1f)
-            )
+                Spacer(modifier = Modifier.width(14.dp))
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.bodyLarge.copy(
+                        fontWeight = if (checked) FontWeight.Bold else FontWeight.Medium
+                    ),
+                    color = if (checked) {
+                        MaterialTheme.colorScheme.onSecondaryContainer
+                    } else {
+                        MaterialTheme.colorScheme.onSurface
+                    },
+                    modifier = Modifier.weight(1f)
+                )
+            }
         }
+    }
+
+    Spacer(modifier = Modifier.height(18.dp))
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        GlassActionButton(
+            text = stringResource(android.R.string.cancel),
+            onClick = onDismiss,
+            backdrop = backdrop,
+            modifier = Modifier.weight(1f)
+        )
+        GlassActionButton(
+            text = stringResource(android.R.string.ok),
+            onClick = { onConfirm(clientChecked, hostChecked) },
+            primary = true,
+            backdrop = backdrop,
+            modifier = Modifier.weight(1f)
+        )
     }
 }

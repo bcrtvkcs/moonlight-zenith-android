@@ -310,4 +310,10 @@
     <string name="summary_checkbox_sensor_landscape">在連線與串流期間自動在正向橫向與反向橫向之間切換，即使系統自動旋轉已關閉</string>
     <string name="duration_500ms_default">500ms（預設）</string>
     <string name="language_default">系統預設</string>
+    <string name="title_audio_output">音訊輸出</string>
+    <string name="summary_audio_output">選擇串流音訊的播放位置</string>
+    <string name="audio_output_client">本裝置 (用戶端)</string>
+    <string name="audio_output_host">電腦 (主機)</string>
+    <string name="audio_output_both">本裝置 + 電腦</string>
+    <string name="audio_output_none">無 (靜音)</string>
 </resources>

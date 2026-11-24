@@ -34,7 +34,8 @@ public class PreferenceConfiguration {
     private static final String SENSOR_LANDSCAPE_PREF_STRING = "checkbox_sensor_landscape";
     private static final String SOPS_PREF_STRING = "checkbox_enable_sops";
     private static final String DISABLE_TOASTS_PREF_STRING = "checkbox_disable_warnings";
-    private static final String HOST_AUDIO_PREF_STRING = "checkbox_host_audio";
+    public static final String HOST_AUDIO_PREF_STRING = "checkbox_host_audio";
+    public static final String CLIENT_AUDIO_PREF_STRING = "checkbox_client_audio";
     private static final String DEADZONE_PREF_STRING = "seekbar_deadzone";
     private static final String OSC_OPACITY_PREF_STRING = "seekbar_osc_opacity";
     private static final String LANGUAGE_PREF_STRING = "list_languages";
@@ -56,18 +57,22 @@ public class PreferenceConfiguration {
     public static final String UI_BACKGROUND_TINT_MODE_PREF_STRING = "list_ui_background_tint_mode";
     public static final String UI_BACKGROUND_TINT_OPACITY_PREF_STRING = "seekbar_ui_background_tint_opacity";
     public static final String UI_BACKGROUND_BLUR_PREF_STRING = "seekbar_ui_background_blur";
+    public static final String SETTINGS_NAV_STYLE_PREF_STRING = "list_settings_nav_style";
+    public static final String SETTINGS_NAV_STYLE_TABS = "tabs";
+    public static final String SETTINGS_NAV_STYLE_FLOATING_BOTTOM_BAR = "floating_bottom_bar";
+    public static final String DEFAULT_SETTINGS_NAV_STYLE = SETTINGS_NAV_STYLE_TABS;
     public static final String DEFAULT_THEME_MODE = "dynamic";
     public static final String DEFAULT_UI_STYLE = "material3";
     public static final String UI_STYLE_LIQUID_GLASS = "liquid_glass";
     public static final String DEFAULT_LIQUID_GLASS_STYLE = "frosted";
     public static final String LIQUID_GLASS_STYLE_CUSTOM = "custom";
-    public static final int DEFAULT_GLASS_BLUR = 16;
-    public static final int DEFAULT_GLASS_REFRACTION_AMOUNT = 18;
-    public static final int DEFAULT_GLASS_REFRACTION_HEIGHT = 11;
+    public static final int DEFAULT_GLASS_BLUR = 10;
+    public static final int DEFAULT_GLASS_REFRACTION_AMOUNT = 26;
+    public static final int DEFAULT_GLASS_REFRACTION_HEIGHT = 16;
     public static final boolean DEFAULT_GLASS_CHROMATIC_ABERRATION = true;
     public static final boolean DEFAULT_GLASS_DEPTH_EFFECT = false;
-    public static final int DEFAULT_GLASS_SURFACE_OPACITY = 38;
-    public static final int DEFAULT_GLASS_HIGHLIGHT_INTENSITY = 75;
+    public static final int DEFAULT_GLASS_SURFACE_OPACITY = 24;
+    public static final int DEFAULT_GLASS_HIGHLIGHT_INTENSITY = 78;
     public static final boolean DEFAULT_GLASS_VIBRANCY = true;
     public static final String DEFAULT_UI_BACKGROUND_SOURCE = "none";
     public static final String UI_BACKGROUND_SOURCE_CUSTOM = "custom_image";
@@ -122,7 +127,8 @@ public class PreferenceConfiguration {
     private static final boolean DEFAULT_SENSOR_LANDSCAPE = true;
     private static final boolean DEFAULT_SOPS = true;
     private static final boolean DEFAULT_DISABLE_TOASTS = false;
-    private static final boolean DEFAULT_HOST_AUDIO = false;
+    public static final boolean DEFAULT_HOST_AUDIO = false;
+    public static final boolean DEFAULT_CLIENT_AUDIO = true;
     private static final int DEFAULT_DEADZONE = 7;
     private static final int DEFAULT_OPACITY = 90;
     public static final String DEFAULT_LANGUAGE = "default";
@@ -176,11 +182,12 @@ public class PreferenceConfiguration {
     public FormatOption videoFormat;
     public int deadzonePercentage;
     public int oscOpacity;
-    public boolean stretchVideo, sensorLandscape, enableSops, playHostAudio, disableWarnings;
+    public boolean stretchVideo, sensorLandscape, enableSops, playHostAudio, playClientAudio, disableWarnings;
     public String language;
     public String themeMode;
     public boolean pureBlackTheme;
     public String uiStyle;
+    public String settingsNavStyle;
     public String liquidGlassStyle;
     public int glassBlurDp;
     public int glassRefractionAmountDp;
@@ -659,6 +666,7 @@ public class PreferenceConfiguration {
         }
 
         config.uiStyle = prefs.getString(UI_STYLE_PREF_STRING, DEFAULT_UI_STYLE);
+        config.settingsNavStyle = prefs.getString(SETTINGS_NAV_STYLE_PREF_STRING, DEFAULT_SETTINGS_NAV_STYLE);
         config.liquidGlassStyle = prefs.getString(LIQUID_GLASS_STYLE_PREF_STRING, DEFAULT_LIQUID_GLASS_STYLE);
         config.glassBlurDp = prefs.getInt(GLASS_BLUR_PREF_STRING, DEFAULT_GLASS_BLUR);
         config.glassRefractionAmountDp = prefs.getInt(GLASS_REFRACTION_AMOUNT_PREF_STRING, DEFAULT_GLASS_REFRACTION_AMOUNT);
@@ -680,6 +688,7 @@ public class PreferenceConfiguration {
         config.stretchVideo = prefs.getBoolean(STRETCH_PREF_STRING, DEFAULT_STRETCH);
         config.sensorLandscape = prefs.getBoolean(SENSOR_LANDSCAPE_PREF_STRING, DEFAULT_SENSOR_LANDSCAPE);
         config.playHostAudio = prefs.getBoolean(HOST_AUDIO_PREF_STRING, DEFAULT_HOST_AUDIO);
+        config.playClientAudio = prefs.getBoolean(CLIENT_AUDIO_PREF_STRING, DEFAULT_CLIENT_AUDIO);
         config.smallIconMode = prefs.getBoolean(SMALL_ICONS_PREF_STRING, getDefaultSmallMode(context));
         config.multiController = prefs.getBoolean(MULTI_CONTROLLER_PREF_STRING, DEFAULT_MULTI_CONTROLLER);
         config.usbDriver = prefs.getBoolean(USB_DRIVER_PREF_SRING, DEFAULT_USB_DRIVER);
