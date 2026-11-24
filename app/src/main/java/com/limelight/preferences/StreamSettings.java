@@ -140,9 +140,9 @@ public class StreamSettings extends AppCompatActivity {
         }
         m3FloatingBottomBarContainer.removeAllViews();
         float density = getResources().getDisplayMetrics().density;
-        int itemWidth = (int) (74 * density + 0.5f);
-        int itemHeight = (int) (54 * density + 0.5f);
-        int iconSize = (int) (21 * density + 0.5f);
+        int itemWidth = (int) (88 * density + 0.5f);
+        int itemHeight = (int) (66 * density + 0.5f);
+        int iconSize = (int) (25 * density + 0.5f);
         int marginH = (int) (2 * density + 0.5f);
 
         for (int i = 0; i < categories.size(); i++) {
@@ -170,10 +170,10 @@ public class StreamSettings extends AppCompatActivity {
                     ViewGroup.LayoutParams.WRAP_CONTENT,
                     ViewGroup.LayoutParams.WRAP_CONTENT
             );
-            labelLp.topMargin = (int) (2 * density + 0.5f);
+            labelLp.topMargin = (int) (3 * density + 0.5f);
             label.setLayoutParams(labelLp);
             label.setText(resolveCategoryShortLabel(cat.key, cat.title));
-            label.setTextSize(10.5f);
+            label.setTextSize(12.5f);
             label.setMaxLines(1);
             label.setTag("nav_label");
             item.addView(label);
@@ -204,7 +204,7 @@ public class StreamSettings extends AppCompatActivity {
             return;
         }
         float density = getResources().getDisplayMetrics().density;
-        int pillRadius = (int) (27 * density + 0.5f);
+        int pillRadius = (int) (33 * density + 0.5f);
         int selectedBg = UiHelper.resolveThemeColor(this, com.google.android.material.R.attr.colorSecondaryContainer, 0xFF434659);
         int selectedFg = UiHelper.resolveThemeColor(this, com.google.android.material.R.attr.colorOnSecondaryContainer, 0xFFE0E1F9);
         int unselectedFg = UiHelper.resolveThemeColor(this, com.google.android.material.R.attr.colorOnSurfaceVariant, 0xFFC6C5D0);
@@ -689,7 +689,7 @@ public class StreamSettings extends AppCompatActivity {
                     && ((StreamSettings) getActivity()).isFloatingBottomBarNav();
             int hPad = (int) (16 * density + 0.5f);
             int tPad = (int) (4 * density + 0.5f);
-            int bPad = (int) ((floatingBottomBar ? 98 : 24) * density + 0.5f);
+            int bPad = (int) ((floatingBottomBar ? 114 : 24) * density + 0.5f);
             list.setDivider(null);
             list.setDividerHeight(0);
             list.setSelector(android.R.color.transparent);

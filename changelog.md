@@ -4,6 +4,17 @@ All notable changes to **Moonlight Zenith Android** are documented in this file.
 
 ---
 
+## [v3.0.1-zenith] - 2026-11-25
+
+### 🫧 Floating Bottom Navigation Bar Proportions & Elastic Liquid Glass Physics
+- **Polish (20% Larger Default Floating Bottom Navigation Bar):**
+  - Scaled up default floating bottom navigation bar dimensions by ~20% across both **Liquid Glass** (`LiquidFloatingBottomBar`: `80dp` capsule height, `90dp` tab width, `25dp` icons, `12.5sp` labels) and **Material You Expressive** (`activity_stream_settings.xml`, `StreamSettings.java`: `80dp` card height, `88×66dp` items, `25dp` icons, `12.5sp` labels), with matching `114dp` bottom list clearance.
+- **Feat (Active-Tab Hold +7% Swell & Dynamic Horizontal Screen-Position Shift in Liquid Glass):**
+  - Pressing and holding the active tab in the Liquid Glass floating bottom bar smoothly scales the entire capsule dock up by **+7%** (`1.07x`) with spring physics and returns it to normal size (`1.0x`) on release.
+  - While holding and dragging the active tab, the entire bottom navigation bar dynamically shifts slightly right or left based on the finger's horizontal screen position relative to the horizontal screen center (zero shift at screen center, smooth proportional shift up to `±16dp` toward the screen edges, with automatic edge scrolling across all 7 categories), springing cleanly back to center when released.
+
+---
+
 ## [v3.0.0-zenith] - 2026-11-25
 
 ### 🫧 Optional Liquid Glass UI (`Kyant0/AndroidLiquidGlass`), Floating Bottom Bar, Custom Tinted Backgrounds & Flexible Audio Output

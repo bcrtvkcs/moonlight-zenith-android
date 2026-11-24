@@ -13,7 +13,6 @@ import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
@@ -63,8 +62,11 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
@@ -89,6 +91,7 @@ import com.kyant.backdrop.shadow.Shadow
 import com.limelight.R
 import com.limelight.ui.background.UiBackgroundManager
 import com.limelight.ui.background.UiBackgroundState
+import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
 
 /**
@@ -539,6 +542,9 @@ fun resolveSettingsNavTabItem(categoryKey: String?, fallbackTitle: String): Sett
  *   scrolling settings cards right behind it).
  * - Inner sliding **Liquid Glass lens bubble** that glides smoothly with spring physics on tap,
  *   tracks pager swipes 1:1, and supports **press-and-drag scrubbing across tabs**.
+ * - Pressing & holding on the active tab swells the entire dock by ~7% and dynamically shifts the
+ *   dock horizontally toward the finger's screen X offset (centered = 0 shift, right = slight right
+ *   shift, left = slight left shift), springing smoothly back to rest on finger lift.
  */
 @Composable
 fun LiquidFloatingBottomBar(
@@ -556,15 +562,26 @@ fun LiquidFloatingBottomBar(
     val scrollState = rememberScrollState()
     val density = LocalDensity.current
 
-    val itemWidthDp = 76.dp
+    // +20% larger default floating capsule proportions
+    val itemWidthDp = 90.dp
     val itemWidthPx = with(density) { itemWidthDp.toPx() }
-    val dockPaddingHorizontal = 6.dp
-    val dockHeight = 66.dp
+    val dockPaddingHorizontal = 7.dp
+    val dockPaddingVertical = 6.dp
+    val dockPadPx = with(density) { dockPaddingHorizontal.toPx() }
+    val dockHeight = 80.dp
+    val maxShiftPx = with(density) { 16.dp.toPx() }
 
-    var isScrubbing by remember { mutableStateOf(false) }
+    val currentSelectedIndex by rememberUpdatedState(selectedIndex)
+    val currentOnTabSelected by rememberUpdatedState(onTabSelected)
+
+    var isHoldingActiveTab by remember { mutableStateOf(false) }
     var scrubIndexFloat by remember { mutableFloatStateOf(selectedIndex.toFloat()) }
+    var targetDockShiftPx by remember { mutableFloatStateOf(0f) }
+    var lastPointerLocalX by remember { mutableFloatStateOf(0f) }
+    var dockLeftInScreenPx by remember { mutableFloatStateOf(0f) }
+    var dockWidthPx by remember { mutableFloatStateOf(0f) }
 
-    val targetPos = if (isScrubbing) {
+    val targetPos = if (isHoldingActiveTab) {
         scrubIndexFloat.coerceIn(0f, tabs.lastIndex.toFloat())
     } else {
         (selectedIndex + pageOffsetFraction).coerceIn(0f, tabs.lastIndex.toFloat())
@@ -576,18 +593,66 @@ fun LiquidFloatingBottomBar(
         label = "glassDockLensPos"
     )
     val scrubScale by animateFloatAsState(
-        targetValue = if (isScrubbing) 1f else 0f,
+        targetValue = if (isHoldingActiveTab) 1f else 0f,
         animationSpec = spring(stiffness = Spring.StiffnessMedium, dampingRatio = 0.68f),
         label = "glassDockLensScale"
     )
+    val dockScale by animateFloatAsState(
+        targetValue = if (isHoldingActiveTab) 1.07f else 1f,
+        animationSpec = spring(stiffness = Spring.StiffnessMedium, dampingRatio = 0.66f),
+        label = "glassDockHoldScale"
+    )
+    val animatedDockShiftX by animateFloatAsState(
+        targetValue = if (isHoldingActiveTab) targetDockShiftPx else 0f,
+        animationSpec = spring(stiffness = Spring.StiffnessMedium, dampingRatio = 0.72f),
+        label = "glassDockHoldShiftX"
+    )
 
-    // Smoothly keep the active tab centered inside the scrollable capsule
-    LaunchedEffect(selectedIndex, tabs.size) {
-        if (scrollState.maxValue > 0) {
-            val targetScroll = ((selectedIndex * itemWidthPx) - itemWidthPx * 1.5f)
+    // Smoothly keep the active tab centered inside the scrollable capsule when not actively dragging
+    LaunchedEffect(selectedIndex, tabs.size, isHoldingActiveTab) {
+        if (!isHoldingActiveTab && scrollState.maxValue > 0) {
+            val targetScroll = ((selectedIndex * itemWidthPx) - itemWidthPx * 1.4f)
                 .roundToInt()
                 .coerceIn(0, scrollState.maxValue)
             scrollState.animateScrollTo(targetScroll)
+        }
+    }
+
+    // Gentle edge auto-scroll when scrubbing the active tab near the left/right edges of the dock
+    LaunchedEffect(isHoldingActiveTab) {
+        if (!isHoldingActiveTab) return@LaunchedEffect
+        val edgeZonePx = with(density) { 48.dp.toPx() }
+        val maxSpeedPxPerFrame = with(density) { 9.dp.toPx() }
+        while (isHoldingActiveTab) {
+            delay(16L)
+            val width = dockWidthPx
+            if (width > 0f && scrollState.maxValue > 0) {
+                val x = lastPointerLocalX
+                val delta = when {
+                    x < edgeZonePx -> {
+                        val factor = ((edgeZonePx - x) / edgeZonePx).coerceIn(0f, 1.5f)
+                        -(maxSpeedPxPerFrame * factor)
+                    }
+                    x > width - edgeZonePx -> {
+                        val factor = ((x - (width - edgeZonePx)) / edgeZonePx).coerceIn(0f, 1.5f)
+                        maxSpeedPxPerFrame * factor
+                    }
+                    else -> 0f
+                }
+                if (delta != 0f) {
+                    val nextScroll = (scrollState.value + delta).roundToInt().coerceIn(0, scrollState.maxValue)
+                    if (nextScroll != scrollState.value) {
+                        scrollState.scrollTo(nextScroll)
+                        val contentX = (x - dockPadPx) + nextScroll
+                        val nextScrub = (contentX / itemWidthPx - 0.5f).coerceIn(0f, tabs.lastIndex.toFloat())
+                        scrubIndexFloat = nextScrub
+                        val hovered = nextScrub.roundToInt().coerceIn(0, tabs.lastIndex)
+                        if (hovered != currentSelectedIndex) {
+                            currentOnTabSelected(hovered)
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -597,165 +662,213 @@ fun LiquidFloatingBottomBar(
     val onSurface = MaterialTheme.colorScheme.onSurface
     val onSurfaceVariant = MaterialTheme.colorScheme.onSurfaceVariant
 
-    Box(
+    BoxWithConstraints(
         contentAlignment = Alignment.BottomCenter,
         modifier = modifier
             .fillMaxWidth()
-            .padding(
-                start = 14.dp,
-                end = 14.dp,
-                bottom = navPadding.calculateBottomPadding() + 12.dp
-            )
+            .padding(bottom = navPadding.calculateBottomPadding() + 14.dp)
     ) {
-        // Outer floating Liquid Glass capsule dock
+        val screenWidthPx = with(density) { maxWidth.toPx() }.coerceAtLeast(1f)
+        val maxDockWidthDp = (maxWidth - 28.dp).coerceAtMost(660.dp).coerceAtLeast(120.dp)
+
+        // Untransformed hit wrapper so pointer X stays 100% free of transform feedback loops
         Box(
             modifier = Modifier
-                .widthIn(max = 580.dp)
+                .widthIn(max = maxDockWidthDp)
                 .height(dockHeight)
-                .liquidGlassSurface(
-                    backdrop = backdrop,
-                    shape = RoundedCornerShape(33.dp),
-                    level = GlassElevationLevel.CHROME,
-                    enableLens = true,
-                    enableShadow = true
-                )
-                .padding(horizontal = dockPaddingHorizontal, vertical = 5.dp)
-        ) {
-            Box(
-                modifier = Modifier
-                    .horizontalScroll(scrollState)
-                    .pointerInput(tabs.size, itemWidthPx) {
-                        detectHorizontalDragGestures(
-                            onDragStart = { offset ->
-                                isScrubbing = true
-                                scrubIndexFloat = (offset.x / itemWidthPx - 0.5f)
-                                    .coerceIn(0f, tabs.lastIndex.toFloat())
-                            },
-                            onHorizontalDrag = { change, _ ->
-                                change.consume()
-                                scrubIndexFloat = (change.position.x / itemWidthPx - 0.5f)
-                                    .coerceIn(0f, tabs.lastIndex.toFloat())
-                                val hovered = scrubIndexFloat.roundToInt().coerceIn(0, tabs.lastIndex)
-                                if (hovered != selectedIndex) {
-                                    onTabSelected(hovered)
-                                }
-                            },
-                            onDragEnd = {
-                                val target = scrubIndexFloat.roundToInt().coerceIn(0, tabs.lastIndex)
-                                isScrubbing = false
-                                onTabSelected(target)
-                            },
-                            onDragCancel = {
-                                isScrubbing = false
-                            }
+                .onGloballyPositioned { coords ->
+                    dockLeftInScreenPx = coords.positionInParent().x
+                    dockWidthPx = coords.size.width.toFloat()
+                }
+                .pointerInput(tabs.size, itemWidthPx, dockPadPx, screenWidthPx, maxShiftPx) {
+                    awaitEachGesture {
+                        val down = awaitFirstDown(
+                            requireUnconsumed = false,
+                            pass = PointerEventPass.Initial
                         )
-                    }
-            ) {
-                // Sliding Liquid Glass active lens bubble behind/over active item
-                val pillShape = RoundedCornerShape(28.dp)
-                val lensMod = Modifier
-                    .graphicsLayer {
-                        translationX = animatedIndicatorIndex * itemWidthPx
-                        scaleX = lerp(1f, 1.12f, scrubScale)
-                        scaleY = lerp(1f, 1.09f, scrubScale)
-                    }
-                    .size(width = itemWidthDp, height = dockHeight - 10.dp)
-                    .let { base ->
-                        if (isRenderEffectSupported()) {
-                            base.drawBackdrop(
-                                backdrop = lensBackdrop,
-                                shape = { pillShape },
-                                effects = {
-                                    val t = tokensState.value
-                                    if (t.vibrancyEnabled) vibrancy()
-                                    val b = lerp(2.5f, 0.5f, scrubScale).dp.toPx()
-                                    if (b > 0.2f) blur(b)
-                                    val refH = lerp(12f, 18f, scrubScale).dp.toPx()
-                                    val refA = lerp(22f, 40f, scrubScale).dp.toPx()
-                                    lens(
-                                        refractionHeight = refH,
-                                        refractionAmount = refA,
-                                        depthEffect = true,
-                                        chromaticAberration = t.chromaticAberration
-                                    )
-                                },
-                                highlight = {
-                                    val t = tokensState.value
-                                    Highlight(
-                                        width = 1.dp,
-                                        alpha = (t.highlightAlpha * 1.1f).coerceIn(0.42f, 1f)
-                                    )
-                                },
-                                shadow = null,
-                                onDrawSurface = {
-                                    val t = tokensState.value
-                                    drawRect(
-                                        lerpColor(
-                                            primaryColor.copy(alpha = 0.24f),
-                                            Color.White.copy(alpha = 0.16f),
-                                            scrubScale
-                                        ).copy(alpha = lerp(0.24f, 0.16f, scrubScale) + t.highlightAlpha * 0.0001f)
-                                    )
+                        val activeLeftPx = dockPadPx + (currentSelectedIndex * itemWidthPx) - scrollState.value
+                        val activeRightPx = activeLeftPx + itemWidthPx
+
+                        if (down.position.x !in activeLeftPx..activeRightPx) {
+                            // Touch started on an inactive tab: let normal tap & horizontal scroll run
+                            return@awaitEachGesture
+                        }
+
+                        down.consume()
+                        isHoldingActiveTab = true
+                        lastPointerLocalX = down.position.x
+                        scrubIndexFloat = currentSelectedIndex.toFloat()
+
+                        fun computeDockShiftFromLocalX(localX: Float): Float {
+                            val fingerScreenX = dockLeftInScreenPx + localX
+                            val halfScreen = (screenWidthPx / 2f).coerceAtLeast(1f)
+                            val normalized = ((fingerScreenX - halfScreen) / halfScreen).coerceIn(-1f, 1f)
+                            return normalized * maxShiftPx
+                        }
+
+                        targetDockShiftPx = computeDockShiftFromLocalX(down.position.x)
+
+                        val pointerId = down.id
+                        try {
+                            while (true) {
+                                val event = awaitPointerEvent(PointerEventPass.Initial)
+                                val change = event.changes.firstOrNull { it.id == pointerId } ?: break
+                                if (!change.pressed) {
+                                    change.consume()
+                                    break
                                 }
-                            )
-                        } else {
-                            base
-                                .clip(pillShape)
-                                .background(primaryColor.copy(alpha = 0.28f))
-                                .border(1.dp, Color.White.copy(alpha = 0.30f), pillShape)
+                                change.consume()
+                                val localX = change.position.x
+                                lastPointerLocalX = localX
+                                targetDockShiftPx = computeDockShiftFromLocalX(localX)
+
+                                val contentX = (localX - dockPadPx) + scrollState.value
+                                val nextScrub = (contentX / itemWidthPx - 0.5f)
+                                    .coerceIn(0f, tabs.lastIndex.toFloat())
+                                scrubIndexFloat = nextScrub
+                                val hovered = nextScrub.roundToInt().coerceIn(0, tabs.lastIndex)
+                                if (hovered != currentSelectedIndex) {
+                                    currentOnTabSelected(hovered)
+                                }
+                            }
+                        } finally {
+                            val finalTarget = scrubIndexFloat.roundToInt().coerceIn(0, tabs.lastIndex)
+                            isHoldingActiveTab = false
+                            targetDockShiftPx = 0f
+                            if (finalTarget != currentSelectedIndex) {
+                                currentOnTabSelected(finalTarget)
+                            }
                         }
                     }
-
-                Box(modifier = lensMod)
-
-                // Tab icons + compact labels recorded into dockContentBackdrop
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .fillMaxHeight()
-                        .framePacedLayerBackdrop(dockContentBackdrop)
+                }
+        ) {
+            // Outer floating Liquid Glass capsule dock (scales +7% and shifts dynamically on active-tab hold)
+            Box(
+                modifier = Modifier
+                    .height(dockHeight)
+                    .graphicsLayer {
+                        scaleX = dockScale
+                        scaleY = dockScale
+                        translationX = animatedDockShiftX
+                    }
+                    .liquidGlassSurface(
+                        backdrop = backdrop,
+                        shape = RoundedCornerShape(40.dp),
+                        level = GlassElevationLevel.CHROME,
+                        enableLens = true,
+                        enableShadow = true
+                    )
+                    .padding(horizontal = dockPaddingHorizontal, vertical = dockPaddingVertical)
+            ) {
+                Box(
+                    modifier = Modifier.horizontalScroll(scrollState)
                 ) {
-                    tabs.forEachIndexed { index, tab ->
-                        val isSelected = index == selectedIndex
-                        val itemInteraction = remember { MutableInteractionSource() }
-                        val isFocused by itemInteraction.collectIsFocusedAsState()
-                        val itemColor = if (isSelected) primaryColor else onSurfaceVariant.copy(alpha = 0.85f)
-
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center,
-                            modifier = Modifier
-                                .width(itemWidthDp)
-                                .fillMaxHeight()
-                                .clip(RoundedCornerShape(28.dp))
-                                .then(
-                                    if (isFocused) Modifier.border(1.5.dp, primaryColor, RoundedCornerShape(28.dp))
-                                    else Modifier
+                    // Sliding Liquid Glass active lens bubble behind/over active item
+                    val pillShape = RoundedCornerShape(34.dp)
+                    val lensMod = Modifier
+                        .graphicsLayer {
+                            translationX = animatedIndicatorIndex * itemWidthPx
+                            scaleX = lerp(1f, 1.12f, scrubScale)
+                            scaleY = lerp(1f, 1.09f, scrubScale)
+                        }
+                        .size(width = itemWidthDp, height = dockHeight - (dockPaddingVertical * 2))
+                        .let { base ->
+                            if (isRenderEffectSupported()) {
+                                base.drawBackdrop(
+                                    backdrop = lensBackdrop,
+                                    shape = { pillShape },
+                                    effects = {
+                                        val t = tokensState.value
+                                        if (t.vibrancyEnabled) vibrancy()
+                                        val b = lerp(2.5f, 0.5f, scrubScale).dp.toPx()
+                                        if (b > 0.2f) blur(b)
+                                        val refH = lerp(12f, 18f, scrubScale).dp.toPx()
+                                        val refA = lerp(22f, 40f, scrubScale).dp.toPx()
+                                        lens(
+                                            refractionHeight = refH,
+                                            refractionAmount = refA,
+                                            depthEffect = true,
+                                            chromaticAberration = t.chromaticAberration
+                                        )
+                                    },
+                                    highlight = {
+                                        val t = tokensState.value
+                                        Highlight(
+                                            width = 1.dp,
+                                            alpha = (t.highlightAlpha * 1.1f).coerceIn(0.42f, 1f)
+                                        )
+                                    },
+                                    shadow = null,
+                                    onDrawSurface = {
+                                        val t = tokensState.value
+                                        drawRect(
+                                            lerpColor(
+                                                primaryColor.copy(alpha = 0.24f),
+                                                Color.White.copy(alpha = 0.16f),
+                                                scrubScale
+                                            ).copy(alpha = lerp(0.24f, 0.16f, scrubScale) + t.highlightAlpha * 0.0001f)
+                                        )
+                                    }
                                 )
-                                .focusable(interactionSource = itemInteraction)
-                                .clickable(
-                                    interactionSource = itemInteraction,
-                                    indication = null
-                                ) { onTabSelected(index) }
-                                .padding(horizontal = 4.dp)
-                        ) {
-                            Icon(
-                                painter = painterResource(id = tab.iconRes),
-                                contentDescription = tab.shortLabel,
-                                tint = if (isSelected) onSurface else itemColor,
-                                modifier = Modifier.size(21.dp)
-                            )
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Text(
-                                text = tab.shortLabel,
-                                style = MaterialTheme.typography.labelSmall.copy(
-                                    fontSize = 10.5.sp,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
-                                ),
-                                color = if (isSelected) onSurface else itemColor,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
+                            } else {
+                                base
+                                    .clip(pillShape)
+                                    .background(primaryColor.copy(alpha = 0.28f))
+                                    .border(1.dp, Color.White.copy(alpha = 0.30f), pillShape)
+                            }
+                        }
+
+                    Box(modifier = lensMod)
+
+                    // Tab icons + compact labels recorded into dockContentBackdrop
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .framePacedLayerBackdrop(dockContentBackdrop)
+                    ) {
+                        tabs.forEachIndexed { index, tab ->
+                            val isSelected = index == selectedIndex
+                            val itemInteraction = remember { MutableInteractionSource() }
+                            val isFocused by itemInteraction.collectIsFocusedAsState()
+                            val itemColor = if (isSelected) primaryColor else onSurfaceVariant.copy(alpha = 0.85f)
+
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center,
+                                modifier = Modifier
+                                    .width(itemWidthDp)
+                                    .fillMaxHeight()
+                                    .clip(pillShape)
+                                    .then(
+                                        if (isFocused) Modifier.border(1.5.dp, primaryColor, pillShape)
+                                        else Modifier
+                                    )
+                                    .focusable(interactionSource = itemInteraction)
+                                    .clickable(
+                                        interactionSource = itemInteraction,
+                                        indication = null
+                                    ) { onTabSelected(index) }
+                                    .padding(horizontal = 4.dp)
+                            ) {
+                                Icon(
+                                    painter = painterResource(id = tab.iconRes),
+                                    contentDescription = tab.shortLabel,
+                                    tint = if (isSelected) onSurface else itemColor,
+                                    modifier = Modifier.size(25.dp)
+                                )
+                                Spacer(modifier = Modifier.height(3.dp))
+                                Text(
+                                    text = tab.shortLabel,
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        fontSize = 12.5.sp,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                                    ),
+                                    color = if (isSelected) onSurface else itemColor,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
                         }
                     }
                 }

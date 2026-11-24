@@ -83,13 +83,13 @@
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/m3FloatingBottomBarCard"
             android:layout_width="wrap_content"
-            android:layout_height="66dp"
+            android:layout_height="80dp"
             android:layout_gravity="bottom|center_horizontal"
             android:layout_marginStart="14dp"
             android:layout_marginEnd="14dp"
             android:layout_marginBottom="16dp"
             android:visibility="gone"
-            app:cardCornerRadius="33dp"
+            app:cardCornerRadius="40dp"
             app:cardElevation="8dp"
             app:cardBackgroundColor="?attr/colorSurfaceContainerHigh"
             app:strokeWidth="1dp"
@@ -102,8 +102,8 @@
                 android:scrollbars="none"
                 android:overScrollMode="never"
                 android:clipToPadding="false"
-                android:paddingStart="6dp"
-                android:paddingEnd="6dp">
+                android:paddingStart="7dp"
+                android:paddingEnd="7dp">
 
                 <LinearLayout
                     android:id="@+id/m3FloatingBottomBarContainer"

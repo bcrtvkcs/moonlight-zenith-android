@@ -362,7 +362,7 @@ fun StreamSettingsGlassScreen(
     ) { backgroundBackdrop ->
         if (categories.isNotEmpty()) {
             val topPad = topInsets.calculateTopPadding() + if (useFloatingBottomBar) 82.dp else 132.dp
-            val bottomPad = navInsets.calculateBottomPadding() + if (useFloatingBottomBar) 98.dp else 28.dp
+            val bottomPad = navInsets.calculateBottomPadding() + if (useFloatingBottomBar) 114.dp else 28.dp
 
             HorizontalPager(
                 state = pagerState,
