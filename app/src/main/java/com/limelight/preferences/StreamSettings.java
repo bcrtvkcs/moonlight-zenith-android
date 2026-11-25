@@ -1187,6 +1187,9 @@ public class StreamSettings extends AppCompatActivity {
             }
             Preference glassFpsPref = findPreference(PreferenceConfiguration.GLASS_FPS_PREF_STRING);
             if (glassFpsPref != null) {
+                if (glassFpsPref instanceof ListPreference && ((ListPreference) glassFpsPref).getValue() == null) {
+                    ((ListPreference) glassFpsPref).setValue(PreferenceConfiguration.DEFAULT_GLASS_FPS);
+                }
                 glassFpsPref.setOnPreferenceChangeListener(liveUiAppearanceListener);
             }
             Preference bgSourcePref = findPreference(PreferenceConfiguration.UI_BACKGROUND_SOURCE_PREF_STRING);

@@ -4,6 +4,20 @@ All notable changes to **Moonlight Zenith Android** are documented in this file.
 
 ---
 
+## [v3.0.2-zenith] - 2026-11-25
+
+### ⚡ True GPU-Saving Liquid Glass FPS Pacing & Floating Bottom Bar Polish
+- **Fix & Perf (Genuine GPU Shader Frame Pacing for `list_glass_fps`):**
+  - Replaced backdrop-only rate limiting with an offscreen GPU texture cache (`Modifier.framePacedGlassCache` using `GraphicsLayer` + `CompositingStrategy.Offscreen`) across `liquidGlassSurface`, `LiquidGlassSlider`, `LiquidGlassSwitch`, `LiquidFloatingBottomBar`, `AttectGlassMenuHost`, and `GlassDialogPortal`.
+  - When a refresh rate cap (`15`, `30`, `60`, `90`, `120`, or `144` FPS) is selected, `DrawBackdropNode` and its GPU AGSL blur, lens refraction, vibrancy, and highlight shaders now execute **strictly at most N times per second**, skipping `drawContent()` completely on intermediate frames and blitting the cached offscreen texture instead (saving ~75% GPU glass shader work at 30 FPS and ~87.5% at 15 FPS on 120Hz displays).
+  - Separated glass background surfaces from foreground interactive content (`GlassPreferenceItemRow`, `LiquidFloatingBottomBar`, `GlassModalDialog`, `GlassBottomSheetOverlay`, `AttectGlassMenuHost`) so scrolling, touch, text, switches, and sliders stay at full native display refresh rate while the Liquid Glass shaders pace cleanly to the chosen FPS.
+  - Selecting `144+ (Unlimited)` bypasses the offscreen cache completely with zero extra VRAM or blit overhead.
+  - Added defensive default value initialization (`"0"`) for `list_glass_fps` in `StreamSettings` on upgrades from earlier builds.
+- **Polish (Floating Bottom Bar Active-Tab Swell):**
+  - Refined the Liquid Glass floating bottom bar active-tab hold scale from `+7%` (`1.07x`) to a more balanced **`+5%` (`1.05x`)**.
+
+---
+
 ## [v3.0.1-zenith] - 2026-11-25
 
 ### 🫧 Floating Bottom Navigation Bar Proportions & Elastic Liquid Glass Physics

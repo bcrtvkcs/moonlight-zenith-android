@@ -44,7 +44,7 @@
 ### 🗂️ Swipeable Settings — Tabbed or Floating Bottom Navigation Bar
 - **Switchable Settings Navigation Style**: Choose live (no restart needed) between:
   - **Tabbed (Default)**: Scrollable top pill tabs (`TabLayout` + `ViewPager2` / `GlassPillTabBar` + `HorizontalPager`) with horizontal swipe navigation across categories.
-  - **Floating Bottom Bar**: A spacious floating capsule dock with custom category icons across all 7 tabs—rendered as a pure Material 3 Expressive floating dock in Material You mode, or a **sliding-lens Liquid Glass capsule dock** (`LiquidFloatingBottomBar`) in Liquid Glass mode featuring elastic active-tab hold physics (+7% dock swell, dynamic horizontal shift following your finger's screen position from center, and smooth edge auto-scroll across all categories).
+  - **Floating Bottom Bar**: A spacious floating capsule dock with custom category icons across all 7 tabs—rendered as a pure Material 3 Expressive floating dock in Material You mode, or a **sliding-lens Liquid Glass capsule dock** (`LiquidFloatingBottomBar`) in Liquid Glass mode featuring elastic active-tab hold physics (+5% dock swell, dynamic horizontal shift following your finger's screen position from center, and smooth edge auto-scroll across all categories).
 - **7 Logical Settings Categories**:
   1. **Basic / Video Settings**: Resolution, frame rate, bitrate, frame pacing, full-screen stretch, PIP, HDR, full range, and codec selection.
   2. **Audio Settings**: Multi-select Audio Output (**This device (Client)** and/or **PC (Host)**), surround sound configuration, audio effects, and equalizer.

@@ -138,11 +138,14 @@ fun Modifier.liquidGlassSurface(
     tintOverride: Color? = null,
     isFocused: Boolean = false,
     enableLens: Boolean = true,
-    enableShadow: Boolean = true
+    enableShadow: Boolean = true,
+    enableFrameCache: Boolean = true,
+    cacheKey: Any? = null
 ): Modifier {
     val tokensState = LocalGlassTokensState.current
     val tokens = tokensState.value
     val primaryColor = MaterialTheme.colorScheme.primary
+    val isCombinedChrome = backdrop === LocalContentBackdrop.current
 
     val focusBorderMod = if (isFocused) {
         Modifier.border(2.dp, primaryColor, shape)
@@ -151,7 +154,19 @@ fun Modifier.liquidGlassSurface(
     }
 
     return if (isRenderEffectSupported()) {
+        val cacheMod = if (enableFrameCache) {
+            val combinedKey = (isFocused.hashCode() * 31 + (tintOverride?.hashCode() ?: 0)) * 31 +
+                (cacheKey?.hashCode() ?: 0)
+            Modifier.framePacedGlassCache(
+                cacheKey = combinedKey,
+                padDp = if (enableShadow) 32.dp else 4.dp,
+                trackContentBackdropTick = isCombinedChrome
+            )
+        } else {
+            Modifier
+        }
         this
+            .then(cacheMod)
             .drawBackdrop(
                 backdrop = backdrop,
                 shape = { shape },
@@ -275,7 +290,8 @@ fun LiquidGlassScaffold(
 
         CompositionLocalProvider(
             LocalBackgroundBackdrop provides backgroundBackdrop,
-            LocalContentBackdrop provides combinedBackdrop
+            LocalContentBackdrop provides combinedBackdrop,
+            LocalContentBackdropTick provides { contentBackdrop.recordTick }
         ) {
             Box(modifier = Modifier.fillMaxSize()) {
                 // LAYER 1: Edge-to-edge background canvas recorded into backgroundBackdrop
@@ -771,7 +787,7 @@ fun GlassBottomSheetOverlay(
             contentAlignment = Alignment.BottomCenter,
             modifier = Modifier.fillMaxSize()
         ) {
-            Column(
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .widthIn(max = 560.dp)
@@ -780,28 +796,37 @@ fun GlassBottomSheetOverlay(
                         end = 12.dp,
                         bottom = navPadding.calculateBottomPadding() + 12.dp
                     )
-                    .liquidGlassSurface(
-                        backdrop = backdrop,
-                        shape = RoundedCornerShape(28.dp),
-                        level = GlassElevationLevel.SHEET
-                    )
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = {}
-                    )
-                    .padding(horizontal = 16.dp, vertical = 14.dp)
             ) {
                 Box(
                     modifier = Modifier
-                        .align(Alignment.CenterHorizontally)
-                        .width(38.dp)
-                        .height(4.dp)
-                        .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.35f))
+                        .matchParentSize()
+                        .liquidGlassSurface(
+                            backdrop = backdrop,
+                            shape = RoundedCornerShape(28.dp),
+                            level = GlassElevationLevel.SHEET
+                        )
                 )
-                Spacer(modifier = Modifier.height(14.dp))
-                content()
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = {}
+                        )
+                        .padding(horizontal = 16.dp, vertical = 14.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.CenterHorizontally)
+                            .width(38.dp)
+                            .height(4.dp)
+                            .clip(CircleShape)
+                            .background(Color.White.copy(alpha = 0.35f))
+                    )
+                    Spacer(modifier = Modifier.height(14.dp))
+                    content()
+                }
             }
         }
     }
@@ -851,23 +876,32 @@ fun GlassModalDialog(
             contentAlignment = Alignment.Center,
             modifier = Modifier.fillMaxSize()
         ) {
-            Column(
+            Box(
                 modifier = Modifier
                     .fillMaxWidth(0.90f)
                     .widthIn(max = 460.dp)
-                    .liquidGlassSurface(
-                        backdrop = backdrop,
-                        shape = RoundedCornerShape(28.dp),
-                        level = GlassElevationLevel.SHEET
-                    )
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = {}
-                    )
-                    .padding(22.dp)
             ) {
-                content()
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .liquidGlassSurface(
+                            backdrop = backdrop,
+                            shape = RoundedCornerShape(28.dp),
+                            level = GlassElevationLevel.SHEET
+                        )
+                )
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = {}
+                        )
+                        .padding(22.dp)
+                ) {
+                    content()
+                }
             }
         }
     }
@@ -1000,6 +1034,8 @@ internal tailrec fun Context.findActivity(): Activity? = when (this) {
     else -> null
 }
 
+val LocalContentBackdropTick = androidx.compose.runtime.staticCompositionLocalOf<() -> Int> { { 0 } }
+
 /**
  * Frame-paced [Backdrop] recorder that lets users cap dynamic Liquid Glass refraction refresh rate
  * (15 / 30 / 60 / 90 / 120 / 144 / 144+ FPS) for battery & GPU savings while keeping scrolling and
@@ -1013,6 +1049,7 @@ class FramePacedLayerBackdrop(
     override val isCoordinatesDependent: Boolean = true
     internal var layerCoordinates: LayoutCoordinates? by mutableStateOf(null)
     internal var catchUpTick by mutableIntStateOf(0)
+    internal var recordTick by mutableIntStateOf(0)
 
     private var lastRecordNanos: Long = 0L
     private var hasRecorded: Boolean = false
@@ -1047,6 +1084,10 @@ class FramePacedLayerBackdrop(
             mainHandler.postDelayed(catchUpRunnable, delayMs)
         }
         return false
+    }
+
+    internal fun notifyRecorded() {
+        recordTick++
     }
 
     override fun DrawScope.drawBackdrop(
@@ -1106,5 +1147,160 @@ fun Modifier.framePacedLayerBackdrop(backdrop: FramePacedLayerBackdrop): Modifie
                 backdrop.graphicsLayer.record(size = IntSize(w, h)) {
                     this@drawWithContent.drawContent()
                 }
+                backdrop.notifyRecorded()
             }
         }
+
+/**
+ * Genuine GPU-saving offscreen frame cache for Liquid Glass surfaces.
+ *
+ * When `glassMaxFps > 0` (`15`, `30`, `60`, `90`, `120`, `144` FPS):
+ * - Executes `DrawBackdropNode` (and its expensive GPU AGSL blur / lens / vibrancy / highlight
+ *   RenderEffect passes) strictly at most `glassMaxFps` times per second, caching the rasterized
+ *   output into an offscreen GPU texture (`CompositingStrategy.Offscreen`).
+ * - On all intermediate display frames, skips `drawContent()` / `DrawBackdropNode.draw()` completely
+ *   and simply blits the cached GPU texture (saving up to 75%–87.5% GPU glass shader work on 120Hz
+ *   displays) while layout, scrolling, and touch remain at full native display refresh rate.
+ * - Schedules a single trailing settle tick when motion pauses so the glass always lands in exact
+ *   1:1 alignment, and immediately refreshes on any optical parameter or size change.
+ * - When `glassMaxFps == 0` (`144+ Unlimited`), bypasses the cache with zero extra VRAM or blit cost.
+ */
+@Stable
+internal class GlassFrameCacheState(
+    val layer: GraphicsLayer,
+    private val maxFpsProvider: () -> Int
+) {
+    internal var cacheTick by mutableIntStateOf(0)
+
+    private var hasCached: Boolean = false
+    private var lastRecordNanos: Long = 0L
+    private var lastSize: IntSize = IntSize.Zero
+    private var lastKey: Int = 0
+    private var lastWinPos: Offset = Offset.Unspecified
+    private var catchUpScheduled: Boolean = false
+
+    private val mainHandler = Handler(Looper.getMainLooper())
+    private val catchUpRunnable = Runnable {
+        catchUpScheduled = false
+        cacheTick++
+    }
+
+    internal fun cancelPending() {
+        mainHandler.removeCallbacks(catchUpRunnable)
+        catchUpScheduled = false
+    }
+
+    internal fun onPositioned(winPos: Offset) {
+        val fps = maxFpsProvider()
+        if (fps <= 0) return
+        if (lastWinPos == Offset.Unspecified) {
+            lastWinPos = winPos
+            return
+        }
+        if (winPos == lastWinPos) return
+        lastWinPos = winPos
+        val minIntervalNs = 1_000_000_000L / fps
+        val elapsed = System.nanoTime() - lastRecordNanos
+        if (elapsed >= minIntervalNs) {
+            if (catchUpScheduled) {
+                mainHandler.removeCallbacks(catchUpRunnable)
+                catchUpScheduled = false
+            }
+            cacheTick++
+        } else if (!catchUpScheduled) {
+            catchUpScheduled = true
+            val delayMs = ((minIntervalNs - elapsed) / 1_000_000L).coerceIn(1L, 120L)
+            mainHandler.postDelayed(catchUpRunnable, delayMs)
+        }
+    }
+
+    internal fun shouldRecordNow(size: IntSize, keyHash: Int): Boolean {
+        val fps = maxFpsProvider()
+        if (fps <= 0) {
+            hasCached = false
+            cancelPending()
+            return true
+        }
+        val minIntervalNs = 1_000_000_000L / fps
+        val now = System.nanoTime()
+        val keyOrSizeChanged = (size != lastSize) || (keyHash != lastKey)
+        if (!hasCached || keyOrSizeChanged || (now - lastRecordNanos) >= minIntervalNs) {
+            lastRecordNanos = now
+            lastSize = size
+            lastKey = keyHash
+            hasCached = true
+            if (catchUpScheduled) {
+                mainHandler.removeCallbacks(catchUpRunnable)
+                catchUpScheduled = false
+            }
+            return true
+        }
+        if (!catchUpScheduled) {
+            catchUpScheduled = true
+            val delayMs = ((minIntervalNs - (now - lastRecordNanos)) / 1_000_000L).coerceIn(1L, 120L)
+            mainHandler.postDelayed(catchUpRunnable, delayMs)
+        }
+        return false
+    }
+}
+
+@Composable
+fun Modifier.framePacedGlassCache(
+    cacheKey: Any? = null,
+    padDp: Dp = 4.dp,
+    trackContentBackdropTick: Boolean = false
+): Modifier {
+    val tokensState = LocalGlassTokensState.current
+    val contentTickProvider = LocalContentBackdropTick.current
+    val layer = rememberGraphicsLayer()
+    val state = remember(layer) {
+        layer.compositingStrategy = androidx.compose.ui.graphics.layer.CompositingStrategy.Offscreen
+        GlassFrameCacheState(layer) { tokensState.value.glassMaxFps }
+    }
+    DisposableEffect(state) {
+        onDispose { state.cancelPending() }
+    }
+    return this
+        .onGloballyPositioned { coords ->
+            if (coords.isAttached) {
+                state.onPositioned(coords.positionInWindow())
+            }
+        }
+        .drawWithContent {
+            val fps = tokensState.value.glassMaxFps
+            if (fps <= 0) {
+                drawContent()
+                return@drawWithContent
+            }
+            @Suppress("UNUSED_VARIABLE")
+            val tick = state.cacheTick
+            val contentTick = if (trackContentBackdropTick) contentTickProvider() else 0
+            val w = size.width.toInt()
+            val h = size.height.toInt()
+            if (w <= 0 || h <= 0) {
+                drawContent()
+                return@drawWithContent
+            }
+            val padPx = padDp.toPx().toInt().coerceAtLeast(0)
+            val recordSize = IntSize(w + padPx * 2, h + padPx * 2)
+            val fullKeyHash = (tokensState.value.hashCode() * 31 + (cacheKey?.hashCode() ?: 0)) * 31 + contentTick
+            if (state.shouldRecordNow(recordSize, fullKeyHash)) {
+                state.layer.record(size = recordSize) {
+                    if (padPx > 0) {
+                        withTransform({ translate(padPx.toFloat(), padPx.toFloat()) }) {
+                            this@drawWithContent.drawContent()
+                        }
+                    } else {
+                        this@drawWithContent.drawContent()
+                    }
+                }
+            }
+            if (padPx > 0) {
+                withTransform({ translate(-padPx.toFloat(), -padPx.toFloat()) }) {
+                    drawLayer(state.layer)
+                }
+            } else {
+                drawLayer(state.layer)
+            }
+        }
+}

@@ -215,8 +215,13 @@ fun LiquidGlassSwitch(
             .size(width = thumbWidthDp, height = thumbHeightDp)
             .let { base ->
                 if (isRenderEffectSupported()) {
-                    base.drawBackdrop(
-                        backdrop = thumbBackdrop,
+                    base
+                        .framePacedGlassCache(
+                            cacheKey = isPressedOrDragging to checked,
+                            padDp = 12.dp
+                        )
+                        .drawBackdrop(
+                            backdrop = thumbBackdrop,
                         shape = { thumbShape },
                         effects = {
                             val t = tokensState.value
@@ -431,8 +436,13 @@ fun LiquidGlassSlider(
                 .size(width = thumbWidth, height = thumbHeight)
                 .let { base ->
                     if (isRenderEffectSupported()) {
-                        base.drawBackdrop(
-                            backdrop = thumbBackdrop,
+                        base
+                            .framePacedGlassCache(
+                                cacheKey = isDragging,
+                                padDp = 14.dp
+                            )
+                            .drawBackdrop(
+                                backdrop = thumbBackdrop,
                             shape = { thumbShape },
                             effects = {
                                 val t = tokensState.value
@@ -542,7 +552,7 @@ fun resolveSettingsNavTabItem(categoryKey: String?, fallbackTitle: String): Sett
  *   scrolling settings cards right behind it).
  * - Inner sliding **Liquid Glass lens bubble** that glides smoothly with spring physics on tap,
  *   tracks pager swipes 1:1, and supports **press-and-drag scrubbing across tabs**.
- * - Pressing & holding on the active tab swells the entire dock by ~7% and dynamically shifts the
+ * - Pressing & holding on the active tab swells the entire dock by ~5% and dynamically shifts the
  *   dock horizontally toward the finger's screen X offset (centered = 0 shift, right = slight right
  *   shift, left = slight left shift), springing smoothly back to rest on finger lift.
  */
@@ -598,7 +608,7 @@ fun LiquidFloatingBottomBar(
         label = "glassDockLensScale"
     )
     val dockScale by animateFloatAsState(
-        targetValue = if (isHoldingActiveTab) 1.07f else 1f,
+        targetValue = if (isHoldingActiveTab) 1.05f else 1f,
         animationSpec = spring(stiffness = Spring.StiffnessMedium, dampingRatio = 0.66f),
         label = "glassDockHoldScale"
     )
@@ -742,7 +752,7 @@ fun LiquidFloatingBottomBar(
                     }
                 }
         ) {
-            // Outer floating Liquid Glass capsule dock (scales +7% and shifts dynamically on active-tab hold)
+            // Outer floating Liquid Glass capsule dock (scales +5% and shifts dynamically on active-tab hold)
             Box(
                 modifier = Modifier
                     .height(dockHeight)
@@ -751,17 +761,22 @@ fun LiquidFloatingBottomBar(
                         scaleY = dockScale
                         translationX = animatedDockShiftX
                     }
-                    .liquidGlassSurface(
-                        backdrop = backdrop,
-                        shape = RoundedCornerShape(40.dp),
-                        level = GlassElevationLevel.CHROME,
-                        enableLens = true,
-                        enableShadow = true
-                    )
-                    .padding(horizontal = dockPaddingHorizontal, vertical = dockPaddingVertical)
             ) {
                 Box(
-                    modifier = Modifier.horizontalScroll(scrollState)
+                    modifier = Modifier
+                        .matchParentSize()
+                        .liquidGlassSurface(
+                            backdrop = backdrop,
+                            shape = RoundedCornerShape(40.dp),
+                            level = GlassElevationLevel.CHROME,
+                            enableLens = true,
+                            enableShadow = true
+                        )
+                )
+                Box(
+                    modifier = Modifier
+                        .padding(horizontal = dockPaddingHorizontal, vertical = dockPaddingVertical)
+                        .horizontalScroll(scrollState)
                 ) {
                     // Sliding Liquid Glass active lens bubble behind/over active item
                     val pillShape = RoundedCornerShape(34.dp)
@@ -774,8 +789,13 @@ fun LiquidFloatingBottomBar(
                         .size(width = itemWidthDp, height = dockHeight - (dockPaddingVertical * 2))
                         .let { base ->
                             if (isRenderEffectSupported()) {
-                                base.drawBackdrop(
-                                    backdrop = lensBackdrop,
+                                base
+                                    .framePacedGlassCache(
+                                        cacheKey = isHoldingActiveTab to selectedIndex,
+                                        padDp = 6.dp
+                                    )
+                                    .drawBackdrop(
+                                        backdrop = lensBackdrop,
                                     shape = { pillShape },
                                     effects = {
                                         val t = tokensState.value

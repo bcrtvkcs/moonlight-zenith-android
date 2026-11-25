@@ -382,7 +382,7 @@ private fun StandaloneLiquidGlassDialogContent(
 
     MoonlightLiquidGlassTheme(bgState = bgState) {
         val colorScheme = MaterialTheme.colorScheme
-        val standaloneBackdrop = rememberLayerBackdrop()
+        val standaloneBackdrop = rememberFramePacedLayerBackdrop()
 
         Box(modifier = Modifier.fillMaxSize()) {
             // Subtle luminous ambient layer so standalone dialogs over black streaming screens still
@@ -390,7 +390,7 @@ private fun StandaloneLiquidGlassDialogContent(
             Canvas(
                 modifier = Modifier
                     .fillMaxSize()
-                    .layerBackdrop(standaloneBackdrop)
+                    .framePacedLayerBackdrop(standaloneBackdrop)
             ) {
                 val w = size.width
                 val h = size.height

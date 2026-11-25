@@ -107,7 +107,8 @@ fun AddComputerGlassScreen(callbacks: AddComputerGlassCallbacks) {
                     .liquidGlassSurface(
                         backdrop = backgroundBackdrop,
                         shape = RoundedCornerShape(28.dp),
-                        level = GlassElevationLevel.CARD
+                        level = GlassElevationLevel.CARD,
+                        enableFrameCache = false
                     )
                     .padding(24.dp)
             ) {

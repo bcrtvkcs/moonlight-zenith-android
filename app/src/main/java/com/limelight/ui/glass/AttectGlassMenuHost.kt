@@ -287,7 +287,7 @@ private fun AttectGlassMenuScreen(
 
     MoonlightLiquidGlassTheme(bgState = bgState) {
         val colorScheme = MaterialTheme.colorScheme
-        val panelBackdrop = rememberLayerBackdrop()
+        val panelBackdrop = rememberFramePacedLayerBackdrop()
 
         Box(
             contentAlignment = Alignment.TopCenter,
@@ -322,7 +322,7 @@ private fun AttectGlassMenuScreen(
                         modifier = Modifier
                             .matchParentSize()
                             .clip(RoundedCornerShape(26.dp))
-                            .layerBackdrop(panelBackdrop)
+                            .framePacedLayerBackdrop(panelBackdrop)
                     ) {
                         val w = size.width
                         val h = size.height
@@ -362,10 +362,9 @@ private fun AttectGlassMenuScreen(
                         )
                     }
 
-                    Column(
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    Box(
                         modifier = Modifier
-                            .fillMaxWidth()
+                            .matchParentSize()
                             .liquidGlassSurface(
                                 backdrop = panelBackdrop,
                                 shape = RoundedCornerShape(26.dp),
@@ -373,6 +372,11 @@ private fun AttectGlassMenuScreen(
                                 enableLens = true,
                                 enableShadow = true
                             )
+                    )
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
                             .clickable(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null,

@@ -571,75 +571,84 @@ private fun GlassPreferenceItemRow(
         }
     }
 
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
+    Box(
         modifier = Modifier
             .fillMaxWidth()
             .alpha(if (enabled) 1f else 0.42f)
-            .liquidGlassSurface(
-                backdrop = backdrop,
-                shape = RoundedCornerShape(20.dp),
-                level = GlassElevationLevel.CARD,
-                isFocused = isFocused,
-                enableShadow = false
-            )
-            .focusable(enabled = enabled, interactionSource = interactionSource)
-            .clickable(
-                enabled = enabled,
-                interactionSource = interactionSource,
-                indication = null,
-                onClick = onClick
-            )
-            .padding(horizontal = 18.dp, vertical = 14.dp)
     ) {
-        Column(
+        Box(
             modifier = Modifier
-                .weight(1f)
-                .padding(end = 12.dp)
+                .matchParentSize()
+                .liquidGlassSurface(
+                    backdrop = backdrop,
+                    shape = RoundedCornerShape(20.dp),
+                    level = GlassElevationLevel.CARD,
+                    isFocused = isFocused,
+                    enableShadow = false
+                )
+        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .focusable(enabled = enabled, interactionSource = interactionSource)
+                .clickable(
+                    enabled = enabled,
+                    interactionSource = interactionSource,
+                    indication = null,
+                    onClick = onClick
+                )
+                .padding(horizontal = 18.dp, vertical = 14.dp)
         ) {
-            Text(
-                text = preference.title?.toString().orEmpty(),
-                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Medium),
-                color = MaterialTheme.colorScheme.onSurface
-            )
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(end = 12.dp)
+            ) {
+                Text(
+                    text = preference.title?.toString().orEmpty(),
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Medium),
+                    color = MaterialTheme.colorScheme.onSurface
+                )
 
-            if (!valueBadgeText.isNullOrEmpty()) {
-                Spacer(modifier = Modifier.height(6.dp))
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.56f))
-                        .border(0.75.dp, Color.White.copy(alpha = 0.18f), RoundedCornerShape(10.dp))
-                        .padding(horizontal = 10.dp, vertical = 3.dp)
-                ) {
+                if (!valueBadgeText.isNullOrEmpty()) {
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.56f))
+                            .border(0.75.dp, Color.White.copy(alpha = 0.18f), RoundedCornerShape(10.dp))
+                            .padding(horizontal = 10.dp, vertical = 3.dp)
+                    ) {
+                        Text(
+                            text = valueBadgeText,
+                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+
+                val summary = preference.summary?.toString()
+                if (!summary.isNullOrEmpty()) {
+                    Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = valueBadgeText,
-                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                        color = MaterialTheme.colorScheme.onSecondaryContainer,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        text = summary,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
 
-            val summary = preference.summary?.toString()
-            if (!summary.isNullOrEmpty()) {
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = summary,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+            if (preference is CheckBoxPreference) {
+                LiquidGlassSwitch(
+                    checked = preference.isChecked,
+                    enabled = enabled,
+                    backdrop = backdrop,
+                    onCheckedChange = { onClick() }
                 )
             }
-        }
-
-        if (preference is CheckBoxPreference) {
-            LiquidGlassSwitch(
-                checked = preference.isChecked,
-                enabled = enabled,
-                backdrop = backdrop,
-                onCheckedChange = { onClick() }
-            )
         }
     }
 }
