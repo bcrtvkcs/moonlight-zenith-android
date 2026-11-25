@@ -4,6 +4,18 @@
 
 ## 📸 Screenshots
 
+### 🫧 Liquid Glass UI
+
+| PCs | Apps & Context Sheet | Settings |
+| :---: | :---: | :---: |
+| ![PCs](https://raw.githubusercontent.com/bcrtvkcs/moonlight-zenith-android/refs/heads/master/screenshots/Screenshot_20261125-032740_Moonlight%20Zenith.png) | ![Apps & Context Sheet](https://raw.githubusercontent.com/bcrtvkcs/moonlight-zenith-android/refs/heads/master/screenshots/Screenshot_20261125-032756_Moonlight%20Zenith.png) | ![Settings](https://raw.githubusercontent.com/bcrtvkcs/moonlight-zenith-android/refs/heads/master/screenshots/Screenshot_20261125-032746_Moonlight%20Zenith.png) |
+
+| Desktop View + Attect Menu |
+| :---: |
+| ![Desktop View & Attect Menu](https://raw.githubusercontent.com/bcrtvkcs/moonlight-zenith-android/refs/heads/master/screenshots/Screenshot_20261125-032846_Moonlight%20Zenith.png) |
+
+### 🎨 Material You Expressive UI
+
 | PCs | Apps & Context Sheet | Settings |
 | :---: | :---: | :---: |
 | ![PCs](https://raw.githubusercontent.com/bcrtvkcs/moonlight-zenith-android/refs/heads/master/screenshots/Screenshot_20260613-224102_MoonlightZenith.png) | ![Apps & Context Sheet](https://raw.githubusercontent.com/bcrtvkcs/moonlight-zenith-android/refs/heads/master/screenshots/Screenshot_20260613-224037_MoonlightZenith.png) | ![Settings](https://raw.githubusercontent.com/bcrtvkcs/moonlight-zenith-android/refs/heads/master/screenshots/Screenshot_20260613-224054_MoonlightZenith.png) |
@@ -20,8 +32,8 @@
 - **Performance-Saving Glass Refresh Rate (FPS)**: Cap dynamic Liquid Glass GPU shader redraws to **`15`**, **`30`**, **`60`**, **`90`**, **`120`**, **`144`**, or **`144+ (Unlimited)`** FPS to save GPU load and battery while keeping scrolling and touch at your display's full native refresh rate.
 - **Zero Gameplay Overhead**: The in-stream floating button uses a lightweight static glass look while streaming, and opening the Liquid Glass quick menu keeps the game stream behind it completely sharp and unblurred.
 
-### 🎨 Material You & Themes
-- **Material You (Dynamic)** and **Zenith Indigo** themes with an independent **Pure Black (AMOLED)** toggle that works with either theme.
+### 🎨 Material You Expressive UI
+- **Material You Expressive** and **Zenith Indigo** themes with an independent **Pure Black (AMOLED)** toggle that works with either theme.
 - **Soft Indigo App Icon** and clean symmetric PC & App grids with automatic cover art centering.
 
 ### 🖼️ Custom Background & Phone Wallpaper
