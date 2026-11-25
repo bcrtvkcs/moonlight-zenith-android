@@ -80,6 +80,7 @@ import com.limelight.preferences.SeekBarPreference
 import com.limelight.preferences.StreamSettings
 import com.limelight.ui.background.UiBackgroundManager
 import com.limelight.ui.background.UiBackgroundState
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -149,7 +150,6 @@ private fun isGlassOpticalSliderKey(key: String?): Boolean {
 
 private fun isLivePreviewSliderKey(key: String?): Boolean {
     return isGlassOpticalSliderKey(key) ||
-            key == PreferenceConfiguration.UI_BACKGROUND_OPACITY_PREF_STRING ||
             key == PreferenceConfiguration.UI_BACKGROUND_TINT_OPACITY_PREF_STRING ||
             key == PreferenceConfiguration.UI_BACKGROUND_BLUR_PREF_STRING
 }
@@ -173,11 +173,27 @@ fun StreamSettingsGlassScreen(
         pageCount = { categories.size.coerceAtLeast(1) }
     )
     val coroutineScope = rememberCoroutineScope()
+    var tabScrollJob by remember { mutableStateOf<Job?>(null) }
+    var lastAppliedInitialKey by remember(categories) { mutableStateOf<String?>(null) }
+
+    fun animateToTab(targetIndex: Int) {
+        val safeTarget = targetIndex.coerceIn(0, (categories.size - 1).coerceAtLeast(0))
+        tabScrollJob?.cancel()
+        tabScrollJob = coroutineScope.launch {
+            pagerState.animateScrollToPage(
+                page = safeTarget,
+                animationSpec = spring(stiffness = Spring.StiffnessMediumLow, dampingRatio = 0.86f)
+            )
+        }
+    }
 
     LaunchedEffect(categories, uiState.initialCategoryKey) {
-        val target = categories.indexOfFirst { it.key == uiState.initialCategoryKey }
-        if (target >= 0 && target != pagerState.currentPage) {
-            pagerState.scrollToPage(target)
+        if (lastAppliedInitialKey != uiState.initialCategoryKey) {
+            lastAppliedInitialKey = uiState.initialCategoryKey
+            val target = categories.indexOfFirst { it.key == uiState.initialCategoryKey }
+            if (target >= 0 && target != pagerState.currentPage) {
+                pagerState.scrollToPage(target)
+            }
         }
     }
 
@@ -219,7 +235,8 @@ fun StreamSettingsGlassScreen(
                             onClick = callbacks::onBackClicked,
                             size = 42.dp,
                             iconSize = 20.dp,
-                            backdrop = combinedBackdrop
+                            backdrop = combinedBackdrop,
+                            nestedInGlass = true
                         )
                     }
                 )
@@ -227,12 +244,8 @@ fun StreamSettingsGlassScreen(
                     Spacer(modifier = Modifier.height(10.dp))
                     GlassPillTabBar(
                         tabs = categories.map { it.title?.toString().orEmpty() },
-                        selectedIndex = pagerState.currentPage.coerceIn(0, categories.lastIndex),
-                        onTabSelected = { targetIndex ->
-                            coroutineScope.launch {
-                                pagerState.animateScrollToPage(targetIndex)
-                            }
-                        },
+                        pagerPosition = pagerState.currentPage + pagerState.currentPageOffsetFraction,
+                        onTabSelected = ::animateToTab,
                         backdrop = combinedBackdrop
                     )
                 }
@@ -241,13 +254,8 @@ fun StreamSettingsGlassScreen(
             if (useFloatingBottomBar && navTabItems.isNotEmpty()) {
                 LiquidFloatingBottomBar(
                     tabs = navTabItems,
-                    selectedIndex = pagerState.currentPage.coerceIn(0, navTabItems.lastIndex),
-                    pageOffsetFraction = pagerState.currentPageOffsetFraction,
-                    onTabSelected = { targetIndex ->
-                        coroutineScope.launch {
-                            pagerState.animateScrollToPage(targetIndex)
-                        }
-                    },
+                    pagerState = pagerState,
+                    onTabSelected = ::animateToTab,
                     backdrop = combinedBackdrop,
                     modifier = Modifier.align(Alignment.BottomCenter)
                 )
@@ -342,6 +350,7 @@ fun StreamSettingsGlassScreen(
                                 text = (dlg.pref.negativeButtonText ?: stringResource(R.string.no)).toString(),
                                 onClick = { activeDialog = null },
                                 backdrop = combinedBackdrop,
+                                nestedInGlass = true,
                                 modifier = Modifier.weight(1f)
                             )
                             GlassActionButton(
@@ -352,6 +361,7 @@ fun StreamSettingsGlassScreen(
                                 },
                                 destructive = true,
                                 backdrop = combinedBackdrop,
+                                nestedInGlass = true,
                                 modifier = Modifier.weight(1f)
                             )
                         }
@@ -535,6 +545,7 @@ private fun GlassCustomBackgroundPickerCard(
                 onClick = onPickImage,
                 primary = true,
                 backdrop = backdrop,
+                nestedInGlass = true,
                 modifier = Modifier.weight(1f)
             )
             if (hasCustomImage) {
@@ -543,6 +554,7 @@ private fun GlassCustomBackgroundPickerCard(
                     onClick = onClearImage,
                     destructive = true,
                     backdrop = backdrop,
+                    nestedInGlass = true,
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -571,84 +583,75 @@ private fun GlassPreferenceItemRow(
         }
     }
 
-    Box(
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
             .alpha(if (enabled) 1f else 0.42f)
+            .liquidGlassSurface(
+                backdrop = backdrop,
+                shape = RoundedCornerShape(20.dp),
+                level = GlassElevationLevel.CARD,
+                isFocused = isFocused,
+                enableShadow = false
+            )
+            .focusable(enabled = enabled, interactionSource = interactionSource)
+            .clickable(
+                enabled = enabled,
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = onClick
+            )
+            .padding(horizontal = 18.dp, vertical = 14.dp)
     ) {
-        Box(
+        Column(
             modifier = Modifier
-                .matchParentSize()
-                .liquidGlassSurface(
-                    backdrop = backdrop,
-                    shape = RoundedCornerShape(20.dp),
-                    level = GlassElevationLevel.CARD,
-                    isFocused = isFocused,
-                    enableShadow = false
-                )
-        )
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .fillMaxWidth()
-                .focusable(enabled = enabled, interactionSource = interactionSource)
-                .clickable(
-                    enabled = enabled,
-                    interactionSource = interactionSource,
-                    indication = null,
-                    onClick = onClick
-                )
-                .padding(horizontal = 18.dp, vertical = 14.dp)
+                .weight(1f)
+                .padding(end = 12.dp)
         ) {
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(end = 12.dp)
-            ) {
-                Text(
-                    text = preference.title?.toString().orEmpty(),
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Medium),
-                    color = MaterialTheme.colorScheme.onSurface
-                )
+            Text(
+                text = preference.title?.toString().orEmpty(),
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Medium),
+                color = MaterialTheme.colorScheme.onSurface
+            )
 
-                if (!valueBadgeText.isNullOrEmpty()) {
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.56f))
-                            .border(0.75.dp, Color.White.copy(alpha = 0.18f), RoundedCornerShape(10.dp))
-                            .padding(horizontal = 10.dp, vertical = 3.dp)
-                    ) {
-                        Text(
-                            text = valueBadgeText,
-                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                            color = MaterialTheme.colorScheme.onSecondaryContainer,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                }
-
-                val summary = preference.summary?.toString()
-                if (!summary.isNullOrEmpty()) {
-                    Spacer(modifier = Modifier.height(4.dp))
+            if (!valueBadgeText.isNullOrEmpty()) {
+                Spacer(modifier = Modifier.height(6.dp))
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.56f))
+                        .border(0.75.dp, Color.White.copy(alpha = 0.18f), RoundedCornerShape(10.dp))
+                        .padding(horizontal = 10.dp, vertical = 3.dp)
+                ) {
                     Text(
-                        text = summary,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        text = valueBadgeText,
+                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
             }
 
-            if (preference is CheckBoxPreference) {
-                LiquidGlassSwitch(
-                    checked = preference.isChecked,
-                    enabled = enabled,
-                    backdrop = backdrop,
-                    onCheckedChange = { onClick() }
+            val summary = preference.summary?.toString()
+            if (!summary.isNullOrEmpty()) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = summary,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
+        }
+
+        if (preference is CheckBoxPreference) {
+            LiquidGlassSwitch(
+                checked = preference.isChecked,
+                enabled = enabled,
+                backdrop = backdrop,
+                onCheckedChange = { onClick() }
+            )
         }
     }
 }
@@ -692,6 +695,12 @@ private fun GlassSingleChoicePrefBody(
                 label = "choiceRowScale"
             )
 
+            val rowFill = when {
+                isSelected -> MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.50f)
+                isFocused || isPressed -> Color.White.copy(alpha = 0.16f)
+                else -> Color.White.copy(alpha = 0.08f)
+            }
+
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
@@ -700,18 +709,10 @@ private fun GlassSingleChoicePrefBody(
                         scaleX = scale
                         scaleY = scale
                     }
-                    .liquidGlassSurface(
-                        backdrop = backdrop,
+                    .nestedGlassSurface(
                         shape = RoundedCornerShape(16.dp),
-                        level = if (isSelected) GlassElevationLevel.ACCENT else GlassElevationLevel.CHROME,
-                        tintOverride = when {
-                            isSelected -> MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.44f)
-                            isFocused -> Color.White.copy(alpha = 0.16f)
-                            else -> tokens.cardTint.copy(alpha = (tokens.cardTint.alpha * 0.65f).coerceIn(0.06f, 0.28f))
-                        },
-                        isFocused = isFocused,
-                        enableLens = true,
-                        enableShadow = false
+                        fillColor = rowFill,
+                        isFocused = isFocused
                     )
                     .focusable(interactionSource = interactionSource)
                     .clickable(interactionSource = interactionSource, indication = null) {
@@ -772,7 +773,8 @@ private fun GlassSingleChoicePrefBody(
         GlassActionButton(
             text = stringResource(android.R.string.cancel),
             onClick = onDismiss,
-            backdrop = backdrop
+            backdrop = backdrop,
+            nestedInGlass = true
         )
     }
 }
@@ -813,6 +815,7 @@ private fun GlassSeekBarPrefBody(
 
     Spacer(modifier = Modifier.height(16.dp))
 
+    val context = LocalContext.current
     Box(
         contentAlignment = Alignment.Center,
         modifier = Modifier
@@ -821,12 +824,9 @@ private fun GlassSeekBarPrefBody(
         Box(
             contentAlignment = Alignment.Center,
             modifier = Modifier
-                .liquidGlassSurface(
-                    backdrop = backdrop,
+                .nestedGlassSurface(
                     shape = RoundedCornerShape(16.dp),
-                    level = GlassElevationLevel.ACCENT,
-                    tintOverride = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.42f),
-                    enableShadow = false
+                    fillColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.46f)
                 )
                 .padding(horizontal = 20.dp, vertical = 8.dp)
         ) {
@@ -849,12 +849,10 @@ private fun GlassSeekBarPrefBody(
         onValueChange = { stepped ->
             currentVal = stepped
             when (pref.key) {
-                PreferenceConfiguration.UI_BACKGROUND_OPACITY_PREF_STRING ->
-                    UiBackgroundManager.setLivePreview(opacity = stepped)
                 PreferenceConfiguration.UI_BACKGROUND_TINT_OPACITY_PREF_STRING ->
-                    UiBackgroundManager.setLivePreview(tintOpacity = stepped)
+                    UiBackgroundManager.setLivePreview(context = context, tintOpacity = stepped)
                 PreferenceConfiguration.UI_BACKGROUND_BLUR_PREF_STRING ->
-                    UiBackgroundManager.setLivePreview(blurDp = stepped)
+                    UiBackgroundManager.setLivePreview(context = context, blurDp = stepped)
                 PreferenceConfiguration.GLASS_BLUR_PREF_STRING ->
                     UiBackgroundManager.setGlassLivePreview(glassBlurDp = stepped)
                 PreferenceConfiguration.GLASS_REFRACTION_AMOUNT_PREF_STRING ->
@@ -879,6 +877,7 @@ private fun GlassSeekBarPrefBody(
             text = stringResource(android.R.string.cancel),
             onClick = onDismiss,
             backdrop = backdrop,
+            nestedInGlass = true,
             modifier = Modifier.weight(1f)
         )
         GlassActionButton(
@@ -886,6 +885,7 @@ private fun GlassSeekBarPrefBody(
             onClick = { onConfirm(currentVal) },
             primary = true,
             backdrop = backdrop,
+            nestedInGlass = true,
             modifier = Modifier.weight(1f)
         )
     }
@@ -934,6 +934,12 @@ private fun GlassAudioOutputPrefBody(
                 label = "audioCheckRowScale"
             )
 
+            val rowFill = when {
+                checked -> MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.50f)
+                isFocused || isPressed -> Color.White.copy(alpha = 0.16f)
+                else -> Color.White.copy(alpha = 0.08f)
+            }
+
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
@@ -942,18 +948,10 @@ private fun GlassAudioOutputPrefBody(
                         scaleX = scale
                         scaleY = scale
                     }
-                    .liquidGlassSurface(
-                        backdrop = backdrop,
+                    .nestedGlassSurface(
                         shape = RoundedCornerShape(18.dp),
-                        level = if (checked) GlassElevationLevel.ACCENT else GlassElevationLevel.CHROME,
-                        tintOverride = when {
-                            checked -> MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.44f)
-                            isFocused -> Color.White.copy(alpha = 0.16f)
-                            else -> tokens.cardTint.copy(alpha = (tokens.cardTint.alpha * 0.65f).coerceIn(0.06f, 0.28f))
-                        },
-                        isFocused = isFocused,
-                        enableLens = true,
-                        enableShadow = false
+                        fillColor = rowFill,
+                        isFocused = isFocused
                     )
                     .focusable(interactionSource = interactionSource)
                     .clickable(interactionSource = interactionSource, indication = null, onClick = onToggle)
@@ -1009,6 +1007,7 @@ private fun GlassAudioOutputPrefBody(
             text = stringResource(android.R.string.cancel),
             onClick = onDismiss,
             backdrop = backdrop,
+            nestedInGlass = true,
             modifier = Modifier.weight(1f)
         )
         GlassActionButton(
@@ -1016,6 +1015,7 @@ private fun GlassAudioOutputPrefBody(
             onClick = { onConfirm(clientChecked, hostChecked) },
             primary = true,
             backdrop = backdrop,
+            nestedInGlass = true,
             modifier = Modifier.weight(1f)
         )
     }

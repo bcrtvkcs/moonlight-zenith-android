@@ -29,7 +29,7 @@
 ### 🫧 Liquid Glass UI
 - **Real-Time Refractive Glass**: Switch between **Material You Expressive** and **Liquid Glass** (powered by [AndroidLiquidGlass](https://github.com/Kyant0/AndroidLiquidGlass)) across all screens, menus, dialogs, switches, sliders, and the in-stream quick menu.
 - **Presets, 8 Live Controls & Preview**: Pick from **Frosted**, **Clear**, or **Tinted** presets, or fine-tune blur, refraction strength & height, chromatic aberration, 3D depth, surface opacity, edge highlight, and vibrancy with a live draggable preview.
-- **Performance-Saving Glass Refresh Rate (FPS)**: Cap dynamic Liquid Glass GPU shader redraws to **`15`**, **`30`**, **`60`**, **`90`**, **`120`**, **`144`**, or **`144+ (Unlimited)`** FPS to save GPU load and battery while keeping scrolling and touch at your display's full native refresh rate.
+- **Optimized Per-Frame GPU Performance**: Eliminates stacked double-blur passes across top bars, dialogs, idle switches, and cards; pre-computes custom background blur once into a static cached image for zero per-frame background blur overhead.
 - **Zero Gameplay Overhead**: The in-stream floating button uses a lightweight static glass look while streaming, and opening the Liquid Glass quick menu keeps the game stream behind it completely sharp and unblurred.
 
 ### 🎨 Material You Expressive UI
@@ -38,7 +38,7 @@
 
 ### 🖼️ Custom Background & Phone Wallpaper
 - Use the **Theme Default**, pick a **Custom Image** (local gallery or Google Photos), or show your **Phone Wallpaper** directly behind the interface.
-- Customize **opacity**, **color tint** (9 options), **tint intensity**, and **blur** in both Material You and Liquid Glass modes.
+- Customize **color tint** (9 options), **tint intensity**, and **static pre-blurred background blur** in both Material You and Liquid Glass modes.
 
 ### 🗂️ Tabbed or Floating Bottom Settings
 - **7 Swipeable Categories**: Video, Audio, Gamepad, Input & Keyboard, On-Screen Controls, UI, and Advanced.

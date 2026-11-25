@@ -79,6 +79,7 @@ public class StreamSettings extends AppCompatActivity {
     private MaterialCardView m3FloatingBottomBarCard;
     private HorizontalScrollView m3FloatingBottomBarScroll;
     private LinearLayout m3FloatingBottomBarContainer;
+    private View m3FloatingBottomBarIndicator;
     private List<CategoryTab> loadedCategories;
     private ViewPager2 activeViewPager;
     private SettingsFragment activeFragment;
@@ -200,48 +201,70 @@ public class StreamSettings extends AppCompatActivity {
     }
 
     private void updateM3FloatingBottomBarSelection(int selectedIndex) {
+        updateM3FloatingBottomBarPosition((float) selectedIndex, true);
+    }
+
+    private void updateM3FloatingBottomBarPosition(float pagePosition, boolean postScroll) {
         if (m3FloatingBottomBarContainer == null) {
             return;
         }
+        int count = m3FloatingBottomBarContainer.getChildCount();
+        if (count == 0) {
+            return;
+        }
+        float clampedPos = Math.max(0f, Math.min(pagePosition, count - 1));
         float density = getResources().getDisplayMetrics().density;
         int pillRadius = (int) (33 * density + 0.5f);
         int selectedBg = UiHelper.resolveThemeColor(this, com.google.android.material.R.attr.colorSecondaryContainer, 0xFF434659);
         int selectedFg = UiHelper.resolveThemeColor(this, com.google.android.material.R.attr.colorOnSecondaryContainer, 0xFFE0E1F9);
         int unselectedFg = UiHelper.resolveThemeColor(this, com.google.android.material.R.attr.colorOnSurfaceVariant, 0xFFC6C5D0);
 
-        for (int i = 0; i < m3FloatingBottomBarContainer.getChildCount(); i++) {
-            View child = m3FloatingBottomBarContainer.getChildAt(i);
-            boolean selected = (i == selectedIndex);
-            if (selected) {
+        float itemWidthPx = (int) (88 * density + 0.5f);
+        float marginHPx = (int) (2 * density + 0.5f);
+        float itemStepPx = itemWidthPx + (marginHPx * 2f);
+
+        if (m3FloatingBottomBarIndicator != null) {
+            if (!(m3FloatingBottomBarIndicator.getBackground() instanceof GradientDrawable)) {
                 GradientDrawable pill = new GradientDrawable();
                 pill.setColor(selectedBg);
                 pill.setCornerRadius(pillRadius);
-                child.setBackground(pill);
-            } else {
-                child.setBackgroundColor(Color.TRANSPARENT);
+                m3FloatingBottomBarIndicator.setBackground(pill);
             }
+            m3FloatingBottomBarIndicator.setTranslationX(clampedPos * itemStepPx);
+        }
+
+        for (int i = 0; i < count; i++) {
+            View child = m3FloatingBottomBarContainer.getChildAt(i);
+            child.setBackgroundColor(Color.TRANSPARENT);
+            float activeWeight = Math.max(0f, 1f - Math.abs(clampedPos - i));
+            int blendedFg = androidx.core.graphics.ColorUtils.blendARGB(unselectedFg, selectedFg, activeWeight);
             ImageView icon = child.findViewWithTag("nav_icon");
             if (icon != null) {
-                icon.setColorFilter(selected ? selectedFg : unselectedFg);
+                icon.setColorFilter(blendedFg);
             }
             TextView label = child.findViewWithTag("nav_label");
             if (label != null) {
-                label.setTextColor(selected ? selectedFg : unselectedFg);
-                label.setTypeface(null, selected ? android.graphics.Typeface.BOLD : android.graphics.Typeface.NORMAL);
+                label.setTextColor(blendedFg);
+                label.setTypeface(null, activeWeight >= 0.5f ? android.graphics.Typeface.BOLD : android.graphics.Typeface.NORMAL);
             }
         }
 
-        if (m3FloatingBottomBarScroll != null && selectedIndex >= 0 && selectedIndex < m3FloatingBottomBarContainer.getChildCount()) {
-            final View target = m3FloatingBottomBarContainer.getChildAt(selectedIndex);
-            m3FloatingBottomBarScroll.post(new Runnable() {
-                @Override
-                public void run() {
-                    if (m3FloatingBottomBarScroll != null && target != null) {
-                        int scrollX = target.getLeft() - (m3FloatingBottomBarScroll.getWidth() - target.getWidth()) / 2;
-                        m3FloatingBottomBarScroll.smoothScrollTo(Math.max(0, scrollX), 0);
+        if (m3FloatingBottomBarScroll != null) {
+            final float centerPx = marginHPx + (clampedPos * itemStepPx) + (itemWidthPx / 2f);
+            if (postScroll) {
+                m3FloatingBottomBarScroll.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (m3FloatingBottomBarScroll != null && m3FloatingBottomBarScroll.getWidth() > 0) {
+                            int targetScroll = (int) (centerPx - m3FloatingBottomBarScroll.getWidth() / 2f);
+                            m3FloatingBottomBarScroll.scrollTo(Math.max(0, targetScroll), 0);
+                        }
                     }
-                }
-            });
+                });
+            } else if (m3FloatingBottomBarScroll.getWidth() > 0) {
+                int targetScroll = (int) (centerPx - m3FloatingBottomBarScroll.getWidth() / 2f);
+                m3FloatingBottomBarScroll.scrollTo(Math.max(0, targetScroll), 0);
+            }
         }
     }
 
@@ -417,6 +440,11 @@ public class StreamSettings extends AppCompatActivity {
 
         viewPager.registerOnPageChangeCallback(new ViewPager2.OnPageChangeCallback() {
             @Override
+            public void onPageScrolled(int position, float positionOffset, int positionOffsetPixels) {
+                updateM3FloatingBottomBarPosition(position + positionOffset, false);
+            }
+
+            @Override
             public void onPageSelected(int position) {
                 if (position >= 0 && position < categories.size()) {
                     CategoryTab cat = categories.get(position);
@@ -424,7 +452,6 @@ public class StreamSettings extends AppCompatActivity {
                     if (settingsTitleText != null) {
                         settingsTitleText.setText(cat.title);
                     }
-                    updateM3FloatingBottomBarSelection(position);
                 }
             }
         });
@@ -554,6 +581,7 @@ public class StreamSettings extends AppCompatActivity {
             m3FloatingBottomBarCard = findViewById(R.id.m3FloatingBottomBarCard);
             m3FloatingBottomBarScroll = findViewById(R.id.m3FloatingBottomBarScroll);
             m3FloatingBottomBarContainer = findViewById(R.id.m3FloatingBottomBarContainer);
+            m3FloatingBottomBarIndicator = findViewById(R.id.m3FloatingBottomBarIndicator);
 
             View backButton = findViewById(R.id.settingsBackButton);
             if (backButton != null) {
@@ -778,8 +806,7 @@ public class StreamSettings extends AppCompatActivity {
                     PreferenceConfiguration.GLASS_DEPTH_EFFECT_PREF_STRING,
                     PreferenceConfiguration.GLASS_SURFACE_OPACITY_PREF_STRING,
                     PreferenceConfiguration.GLASS_HIGHLIGHT_INTENSITY_PREF_STRING,
-                    PreferenceConfiguration.GLASS_VIBRANCY_PREF_STRING,
-                    PreferenceConfiguration.GLASS_FPS_PREF_STRING
+                    PreferenceConfiguration.GLASS_VIBRANCY_PREF_STRING
             };
             for (String key : glassKeys) {
                 Preference p = findPreference(key);
@@ -794,10 +821,6 @@ public class StreamSettings extends AppCompatActivity {
                         ? R.string.summary_ui_background_pick_image_set
                         : R.string.summary_ui_background_pick_image_empty);
             }
-            Preference opacityPref = findPreference(PreferenceConfiguration.UI_BACKGROUND_OPACITY_PREF_STRING);
-            if (opacityPref != null) {
-                opacityPref.setEnabled(hasBackground);
-            }
             Preference tintModePref = findPreference(PreferenceConfiguration.UI_BACKGROUND_TINT_MODE_PREF_STRING);
             if (tintModePref != null) {
                 tintModePref.setEnabled(hasBackground);
@@ -808,7 +831,8 @@ public class StreamSettings extends AppCompatActivity {
             }
             Preference blurPref = findPreference(PreferenceConfiguration.UI_BACKGROUND_BLUR_PREF_STRING);
             if (blurPref != null) {
-                blurPref.setEnabled(hasBackground);
+                boolean blurSupported = isCustomImage || (hasBackground && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S);
+                blurPref.setEnabled(blurSupported);
             }
         }
 
@@ -1185,13 +1209,6 @@ public class StreamSettings extends AppCompatActivity {
                     p.setOnPreferenceChangeListener(glassParamChangeListener);
                 }
             }
-            Preference glassFpsPref = findPreference(PreferenceConfiguration.GLASS_FPS_PREF_STRING);
-            if (glassFpsPref != null) {
-                if (glassFpsPref instanceof ListPreference && ((ListPreference) glassFpsPref).getValue() == null) {
-                    ((ListPreference) glassFpsPref).setValue(PreferenceConfiguration.DEFAULT_GLASS_FPS);
-                }
-                glassFpsPref.setOnPreferenceChangeListener(liveUiAppearanceListener);
-            }
             Preference bgSourcePref = findPreference(PreferenceConfiguration.UI_BACKGROUND_SOURCE_PREF_STRING);
             if (bgSourcePref != null) {
                 bgSourcePref.setOnPreferenceChangeListener(liveUiAppearanceListener);
@@ -1214,30 +1231,6 @@ public class StreamSettings extends AppCompatActivity {
                 });
             }
 
-            final SeekBarPreference bgOpacityPref = (SeekBarPreference) findPreference(PreferenceConfiguration.UI_BACKGROUND_OPACITY_PREF_STRING);
-            if (bgOpacityPref != null) {
-                bgOpacityPref.setOnPreferenceChangeListener(liveUiAppearanceListener);
-                bgOpacityPref.setOnLiveValueChangedListener(new SeekBarPreference.OnLiveValueChangedListener() {
-                    @Override
-                    public void onLiveValueChanged(int value) {
-                        Activity act = SettingsFragment.this.getActivity();
-                        UiBackgroundManager.setLivePreview(value, null, null);
-                        if (act != null && !UiHelper.isLiquidGlassEnabled(act)) {
-                            UiHelper.applyWindowSurfaceColors(act);
-                        }
-                    }
-
-                    @Override
-                    public void onLivePreviewCancelled() {
-                        Activity act = SettingsFragment.this.getActivity();
-                        UiBackgroundManager.clearLivePreview();
-                        if (act != null && !UiHelper.isLiquidGlassEnabled(act)) {
-                            UiHelper.applyWindowSurfaceColors(act);
-                        }
-                    }
-                });
-            }
-
             final SeekBarPreference bgTintOpacityPref = (SeekBarPreference) findPreference(PreferenceConfiguration.UI_BACKGROUND_TINT_OPACITY_PREF_STRING);
             if (bgTintOpacityPref != null) {
                 bgTintOpacityPref.setOnPreferenceChangeListener(liveUiAppearanceListener);
@@ -1245,9 +1238,11 @@ public class StreamSettings extends AppCompatActivity {
                     @Override
                     public void onLiveValueChanged(int value) {
                         Activity act = SettingsFragment.this.getActivity();
-                        UiBackgroundManager.setLivePreview(null, value, null);
-                        if (act != null && !UiHelper.isLiquidGlassEnabled(act)) {
-                            UiHelper.applyWindowSurfaceColors(act);
+                        if (act != null) {
+                            UiBackgroundManager.setLivePreview(act, value, null, null);
+                            if (!UiHelper.isLiquidGlassEnabled(act)) {
+                                UiHelper.applyWindowSurfaceColors(act);
+                            }
                         }
                     }
 
@@ -1264,33 +1259,36 @@ public class StreamSettings extends AppCompatActivity {
 
             final SeekBarPreference bgBlurPref = (SeekBarPreference) findPreference(PreferenceConfiguration.UI_BACKGROUND_BLUR_PREF_STRING);
             if (bgBlurPref != null) {
-                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
-                    PreferenceCategory uiCat = (PreferenceCategory) findPreference("category_ui_settings");
-                    if (uiCat != null) {
-                        uiCat.removePreference(bgBlurPref);
+                bgBlurPref.setOnPreferenceChangeListener(liveUiAppearanceListener);
+                bgBlurPref.setOnLiveValueChangedListener(new SeekBarPreference.OnLiveValueChangedListener() {
+                    @Override
+                    public void onLiveValueChanged(int value) {
+                        final Activity act = SettingsFragment.this.getActivity();
+                        if (act != null) {
+                            Runnable xmlRefresh = !UiHelper.isLiquidGlassEnabled(act) ? new Runnable() {
+                                @Override
+                                public void run() {
+                                    if (!act.isFinishing() && !act.isDestroyed()) {
+                                        UiHelper.applyWindowSurfaceColors(act);
+                                    }
+                                }
+                            } : null;
+                            UiBackgroundManager.setLivePreview(act, null, value, xmlRefresh);
+                            if (xmlRefresh != null) {
+                                UiHelper.applyWindowSurfaceColors(act);
+                            }
+                        }
                     }
-                } else {
-                    bgBlurPref.setOnPreferenceChangeListener(liveUiAppearanceListener);
-                    bgBlurPref.setOnLiveValueChangedListener(new SeekBarPreference.OnLiveValueChangedListener() {
-                        @Override
-                        public void onLiveValueChanged(int value) {
-                            Activity act = SettingsFragment.this.getActivity();
-                            UiBackgroundManager.setLivePreview(null, null, value);
-                            if (act != null && !UiHelper.isLiquidGlassEnabled(act)) {
-                                UiHelper.applyWindowSurfaceColors(act);
-                            }
-                        }
 
-                        @Override
-                        public void onLivePreviewCancelled() {
-                            Activity act = SettingsFragment.this.getActivity();
-                            UiBackgroundManager.clearLivePreview();
-                            if (act != null && !UiHelper.isLiquidGlassEnabled(act)) {
-                                UiHelper.applyWindowSurfaceColors(act);
-                            }
+                    @Override
+                    public void onLivePreviewCancelled() {
+                        Activity act = SettingsFragment.this.getActivity();
+                        UiBackgroundManager.clearLivePreview();
+                        if (act != null && !UiHelper.isLiquidGlassEnabled(act)) {
+                            UiHelper.applyWindowSurfaceColors(act);
                         }
-                    });
-                }
+                    }
+                });
             }
 
             refreshUiBackgroundPreferenceStates();

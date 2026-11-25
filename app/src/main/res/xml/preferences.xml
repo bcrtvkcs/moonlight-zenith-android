@@ -332,13 +332,6 @@
             android:summary="@string/summary_glass_vibrancy"
             android:defaultValue="true" />
         <com.limelight.preferences.M3ListPreference
-            android:key="list_glass_fps"
-            android:title="@string/title_glass_fps"
-            android:summary="@string/summary_glass_fps"
-            android:entries="@array/glass_fps_names"
-            android:entryValues="@array/glass_fps_values"
-            android:defaultValue="0" />
-        <com.limelight.preferences.M3ListPreference
             android:key="list_theme_mode"
             android:title="@string/title_theme_mode"
             android:summary="@string/summary_theme_mode"
@@ -361,16 +354,6 @@
             android:key="pref_ui_background_pick_image"
             android:title="@string/title_ui_background_pick_image"
             android:summary="@string/summary_ui_background_pick_image_empty" />
-        <com.limelight.preferences.SeekBarPreference
-            android:key="seekbar_ui_background_opacity"
-            android:dialogMessage="@string/summary_ui_background_opacity"
-            seekbar:min="0"
-            seekbar:step="5"
-            android:max="100"
-            android:defaultValue="65"
-            android:summary="@string/summary_ui_background_opacity"
-            android:text="@string/suffix_osc_opacity"
-            android:title="@string/title_ui_background_opacity" />
         <com.limelight.preferences.M3ListPreference
             android:key="list_ui_background_tint_mode"
             android:title="@string/title_ui_background_tint_mode"

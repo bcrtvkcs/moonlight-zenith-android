@@ -4,6 +4,29 @@ All notable changes to **Moonlight Zenith Android** are documented in this file.
 
 ---
 
+## [v3.1.0-zenith] - 2026-11-26
+
+### ⚡ Liquid Glass Performance Overhaul, Static Pre-Blurred Backgrounds & 1:1 Synchronized Tab Animations
+- **Perf (Static Pre-Computed Background Blur — `0.00 ms` GPU Blur/Frame):**
+  - Replaced live per-frame GPU `BlurEffect` / `ImageView.setRenderEffect` on custom background images with a one-time background-thread static blurred `Bitmap` cache (`UiBackgroundManager.kt`, 3-pass separable box blur saved to `ui_background_blurred.webp` with metadata validation).
+  - Keeps the master image (`ui_background_custom.webp`) untouched so changing blur strength never accumulates quality loss, provides fast downscaled live preview while dragging the slider, and brings custom background blur support to **all Android versions (API 23+)**.
+- **Perf (Eliminated Stacked Multi-Pass Blurs & Offscreen Shadow FBOs):**
+  - Removed the Liquid Glass FPS limiter (`list_glass_fps`) and offscreen `framePacedGlassCache` / `FramePacedLayerBackdrop` wrappers, restoring native zero-overhead `rememberLayerBackdrop()` / `.layerBackdrop(...)` everywhere.
+  - Added lightweight `nestedGlassSurface` for buttons and rows nested inside already-blurred Liquid Glass containers (`GlassTopBar` icon buttons, `PcView` landscape nav rail buttons, `GlassModalDialog`, `GlassBottomSheetOverlay`, `GlassMenuOverlay`, `GlassDialogPortal`, `GlassWallpaperNoticeCard`, `AddComputerGlassScreen`), cutting dialog open/close glass passes from **11 down to 1**.
+  - Optimized `LiquidGlassSwitch` and `LiquidGlassSlider` to use zero `LayerBackdrop` recording, AGSL shaders, or shadow FBOs while idle, activating full optical lens refraction instantly on touch/drag/toggle.
+  - Eliminated triple-stacked full-screen blur in `LiquidFloatingBottomBar` (inner sliding lens now applies single-pass `lens()` directly over `dockContentBackdrop`), disabled heavy per-card offscreen `ShadowNode` FBOs on scrolling `PcCard` / `AppCard` grids, reduced chrome/sheet shadow radii (`12–16 dp`), and removed redundant second Gaussian blur on the 28 `AttectGlassMenuHost` shortcut buttons while preserving crisp single-pass optical lens refraction.
+- **Fix & Feat (Tab Drag Stall Fix & 1:1 Synchronized Tab ↔ Page Animations):**
+  - Fixed active-tab dragging stalling mid-transition in `LiquidFloatingBottomBar` by replacing repeated `animateScrollToPage` cancellations with a single conflated `snapshotFlow` driving `pagerState.scrollToPage(page, offsetFraction)` **1:1 with the finger**, snapping smoothly on release via a single tracked `Job`.
+  - Bound the sliding lens bubble, tab icon/label color interpolation, and bar scroll directly to `pagerState.currentPage + pagerState.currentPageOffsetFraction` (eliminating secondary `animateFloatAsState` lag).
+  - Rebuilt `GlassPillTabBar` (Tabbed mode) as a single Liquid Glass capsule with a 1:1 width-morphing sliding active lens pill (replacing 7 independent `drawBackdrop` pills).
+  - Upgraded Material You Expressive's Floating Bottom Bar (`activity_stream_settings.xml`, `StreamSettings.java`) with a sliding M3 pill indicator and `onPageScrolled` 1:1 color & scroll synchronization.
+- **Polish (Background Controls & Turkish Localization):**
+  - Removed the redundant **Background opacity** (`seekbar_ui_background_opacity`) setting and its extra background `alpha` compositing layer; custom images & wallpapers render cleanly at full visibility beneath the optional color tint overlay.
+  - Refined Turkish localization (`values-tr/strings.xml`): **`Arka plan renk tonu`**, **`Renk tonu yoğunluğu`**, and **`Renk Tonu Yok (Orijinal Renkler)`**.
+  - Added `WallpaperManager.getWallpaperId(FLAG_SYSTEM)` change detection for cached static wallpapers on Android ≤12 while keeping zero-permission `FLAG_SHOW_WALLPAPER` on Android 13+.
+
+---
+
 ## [v3.0.2-zenith] - 2026-11-25
 
 ### ⚡ True GPU-Saving Liquid Glass FPS Pacing & Floating Bottom Bar Polish

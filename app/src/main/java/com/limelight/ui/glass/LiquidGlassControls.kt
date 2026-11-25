@@ -34,8 +34,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -48,6 +48,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -82,22 +83,25 @@ import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberCombinedBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.kyant.backdrop.drawBackdrop
-import com.kyant.backdrop.effects.blur
 import com.kyant.backdrop.effects.lens
-import com.kyant.backdrop.effects.vibrancy
 import com.kyant.backdrop.highlight.Highlight
 import com.kyant.backdrop.isRenderEffectSupported
-import com.kyant.backdrop.shadow.Shadow
 import com.limelight.R
 import com.limelight.ui.background.UiBackgroundManager
 import com.limelight.ui.background.UiBackgroundState
 import kotlinx.coroutines.delay
+import kotlin.math.abs
 import kotlin.math.roundToInt
 
 /**
  * Authentic Kyant0/AndroidLiquidGlass-powered Switch (`LiquidToggle` architecture).
- * The glass capsule thumb refracts both the underlying screen backdrop AND the glowing switch track,
- * stretching and turning crystal-clear on press or horizontal drag.
+ *
+ * Performance optimization:
+ * - While completely idle (e.g., scrolling past 10 toggles in Settings), renders a crisp glossy
+ *   capsule thumb with ZERO `LayerBackdrop` recording, ZERO AGSL shaders, and ZERO shadow FBOs.
+ * - The instant the user touches, drags, or toggles the switch, activates the full refractive
+ *   Liquid Glass magnifying capsule over the glowing switch track strictly until finger lift and
+ *   spring settle.
  */
 @Composable
 fun LiquidGlassSwitch(
@@ -135,7 +139,13 @@ fun LiquidGlassSwitch(
         label = "liquidTogglePress"
     )
 
-    val trackBackdrop = rememberFramePacedLayerBackdrop()
+    val isGlassActive = isRenderEffectSupported() && (
+        isPressedOrDragging ||
+            pressProgress > 0.01f ||
+            (animatedFraction > 0.01f && animatedFraction < 0.99f)
+        )
+
+    val trackBackdrop = rememberLayerBackdrop()
     val thumbBackdrop = rememberCombinedBackdrop(backdrop, trackBackdrop)
     val primaryColor = MaterialTheme.colorScheme.primary
     val inactiveTrackColor = Color.White.copy(alpha = 0.18f)
@@ -171,7 +181,7 @@ fun LiquidGlassSwitch(
                             }
                             change.consume()
                             val dx = change.position.x - startX
-                            if (kotlin.math.abs(dx) > 6f) {
+                            if (abs(dx) > 6f) {
                                 moved = true
                             }
                             if (travelPx > 0f && moved) {
@@ -188,12 +198,11 @@ fun LiquidGlassSwitch(
                 }
             }
     ) {
-        // Track recorded into trackBackdrop so the refractive thumb magnifies its glowing edge
         val activeColor = lerpColor(inactiveTrackColor, primaryColor.copy(alpha = 0.88f), animatedFraction)
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .framePacedLayerBackdrop(trackBackdrop)
+                .then(if (isGlassActive) Modifier.layerBackdrop(trackBackdrop) else Modifier)
                 .clip(RoundedCornerShape(16.dp))
                 .background(activeColor)
                 .border(
@@ -203,7 +212,6 @@ fun LiquidGlassSwitch(
                 )
         )
 
-        // Refractive Liquid Glass capsule thumb
         val thumbShape = RoundedCornerShape(12.dp)
         val thumbModifier = Modifier
             .padding(start = padDp)
@@ -214,21 +222,13 @@ fun LiquidGlassSwitch(
             }
             .size(width = thumbWidthDp, height = thumbHeightDp)
             .let { base ->
-                if (isRenderEffectSupported()) {
-                    base
-                        .framePacedGlassCache(
-                            cacheKey = isPressedOrDragging to checked,
-                            padDp = 12.dp
-                        )
-                        .drawBackdrop(
-                            backdrop = thumbBackdrop,
+                if (isGlassActive) {
+                    base.drawBackdrop(
+                        backdrop = thumbBackdrop,
                         shape = { thumbShape },
                         effects = {
                             val t = tokensState.value
-                            if (t.vibrancyEnabled) vibrancy()
-                            val blurR = lerp(2f, 0.5f, pressProgress).dp.toPx()
-                            if (blurR > 0.2f) blur(blurR)
-                            val refH = lerp(6f, 11f, pressProgress).dp.toPx()
+                            val refH = lerp(6f, 12f, pressProgress).dp.toPx()
                             val refA = lerp(12f, 26f, pressProgress).dp.toPx()
                             lens(
                                 refractionHeight = refH,
@@ -244,22 +244,18 @@ fun LiquidGlassSwitch(
                                 alpha = (t.highlightAlpha * 1.15f).coerceIn(0.45f, 1f)
                             )
                         },
-                        shadow = {
-                            Shadow(
-                                radius = 6.dp,
-                                color = Color.Black.copy(alpha = 0.30f)
-                            )
-                        },
+                        shadow = null,
                         onDrawSurface = {
                             val t = tokensState.value
-                            val fillAlpha = lerp(0.84f, 0.22f, pressProgress)
+                            val fillAlpha = lerp(0.84f, 0.18f, pressProgress)
                             drawRect(Color.White.copy(alpha = fillAlpha + (t.highlightAlpha * 0.0001f)))
                         }
                     )
                 } else {
                     base
                         .clip(thumbShape)
-                        .background(Color.White.copy(alpha = 0.92f))
+                        .background(Color.White.copy(alpha = 0.94f))
+                        .border(0.75.dp, Color.White.copy(alpha = 0.55f), thumbShape)
                 }
             }
 
@@ -269,9 +265,10 @@ fun LiquidGlassSwitch(
 
 /**
  * Authentic Kyant0/AndroidLiquidGlass-powered Slider (`LiquidSlider` architecture).
- * Features a sleek translucent track with glowing active fill and an interactive Liquid Glass
- * capsule thumb that stays magnified and refractive from touch-down until finger lift,
- * regardless of finger movement outside the slider bounds.
+ *
+ * Uses a single unified `awaitEachGesture` loop so the magnified refractive Liquid Glass capsule
+ * stays active strictly until the user lifts their finger off the display (never cancelling when
+ * dragging outside slider bounds), and skips per-frame backdrop/shadow work while completely idle.
  */
 @Composable
 fun LiquidGlassSlider(
@@ -279,8 +276,8 @@ fun LiquidGlassSlider(
     minValue: Int,
     maxValue: Int,
     step: Int,
-    backdrop: Backdrop = LocalContentBackdrop.current,
     onValueChange: (Int) -> Unit,
+    backdrop: Backdrop = LocalContentBackdrop.current,
     modifier: Modifier = Modifier
 ) {
     val tokensState = LocalGlassTokensState.current
@@ -288,19 +285,19 @@ fun LiquidGlassSlider(
     val safeStep = step.coerceAtLeast(1)
     val range = (safeMax - minValue).toFloat()
 
+    val currentValue by rememberUpdatedState(value)
+    val currentOnValueChange by rememberUpdatedState(onValueChange)
+
     var isDragging by remember { mutableStateOf(false) }
-    var rawFraction by remember {
+    var rawFraction by remember(minValue, safeMax) {
         mutableFloatStateOf(((value - minValue).toFloat() / range).coerceIn(0f, 1f))
     }
 
-    LaunchedEffect(value, minValue, safeMax, isDragging) {
+    LaunchedEffect(value, isDragging, minValue, safeMax) {
         if (!isDragging) {
             rawFraction = ((value - minValue).toFloat() / range).coerceIn(0f, 1f)
         }
     }
-
-    val currentValue by rememberUpdatedState(value)
-    val currentOnValueChange by rememberUpdatedState(onValueChange)
 
     val displayedFraction by animateFloatAsState(
         targetValue = if (isDragging) rawFraction else ((value - minValue).toFloat() / range).coerceIn(0f, 1f),
@@ -313,6 +310,8 @@ fun LiquidGlassSlider(
         label = "liquidSliderDrag"
     )
 
+    val isGlassActive = isRenderEffectSupported() && (isDragging || dragScale > 0.01f)
+
     fun commitFraction(frac: Float) {
         val clamped = frac.coerceIn(0f, 1f)
         rawFraction = clamped
@@ -324,7 +323,7 @@ fun LiquidGlassSlider(
         }
     }
 
-    val trackBackdrop = rememberFramePacedLayerBackdrop()
+    val trackBackdrop = rememberLayerBackdrop()
     val thumbBackdrop = rememberCombinedBackdrop(backdrop, trackBackdrop)
     val primaryColor = MaterialTheme.colorScheme.primary
     val tertiaryColor = MaterialTheme.colorScheme.tertiary
@@ -363,7 +362,6 @@ fun LiquidGlassSlider(
         val thumbWidthPx = with(density) { thumbWidth.toPx() }
         val usableWidthPx = (totalWidthPx - thumbWidthPx).coerceAtLeast(1f)
 
-        // Track recorded into trackBackdrop so the lens thumb visibly magnifies the active fill edge
         Box(
             contentAlignment = Alignment.CenterStart,
             modifier = Modifier
@@ -385,8 +383,6 @@ fun LiquidGlassSlider(
                                     break
                                 }
                                 change.consume()
-                                // Track X across the entire screen; keep Liquid Glass active strictly
-                                // until the finger is actually lifted off the display.
                                 commitFraction((change.position.x - thumbWidthPx / 2f) / usableWidthPx)
                             }
                         } finally {
@@ -400,7 +396,7 @@ fun LiquidGlassSlider(
                     .fillMaxWidth()
                     .padding(horizontal = thumbWidth / 2f)
                     .height(10.dp)
-                    .framePacedLayerBackdrop(trackBackdrop)
+                    .then(if (isGlassActive) Modifier.layerBackdrop(trackBackdrop) else Modifier)
                     .clip(RoundedCornerShape(5.dp))
                     .background(Color.White.copy(alpha = 0.16f))
                     .border(
@@ -425,7 +421,6 @@ fun LiquidGlassSlider(
                 )
             }
 
-            // Refractive Liquid Glass capsule thumb
             val thumbShape = RoundedCornerShape(13.dp)
             val thumbMod = Modifier
                 .graphicsLayer {
@@ -435,20 +430,12 @@ fun LiquidGlassSlider(
                 }
                 .size(width = thumbWidth, height = thumbHeight)
                 .let { base ->
-                    if (isRenderEffectSupported()) {
-                        base
-                            .framePacedGlassCache(
-                                cacheKey = isDragging,
-                                padDp = 14.dp
-                            )
-                            .drawBackdrop(
-                                backdrop = thumbBackdrop,
+                    if (isGlassActive) {
+                        base.drawBackdrop(
+                            backdrop = thumbBackdrop,
                             shape = { thumbShape },
                             effects = {
                                 val t = tokensState.value
-                                if (t.vibrancyEnabled) vibrancy()
-                                val blurR = lerp(2.5f, 0.5f, dragScale).dp.toPx()
-                                if (blurR > 0.2f) blur(blurR)
                                 val refH = lerp(8f, 14f, dragScale).dp.toPx()
                                 val refA = lerp(16f, 34f, dragScale).dp.toPx()
                                 lens(
@@ -465,22 +452,18 @@ fun LiquidGlassSlider(
                                     alpha = (t.highlightAlpha * 1.15f).coerceIn(0.5f, 1f)
                                 )
                             },
-                            shadow = {
-                                Shadow(
-                                    radius = 10.dp,
-                                    color = Color.Black.copy(alpha = 0.34f)
-                                )
-                            },
+                            shadow = null,
                             onDrawSurface = {
                                 val t = tokensState.value
-                                val alphaVal = lerp(0.76f, 0.14f, dragScale)
+                                val alphaVal = lerp(0.82f, 0.14f, dragScale)
                                 drawRect(Color.White.copy(alpha = alphaVal + (t.highlightAlpha * 0.0001f)))
                             }
                         )
                     } else {
                         base
                             .clip(thumbShape)
-                            .background(Color.White.copy(alpha = 0.92f))
+                            .background(Color.White.copy(alpha = 0.94f))
+                            .border(0.9.dp, Color.White.copy(alpha = 0.55f), thumbShape)
                     }
                 }
 
@@ -545,22 +528,22 @@ fun resolveSettingsNavTabItem(categoryKey: String?, fallbackTitle: String): Sett
 }
 
 /**
- * Liquid Glass Floating Bottom Navigation Bar.
+ * Liquid Glass Floating Bottom Navigation Bar with true 1:1 [PagerState] synchronization.
  *
  * Features:
- * - Outer full-capsule Liquid Glass dock floating above the gesture bar (`combinedBackdrop` refracts
+ * - Outer full-capsule Liquid Glass dock floating above the gesture bar (`backdrop` refracts
  *   scrolling settings cards right behind it).
- * - Inner sliding **Liquid Glass lens bubble** that glides smoothly with spring physics on tap,
- *   tracks pager swipes 1:1, and supports **press-and-drag scrubbing across tabs**.
- * - Pressing & holding on the active tab swells the entire dock by ~5% and dynamically shifts the
- *   dock horizontally toward the finger's screen X offset (centered = 0 shift, right = slight right
- *   shift, left = slight left shift), springing smoothly back to rest on finger lift.
+ * - Inner sliding **Liquid Glass lens bubble** driven directly 1:1 by [pagerState] (zero double-
+ *   animation lag) using single-pass `lens()` over `dockContentBackdrop` (eliminating triple blur).
+ * - Pressing & dragging the active tab swells the entire dock by +5%, dynamically shifts the dock
+ *   horizontally toward the finger's screen X offset (0 at screen center, ±16dp at screen edges),
+ *   and drives [pagerState.scrollToPage] directly 1:1 via a single conflated `snapshotFlow`
+ *   collector (zero coroutine cancellations or mid-transition stalls!), snapping smoothly on lift.
  */
 @Composable
 fun LiquidFloatingBottomBar(
     tabs: List<SettingsNavTabItem>,
-    selectedIndex: Int,
-    pageOffsetFraction: Float,
+    pagerState: PagerState,
     onTabSelected: (Int) -> Unit,
     backdrop: Backdrop = LocalContentBackdrop.current,
     modifier: Modifier = Modifier
@@ -572,7 +555,6 @@ fun LiquidFloatingBottomBar(
     val scrollState = rememberScrollState()
     val density = LocalDensity.current
 
-    // +20% larger default floating capsule proportions
     val itemWidthDp = 90.dp
     val itemWidthPx = with(density) { itemWidthDp.toPx() }
     val dockPaddingHorizontal = 7.dp
@@ -581,27 +563,23 @@ fun LiquidFloatingBottomBar(
     val dockHeight = 80.dp
     val maxShiftPx = with(density) { 16.dp.toPx() }
 
-    val currentSelectedIndex by rememberUpdatedState(selectedIndex)
     val currentOnTabSelected by rememberUpdatedState(onTabSelected)
 
     var isHoldingActiveTab by remember { mutableStateOf(false) }
-    var scrubIndexFloat by remember { mutableFloatStateOf(selectedIndex.toFloat()) }
+    var scrubIndexFloat by remember { mutableFloatStateOf(pagerState.currentPage.toFloat()) }
     var targetDockShiftPx by remember { mutableFloatStateOf(0f) }
     var lastPointerLocalX by remember { mutableFloatStateOf(0f) }
     var dockLeftInScreenPx by remember { mutableFloatStateOf(0f) }
     var dockWidthPx by remember { mutableFloatStateOf(0f) }
 
-    val targetPos = if (isHoldingActiveTab) {
+    val exactPagerPos = (pagerState.currentPage + pagerState.currentPageOffsetFraction)
+        .coerceIn(0f, tabs.lastIndex.toFloat())
+    val activeIndicatorPos = if (isHoldingActiveTab) {
         scrubIndexFloat.coerceIn(0f, tabs.lastIndex.toFloat())
     } else {
-        (selectedIndex + pageOffsetFraction).coerceIn(0f, tabs.lastIndex.toFloat())
+        exactPagerPos
     }
 
-    val animatedIndicatorIndex by animateFloatAsState(
-        targetValue = targetPos,
-        animationSpec = spring(stiffness = Spring.StiffnessMediumLow, dampingRatio = 0.78f),
-        label = "glassDockLensPos"
-    )
     val scrubScale by animateFloatAsState(
         targetValue = if (isHoldingActiveTab) 1f else 0f,
         animationSpec = spring(stiffness = Spring.StiffnessMedium, dampingRatio = 0.68f),
@@ -618,18 +596,39 @@ fun LiquidFloatingBottomBar(
         label = "glassDockHoldShiftX"
     )
 
-    // Smoothly keep the active tab centered inside the scrollable capsule when not actively dragging
-    LaunchedEffect(selectedIndex, tabs.size, isHoldingActiveTab) {
-        if (!isHoldingActiveTab && scrollState.maxValue > 0) {
-            val targetScroll = ((selectedIndex * itemWidthPx) - itemWidthPx * 1.4f)
-                .roundToInt()
-                .coerceIn(0, scrollState.maxValue)
-            scrollState.animateScrollTo(targetScroll)
+    // Single conflated sequential collector: drives HorizontalPager 1:1 during active-tab drag
+    // with ZERO cancelled animations and ZERO stalls!
+    LaunchedEffect(isHoldingActiveTab, pagerState, tabs.size) {
+        if (!isHoldingActiveTab) return@LaunchedEffect
+        snapshotFlow { scrubIndexFloat.coerceIn(0f, tabs.lastIndex.toFloat()) }
+            .collect { pos ->
+                val page = pos.roundToInt().coerceIn(0, tabs.lastIndex)
+                val offsetFrac = (pos - page).coerceIn(-0.5f, 0.5f)
+                pagerState.scrollToPage(page = page, pageOffsetFraction = offsetFrac)
+            }
+    }
+
+    // Continuously keep the active lens centered inside the scrollable dock in 1:1 sync with pager
+    LaunchedEffect(pagerState, isHoldingActiveTab, tabs.size, itemWidthPx, dockWidthPx) {
+        if (isHoldingActiveTab) return@LaunchedEffect
+        snapshotFlow {
+            (pagerState.currentPage + pagerState.currentPageOffsetFraction)
+                .coerceIn(0f, tabs.lastIndex.toFloat())
+        }.collect { pos ->
+            val maxScroll = scrollState.maxValue
+            if (maxScroll > 0 && dockWidthPx > 0f) {
+                val centerX = pos * itemWidthPx + itemWidthPx / 2f
+                val viewportW = (dockWidthPx - dockPadPx * 2f).coerceAtLeast(1f)
+                val targetScroll = (centerX - viewportW / 2f).roundToInt().coerceIn(0, maxScroll)
+                if (abs(targetScroll - scrollState.value) > 1) {
+                    scrollState.scrollTo(targetScroll)
+                }
+            }
         }
     }
 
     // Gentle edge auto-scroll when scrubbing the active tab near the left/right edges of the dock
-    LaunchedEffect(isHoldingActiveTab) {
+    LaunchedEffect(isHoldingActiveTab, tabs.size) {
         if (!isHoldingActiveTab) return@LaunchedEffect
         val edgeZonePx = with(density) { 48.dp.toPx() }
         val maxSpeedPxPerFrame = with(density) { 9.dp.toPx() }
@@ -654,20 +653,15 @@ fun LiquidFloatingBottomBar(
                     if (nextScroll != scrollState.value) {
                         scrollState.scrollTo(nextScroll)
                         val contentX = (x - dockPadPx) + nextScroll
-                        val nextScrub = (contentX / itemWidthPx - 0.5f).coerceIn(0f, tabs.lastIndex.toFloat())
-                        scrubIndexFloat = nextScrub
-                        val hovered = nextScrub.roundToInt().coerceIn(0, tabs.lastIndex)
-                        if (hovered != currentSelectedIndex) {
-                            currentOnTabSelected(hovered)
-                        }
+                        scrubIndexFloat = (contentX / itemWidthPx - 0.5f)
+                            .coerceIn(0f, tabs.lastIndex.toFloat())
                     }
                 }
             }
         }
     }
 
-    val dockContentBackdrop = rememberFramePacedLayerBackdrop()
-    val lensBackdrop = rememberCombinedBackdrop(backdrop, dockContentBackdrop)
+    val dockContentBackdrop = rememberLayerBackdrop()
     val primaryColor = MaterialTheme.colorScheme.primary
     val onSurface = MaterialTheme.colorScheme.onSurface
     val onSurfaceVariant = MaterialTheme.colorScheme.onSurfaceVariant
@@ -696,7 +690,9 @@ fun LiquidFloatingBottomBar(
                             requireUnconsumed = false,
                             pass = PointerEventPass.Initial
                         )
-                        val activeLeftPx = dockPadPx + (currentSelectedIndex * itemWidthPx) - scrollState.value
+                        val livePagerPos = (pagerState.currentPage + pagerState.currentPageOffsetFraction)
+                            .coerceIn(0f, tabs.lastIndex.toFloat())
+                        val activeLeftPx = dockPadPx + (livePagerPos * itemWidthPx) - scrollState.value
                         val activeRightPx = activeLeftPx + itemWidthPx
 
                         if (down.position.x !in activeLeftPx..activeRightPx) {
@@ -707,7 +703,7 @@ fun LiquidFloatingBottomBar(
                         down.consume()
                         isHoldingActiveTab = true
                         lastPointerLocalX = down.position.x
-                        scrubIndexFloat = currentSelectedIndex.toFloat()
+                        scrubIndexFloat = livePagerPos
 
                         fun computeDockShiftFromLocalX(localX: Float): Float {
                             val fingerScreenX = dockLeftInScreenPx + localX
@@ -733,21 +729,14 @@ fun LiquidFloatingBottomBar(
                                 targetDockShiftPx = computeDockShiftFromLocalX(localX)
 
                                 val contentX = (localX - dockPadPx) + scrollState.value
-                                val nextScrub = (contentX / itemWidthPx - 0.5f)
+                                scrubIndexFloat = (contentX / itemWidthPx - 0.5f)
                                     .coerceIn(0f, tabs.lastIndex.toFloat())
-                                scrubIndexFloat = nextScrub
-                                val hovered = nextScrub.roundToInt().coerceIn(0, tabs.lastIndex)
-                                if (hovered != currentSelectedIndex) {
-                                    currentOnTabSelected(hovered)
-                                }
                             }
                         } finally {
                             val finalTarget = scrubIndexFloat.roundToInt().coerceIn(0, tabs.lastIndex)
                             isHoldingActiveTab = false
                             targetDockShiftPx = 0f
-                            if (finalTarget != currentSelectedIndex) {
-                                currentOnTabSelected(finalTarget)
-                            }
+                            currentOnTabSelected(finalTarget)
                         }
                     }
                 }
@@ -761,49 +750,37 @@ fun LiquidFloatingBottomBar(
                         scaleY = dockScale
                         translationX = animatedDockShiftX
                     }
+                    .liquidGlassSurface(
+                        backdrop = backdrop,
+                        shape = RoundedCornerShape(40.dp),
+                        level = GlassElevationLevel.CHROME,
+                        enableLens = true,
+                        enableShadow = true
+                    )
+                    .padding(horizontal = dockPaddingHorizontal, vertical = dockPaddingVertical)
             ) {
                 Box(
-                    modifier = Modifier
-                        .matchParentSize()
-                        .liquidGlassSurface(
-                            backdrop = backdrop,
-                            shape = RoundedCornerShape(40.dp),
-                            level = GlassElevationLevel.CHROME,
-                            enableLens = true,
-                            enableShadow = true
-                        )
-                )
-                Box(
-                    modifier = Modifier
-                        .padding(horizontal = dockPaddingHorizontal, vertical = dockPaddingVertical)
-                        .horizontalScroll(scrollState)
+                    modifier = Modifier.horizontalScroll(scrollState)
                 ) {
-                    // Sliding Liquid Glass active lens bubble behind/over active item
+                    // Sliding Liquid Glass active lens bubble: single-pass lens over dockContentBackdrop
+                    // (no redundant second full-screen blur!)
                     val pillShape = RoundedCornerShape(34.dp)
                     val lensMod = Modifier
                         .graphicsLayer {
-                            translationX = animatedIndicatorIndex * itemWidthPx
+                            translationX = activeIndicatorPos * itemWidthPx
                             scaleX = lerp(1f, 1.12f, scrubScale)
                             scaleY = lerp(1f, 1.09f, scrubScale)
                         }
                         .size(width = itemWidthDp, height = dockHeight - (dockPaddingVertical * 2))
                         .let { base ->
                             if (isRenderEffectSupported()) {
-                                base
-                                    .framePacedGlassCache(
-                                        cacheKey = isHoldingActiveTab to selectedIndex,
-                                        padDp = 6.dp
-                                    )
-                                    .drawBackdrop(
-                                        backdrop = lensBackdrop,
+                                base.drawBackdrop(
+                                    backdrop = dockContentBackdrop,
                                     shape = { pillShape },
                                     effects = {
                                         val t = tokensState.value
-                                        if (t.vibrancyEnabled) vibrancy()
-                                        val b = lerp(2.5f, 0.5f, scrubScale).dp.toPx()
-                                        if (b > 0.2f) blur(b)
-                                        val refH = lerp(12f, 18f, scrubScale).dp.toPx()
-                                        val refA = lerp(22f, 40f, scrubScale).dp.toPx()
+                                        val refH = lerp(11f, 18f, scrubScale).dp.toPx()
+                                        val refA = lerp(20f, 38f, scrubScale).dp.toPx()
                                         lens(
                                             refractionHeight = refH,
                                             refractionAmount = refA,
@@ -840,18 +817,22 @@ fun LiquidFloatingBottomBar(
 
                     Box(modifier = lensMod)
 
-                    // Tab icons + compact labels recorded into dockContentBackdrop
+                    // Tab icons + compact labels recorded into dockContentBackdrop with smooth 1:1 color sync
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
                             .fillMaxHeight()
-                            .framePacedLayerBackdrop(dockContentBackdrop)
+                            .layerBackdrop(dockContentBackdrop)
                     ) {
                         tabs.forEachIndexed { index, tab ->
-                            val isSelected = index == selectedIndex
+                            val activeWeight = (1f - abs(activeIndicatorPos - index)).coerceIn(0f, 1f)
                             val itemInteraction = remember { MutableInteractionSource() }
                             val isFocused by itemInteraction.collectIsFocusedAsState()
-                            val itemColor = if (isSelected) primaryColor else onSurfaceVariant.copy(alpha = 0.85f)
+                            val contentColor = lerpColor(
+                                onSurfaceVariant.copy(alpha = 0.85f),
+                                onSurface,
+                                activeWeight
+                            )
 
                             Column(
                                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -868,13 +849,13 @@ fun LiquidFloatingBottomBar(
                                     .clickable(
                                         interactionSource = itemInteraction,
                                         indication = null
-                                    ) { onTabSelected(index) }
+                                    ) { currentOnTabSelected(index) }
                                     .padding(horizontal = 4.dp)
                             ) {
                                 Icon(
                                     painter = painterResource(id = tab.iconRes),
                                     contentDescription = tab.shortLabel,
-                                    tint = if (isSelected) onSurface else itemColor,
+                                    tint = contentColor,
                                     modifier = Modifier.size(25.dp)
                                 )
                                 Spacer(modifier = Modifier.height(3.dp))
@@ -882,9 +863,9 @@ fun LiquidFloatingBottomBar(
                                     text = tab.shortLabel,
                                     style = MaterialTheme.typography.labelSmall.copy(
                                         fontSize = 12.5.sp,
-                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                                        fontWeight = if (activeWeight >= 0.5f) FontWeight.Bold else FontWeight.Medium
                                     ),
-                                    color = if (isSelected) onSurface else itemColor,
+                                    color = contentColor,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
@@ -909,7 +890,7 @@ fun LiquidGlassLivePreviewCard(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val previewBackdrop = rememberFramePacedLayerBackdrop()
+    val previewBackdrop = rememberLayerBackdrop()
     val customBitmap = remember(bgState.hasCustomImage, bgState.imageVersion) {
         if (bgState.hasCustomImage) UiBackgroundManager.loadCustomBitmapSync(context) else null
     }
@@ -939,11 +920,10 @@ fun LiquidGlassLivePreviewCard(
             val maxDx = with(density) { ((maxWidth - lensWidth) / 2f - 10.dp).toPx().coerceAtLeast(10f) }
             val maxDy = with(density) { ((maxHeight - lensHeight) / 2f - 8.dp).toPx().coerceAtLeast(6f) }
 
-            // High-contrast scene recorded into previewBackdrop
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .framePacedLayerBackdrop(previewBackdrop)
+                    .layerBackdrop(previewBackdrop)
             ) {
                 if (customBitmap != null && !customBitmap.isRecycled) {
                     Image(
@@ -987,7 +967,6 @@ fun LiquidGlassLivePreviewCard(
                             radius = w * 0.38f,
                             center = Offset(w * 0.54f, h * 0.25f)
                         )
-                        // High-contrast crisp grid & diagonal stripe so lens refraction + RGB prism pop unmistakably
                         val step = 22.dp.toPx()
                         var x = step
                         while (x < w) {
@@ -1012,7 +991,6 @@ fun LiquidGlassLivePreviewCard(
                     }
                 }
 
-                // Crisp high-contrast text behind the draggable glass lens
                 Row(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
@@ -1039,7 +1017,6 @@ fun LiquidGlassLivePreviewCard(
                 }
             }
 
-            // Draggable live Liquid Glass capsule refracting previewBackdrop with all 8 active parameters!
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
@@ -1131,7 +1108,8 @@ fun GlassWallpaperNoticeCard(
             text = stringResource(R.string.ui_background_pick_action),
             onClick = onPickCustomImage,
             primary = true,
-            backdrop = backdrop
+            backdrop = backdrop,
+            nestedInGlass = true
         )
     }
 }

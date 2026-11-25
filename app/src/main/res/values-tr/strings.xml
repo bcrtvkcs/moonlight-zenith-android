@@ -338,10 +338,8 @@
     <string name="ui_background_image_saved">Arka plan görseli güncellendi</string>
     <string name="ui_background_image_failed">Seçilen görsel yüklenemedi</string>
     <string name="ui_background_image_cleared">Özel arka plan görseli kaldırıldı</string>
-    <string name="title_ui_background_opacity">Arka plan opaklığı</string>
-    <string name="summary_ui_background_opacity">Özel görselin veya telefon duvar kağıdının arayüz arkasındaki görünürlüğünü ayarlayın</string>
-    <string name="title_ui_background_tint_mode">Arka plan renk tonu (Tint)</string>
-    <string name="summary_ui_background_tint_mode">Görsel uyum ve okunabilirlik için arka plan görseli veya duvar kağıdı üzerine renk tonu uygulayın</string>
+    <string name="title_ui_background_tint_mode">Arka plan renk tonu</string>
+    <string name="summary_ui_background_tint_mode">Okunabilirlik ve görsel uyum için arka planın üzerine renk tonu kaplaması uygulayın</string>
     <string name="ui_background_tint_theme_surface">Tema Yüzeyi (Uyumlu)</string>
     <string name="ui_background_tint_theme_primary">Tema Vurgu Rengi</string>
     <string name="ui_background_tint_pure_black">Saf Siyah Karartma</string>
@@ -350,11 +348,11 @@
     <string name="ui_background_tint_emerald">Zümrüt Yeşili</string>
     <string name="ui_background_tint_amber">Sıcak Kehribar</string>
     <string name="ui_background_tint_crimson">Kadife Kızıl</string>
-    <string name="ui_background_tint_none">Tint Yok (Orijinal Renkler)</string>
-    <string name="title_ui_background_tint_opacity">Tint yoğunluğu</string>
+    <string name="ui_background_tint_none">Renk Tonu Yok (Orijinal Renkler)</string>
+    <string name="title_ui_background_tint_opacity">Renk tonu yoğunluğu</string>
     <string name="summary_ui_background_tint_opacity">Arka plan üzerindeki renk tonu kaplamasının şiddetini ayarlayın</string>
     <string name="title_ui_background_blur">Arka plan bulanıklığı</string>
-    <string name="summary_ui_background_blur">Karmaşık arka plan fotoğraflarını yumuşatarak metin okunabilirliğini artırın (Android 12+)</string>
+    <string name="summary_ui_background_blur">Karmaşık arka plan fotoğraflarını yumuşatarak metin okunabilirliğini artırın</string>
     <string name="suffix_dp">dp</string>
     <string name="title_settings_nav_style">Ayarlar gezinme stili</string>
     <string name="summary_settings_nav_style">Ayarlar ekranında üst sekmeler veya yüzen alt gezinme çubuğu arasında seçim yapın</string>
@@ -370,9 +368,6 @@
     <string name="glass_live_preview_title">Canlı Liquid Glass Önizleme</string>
     <string name="glass_live_preview_subtitle">Lens kırılması, bulanıklık ve prizma dağılımını anlık görmek için merceği sürükleyin veya aşağıdaki ayarları değiştirin</string>
     <string name="glass_wallpaper_refraction_notice">Kartlarda tam optik kırılma için Özel Görsel seçeneğini kullanınız</string>
-    <string name="title_glass_fps">Liquid Glass yenileme hızı (FPS)</string>
-    <string name="summary_glass_fps">Akıcılık ve pil tasarrufu dengesi için dinamik Liquid Glass kırılma güncellemelerinin saniyedeki kare sınırını belirler</string>
-    <string name="glass_fps_unlimited">144+ FPS (Sınırsız)</string>
     <string name="title_audio_output">Ses çıkışı</string>
     <string name="summary_audio_output">Yayın sesinin nerede oynatılacağını seçin</string>
     <string name="audio_output_client">Bu cihaz (İstemci)</string>

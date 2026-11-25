@@ -70,8 +70,7 @@ data class GlassTokens(
     val accentTint: Color,
     val sheetTint: Color,
     val highlightAlpha: Float,
-    val fallbackCardBorder: Color,
-    val glassMaxFps: Int
+    val fallbackCardBorder: Color
 )
 
 private val DefaultGlassTokens = buildGlassTokens(UiBackgroundState(), ZenithDarkColorScheme)
@@ -125,8 +124,7 @@ fun buildGlassTokens(bgState: UiBackgroundState, scheme: ColorScheme): GlassToke
         sheetTint = scheme.surfaceContainer.copy(alpha = (surfaceAlpha + 0.08f).coerceAtMost(0.80f)),
         highlightAlpha = highlightAlpha,
         fallbackCardBorder = (if (isTintedBase) primary else Color.White)
-            .copy(alpha = (highlightAlpha * 0.38f).coerceIn(0.08f, 0.50f)),
-        glassMaxFps = bgState.glassMaxFps
+            .copy(alpha = (highlightAlpha * 0.38f).coerceIn(0.08f, 0.50f))
     )
 }
 

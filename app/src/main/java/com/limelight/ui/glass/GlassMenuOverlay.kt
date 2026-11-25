@@ -118,12 +118,9 @@ private fun GlassMenuContent(
             contentAlignment = Alignment.Center,
             modifier = Modifier
                 .size(46.dp)
-                .liquidGlassSurface(
-                    backdrop = backdrop,
+                .nestedGlassSurface(
                     shape = RoundedCornerShape(15.dp),
-                    level = GlassElevationLevel.ACCENT,
-                    tintOverride = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.44f),
-                    enableShadow = false
+                    fillColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.48f)
                 )
         ) {
             Icon(
@@ -197,14 +194,10 @@ private fun GlassMenuContent(
                         scaleX = scale
                         scaleY = scale
                     }
-                    .liquidGlassSurface(
-                        backdrop = backdrop,
+                    .nestedGlassSurface(
                         shape = RoundedCornerShape(18.dp),
-                        level = if (option.isPrimary || option.isDestructive) GlassElevationLevel.ACCENT else GlassElevationLevel.CHROME,
-                        tintOverride = rowTint,
-                        isFocused = isFocused,
-                        enableLens = true,
-                        enableShadow = false
+                        fillColor = rowTint,
+                        isFocused = isFocused
                     )
                     .focusable(interactionSource = interactionSource)
                     .clickable(interactionSource = interactionSource, indication = null) {

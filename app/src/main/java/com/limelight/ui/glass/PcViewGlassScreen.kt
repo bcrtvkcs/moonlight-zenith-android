@@ -177,7 +177,8 @@ fun PcViewGlassScreen(
                             .liquidGlassSurface(
                                 backdrop = combinedBackdrop,
                                 shape = RoundedCornerShape(37.dp),
-                                level = GlassElevationLevel.CHROME
+                                level = GlassElevationLevel.CHROME,
+                                enableShadow = true
                             )
                             .padding(vertical = 18.dp)
                     ) {
@@ -189,7 +190,8 @@ fun PcViewGlassScreen(
                             iconSize = 26.dp,
                             backdrop = combinedBackdrop,
                             level = GlassElevationLevel.ACCENT,
-                            iconTint = MaterialTheme.colorScheme.onPrimaryContainer
+                            iconTint = MaterialTheme.colorScheme.onPrimaryContainer,
+                            nestedInGlass = true
                         )
                         HorizontalDivider(
                             modifier = Modifier.width(32.dp),
@@ -201,7 +203,8 @@ fun PcViewGlassScreen(
                             onClick = callbacks::onSettingsClicked,
                             size = 48.dp,
                             iconSize = 23.dp,
-                            backdrop = combinedBackdrop
+                            backdrop = combinedBackdrop,
+                            nestedInGlass = true
                         )
                         if (state.showHelpButton) {
                             GlassIconButton(
@@ -210,7 +213,8 @@ fun PcViewGlassScreen(
                                 onClick = callbacks::onHelpClicked,
                                 size = 48.dp,
                                 iconSize = 23.dp,
-                                backdrop = combinedBackdrop
+                                backdrop = combinedBackdrop,
+                                nestedInGlass = true
                             )
                         }
                     }
@@ -231,7 +235,8 @@ fun PcViewGlassScreen(
                             .liquidGlassSurface(
                                 backdrop = combinedBackdrop,
                                 shape = RoundedCornerShape(24.dp),
-                                level = GlassElevationLevel.CHROME
+                                level = GlassElevationLevel.CHROME,
+                                enableShadow = true
                             )
                             .padding(horizontal = 20.dp, vertical = 10.dp)
                     ) {
@@ -257,7 +262,8 @@ fun PcViewGlassScreen(
                                     onClick = callbacks::onHelpClicked,
                                     size = 42.dp,
                                     iconSize = 20.dp,
-                                    backdrop = combinedBackdrop
+                                    backdrop = combinedBackdrop,
+                                    nestedInGlass = true
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                             }
@@ -267,7 +273,8 @@ fun PcViewGlassScreen(
                                 onClick = callbacks::onSettingsClicked,
                                 size = 42.dp,
                                 iconSize = 20.dp,
-                                backdrop = combinedBackdrop
+                                backdrop = combinedBackdrop,
+                                nestedInGlass = true
                             )
                         }
                     )

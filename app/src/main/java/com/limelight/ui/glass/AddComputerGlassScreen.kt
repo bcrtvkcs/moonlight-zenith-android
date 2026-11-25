@@ -80,7 +80,8 @@ fun AddComputerGlassScreen(callbacks: AddComputerGlassCallbacks) {
                             onClick = callbacks::onBackClicked,
                             size = 42.dp,
                             iconSize = 20.dp,
-                            backdrop = combinedBackdrop
+                            backdrop = combinedBackdrop,
+                            nestedInGlass = true
                         )
                     }
                 )
@@ -107,8 +108,7 @@ fun AddComputerGlassScreen(callbacks: AddComputerGlassCallbacks) {
                     .liquidGlassSurface(
                         backdrop = backgroundBackdrop,
                         shape = RoundedCornerShape(28.dp),
-                        level = GlassElevationLevel.CARD,
-                        enableFrameCache = false
+                        level = GlassElevationLevel.CARD
                     )
                     .padding(24.dp)
             ) {
@@ -149,6 +149,7 @@ fun AddComputerGlassScreen(callbacks: AddComputerGlassCallbacks) {
                     onClick = { callbacks.onSubmitHost(hostInput.trim()) },
                     primary = true,
                     backdrop = backgroundBackdrop,
+                    nestedInGlass = true,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(52.dp)

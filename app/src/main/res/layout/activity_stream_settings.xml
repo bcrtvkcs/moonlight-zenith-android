@@ -105,12 +105,25 @@
                 android:paddingStart="7dp"
                 android:paddingEnd="7dp">
 
-                <LinearLayout
-                    android:id="@+id/m3FloatingBottomBarContainer"
+                <FrameLayout
                     android:layout_width="wrap_content"
-                    android:layout_height="match_parent"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical" />
+                    android:layout_height="match_parent">
+
+                    <View
+                        android:id="@+id/m3FloatingBottomBarIndicator"
+                        android:layout_width="88dp"
+                        android:layout_height="66dp"
+                        android:layout_gravity="start|center_vertical"
+                        android:layout_marginStart="2dp" />
+
+                    <LinearLayout
+                        android:id="@+id/m3FloatingBottomBarContainer"
+                        android:layout_width="wrap_content"
+                        android:layout_height="match_parent"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical" />
+
+                </FrameLayout>
 
             </HorizontalScrollView>
 

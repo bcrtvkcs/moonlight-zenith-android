@@ -287,7 +287,7 @@ private fun AttectGlassMenuScreen(
 
     MoonlightLiquidGlassTheme(bgState = bgState) {
         val colorScheme = MaterialTheme.colorScheme
-        val panelBackdrop = rememberFramePacedLayerBackdrop()
+        val panelBackdrop = rememberLayerBackdrop()
 
         Box(
             contentAlignment = Alignment.TopCenter,
@@ -322,7 +322,7 @@ private fun AttectGlassMenuScreen(
                         modifier = Modifier
                             .matchParentSize()
                             .clip(RoundedCornerShape(26.dp))
-                            .framePacedLayerBackdrop(panelBackdrop)
+                            .layerBackdrop(panelBackdrop)
                     ) {
                         val w = size.width
                         val h = size.height
@@ -362,9 +362,10 @@ private fun AttectGlassMenuScreen(
                         )
                     }
 
-                    Box(
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
                         modifier = Modifier
-                            .matchParentSize()
+                            .fillMaxWidth()
                             .liquidGlassSurface(
                                 backdrop = panelBackdrop,
                                 shape = RoundedCornerShape(26.dp),
@@ -372,11 +373,6 @@ private fun AttectGlassMenuScreen(
                                 enableLens = true,
                                 enableShadow = true
                             )
-                    )
-                    Column(
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier
-                            .fillMaxWidth()
                             .clickable(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null,
@@ -443,6 +439,7 @@ private fun AttectGlassRow(
                         shape = RoundedCornerShape(16.dp),
                         level = if (spec.tone == AttectChipTone.STANDARD) GlassElevationLevel.CHROME else GlassElevationLevel.ACCENT,
                         tintOverride = chipTint,
+                        enableBlur = false,
                         enableLens = true,
                         enableShadow = false
                     )

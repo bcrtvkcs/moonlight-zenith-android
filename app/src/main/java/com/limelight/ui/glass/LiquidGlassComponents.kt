@@ -3,14 +3,10 @@ package com.limelight.ui.glass
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
-import android.os.Build
-import android.os.Handler
-import android.os.Looper
 import androidx.activity.compose.BackHandler
 import androidx.annotation.DrawableRes
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
@@ -26,21 +22,23 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.displayCutout
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -51,9 +49,7 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
@@ -61,47 +57,36 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.Stable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.BlurEffect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.GraphicsLayerScope
 import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.layer.GraphicsLayer
-import androidx.compose.ui.graphics.layer.drawLayer
-import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.positionInWindow
+import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.util.lerp
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberCombinedBackdrop
@@ -115,6 +100,9 @@ import com.kyant.backdrop.isRenderEffectSupported
 import com.kyant.backdrop.shadow.Shadow
 import com.limelight.ui.background.UiBackgroundManager
 import com.limelight.ui.background.UiBackgroundState
+import kotlin.math.abs
+import kotlin.math.floor
+import kotlin.math.roundToInt
 
 enum class GlassElevationLevel {
     CARD,
@@ -125,10 +113,15 @@ enum class GlassElevationLevel {
 
 /**
  * Core Kyant0/AndroidLiquidGlass modifier wrapper.
- * Reads Snapshot-tracked [LocalGlassTokensState] directly inside both `effects` and `onDrawSurface`
- * so EVERY optical parameter change (blur, lens refraction amount/height, chromatic aberration,
- * 3D depth effect, vibrancy, surface opacity, specular highlight) immediately triggers both
- * `DrawBackdropNode.updateEffects()` and a live Compose draw invalidation at 60/120fps.
+ * Reads Snapshot-tracked [LocalGlassTokensState] inside both `effects` and `onDrawSurface`
+ * so all 8 optical parameter controls update live.
+ *
+ * Performance guidelines enforced here:
+ * - [enableBlur] can be disabled on small nested chips (e.g. Attect shortcut buttons over an
+ *   already-soft panel backdrop) so only single-pass optical `lens()` runs without a second
+ *   Gaussian blur pass.
+ * - [enableShadow] defaults to `false` for scrolling cards and uses lighter `12–16 dp` radii on
+ *   floating chrome/sheets to avoid oversized offscreen BlurMaskFilter FBOs.
  */
 @Composable
 fun Modifier.liquidGlassSurface(
@@ -137,15 +130,13 @@ fun Modifier.liquidGlassSurface(
     level: GlassElevationLevel = GlassElevationLevel.CARD,
     tintOverride: Color? = null,
     isFocused: Boolean = false,
+    enableBlur: Boolean = true,
     enableLens: Boolean = true,
-    enableShadow: Boolean = true,
-    enableFrameCache: Boolean = true,
-    cacheKey: Any? = null
+    enableShadow: Boolean = false
 ): Modifier {
     val tokensState = LocalGlassTokensState.current
     val tokens = tokensState.value
     val primaryColor = MaterialTheme.colorScheme.primary
-    val isCombinedChrome = backdrop === LocalContentBackdrop.current
 
     val focusBorderMod = if (isFocused) {
         Modifier.border(2.dp, primaryColor, shape)
@@ -154,25 +145,13 @@ fun Modifier.liquidGlassSurface(
     }
 
     return if (isRenderEffectSupported()) {
-        val cacheMod = if (enableFrameCache) {
-            val combinedKey = (isFocused.hashCode() * 31 + (tintOverride?.hashCode() ?: 0)) * 31 +
-                (cacheKey?.hashCode() ?: 0)
-            Modifier.framePacedGlassCache(
-                cacheKey = combinedKey,
-                padDp = if (enableShadow) 32.dp else 4.dp,
-                trackContentBackdropTick = isCombinedChrome
-            )
-        } else {
-            Modifier
-        }
         this
-            .then(cacheMod)
             .drawBackdrop(
                 backdrop = backdrop,
                 shape = { shape },
                 effects = {
                     val t = tokensState.value
-                    val blurDp = when (level) {
+                    val blurDp = if (!enableBlur) 0.dp else when (level) {
                         GlassElevationLevel.CARD -> t.cardBlur
                         GlassElevationLevel.CHROME, GlassElevationLevel.ACCENT -> t.chromeBlur
                         GlassElevationLevel.SHEET -> t.sheetBlur
@@ -186,7 +165,7 @@ fun Modifier.liquidGlassSurface(
                         GlassElevationLevel.CHROME, GlassElevationLevel.ACCENT -> t.chromeRefractionAmount
                         GlassElevationLevel.SHEET -> t.cardRefractionAmount
                     }
-                    if (t.vibrancyEnabled) {
+                    if (t.vibrancyEnabled && enableBlur) {
                         vibrancy()
                     }
                     if (blurDp > 0.dp) {
@@ -215,17 +194,14 @@ fun Modifier.liquidGlassSurface(
                 shadow = if (enableShadow) {
                     {
                         Shadow(
-                            radius = if (level == GlassElevationLevel.SHEET) 28.dp else 18.dp,
-                            color = Color.Black.copy(alpha = 0.28f)
+                            radius = if (level == GlassElevationLevel.SHEET) 16.dp else 12.dp,
+                            color = Color.Black.copy(alpha = 0.24f)
                         )
                     }
                 } else {
                     null
                 },
                 onDrawSurface = {
-                    // Reading tokensState.value here guarantees ContentDrawScope.draw() is invalidated
-                    // whenever any of the 8 optical parameters changes, fixing DrawBackdropNode's
-                    // updateEffects() redraw gap when padding stays unchanged.
                     val t = tokensState.value
                     val resolvedTint = tintOverride ?: when (level) {
                         GlassElevationLevel.CARD -> t.cardTint
@@ -257,6 +233,30 @@ fun Modifier.liquidGlassSurface(
 }
 
 /**
+ * Lightweight translucent glass surface for controls nested INSIDE an already-blurred Liquid Glass
+ * container (TopBar icon buttons, Landscape NavRail buttons, Dialog/BottomSheet rows & buttons).
+ * Eliminates redundant stacked multi-pass GPU blurs & shadow FBOs while keeping crisp specular rims.
+ */
+@Composable
+fun Modifier.nestedGlassSurface(
+    shape: Shape,
+    fillColor: Color,
+    isFocused: Boolean = false
+): Modifier {
+    val tokens = LocalGlassTokens.current
+    val primaryColor = MaterialTheme.colorScheme.primary
+    val rimAlpha = (tokens.highlightAlpha * 0.34f).coerceIn(0.10f, 0.42f)
+    return this
+        .clip(shape)
+        .background(fillColor, shape)
+        .border(
+            width = if (isFocused) 1.75.dp else 0.85.dp,
+            color = if (isFocused) primaryColor else Color.White.copy(alpha = rimAlpha),
+            shape = shape
+        )
+}
+
+/**
  * Root dual-backdrop Liquid Glass scaffold used by PcView, AppView, StreamSettings, and AddComputerManually.
  */
 @Composable
@@ -284,29 +284,28 @@ fun LiquidGlassScaffold(
             }
         }
 
-        val backgroundBackdrop = rememberFramePacedLayerBackdrop()
-        val contentBackdrop = rememberFramePacedLayerBackdrop()
+        val backgroundBackdrop = rememberLayerBackdrop()
+        val contentBackdrop = rememberLayerBackdrop()
         val combinedBackdrop = rememberCombinedBackdrop(backgroundBackdrop, contentBackdrop)
 
         CompositionLocalProvider(
             LocalBackgroundBackdrop provides backgroundBackdrop,
-            LocalContentBackdrop provides combinedBackdrop,
-            LocalContentBackdropTick provides { contentBackdrop.recordTick }
+            LocalContentBackdrop provides combinedBackdrop
         ) {
             Box(modifier = Modifier.fillMaxSize()) {
-                // LAYER 1: Edge-to-edge background canvas recorded into backgroundBackdrop
+                // LAYER 1: Edge-to-edge static background recorded into backgroundBackdrop
                 LiquidGlassBackgroundLayer(
                     bgState = bgState,
                     modifier = Modifier
                         .fillMaxSize()
-                        .framePacedLayerBackdrop(backgroundBackdrop)
+                        .layerBackdrop(backgroundBackdrop)
                 )
 
                 // LAYER 2: Main scrollable content recorded into contentBackdrop
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .framePacedLayerBackdrop(contentBackdrop)
+                        .layerBackdrop(contentBackdrop)
                 ) {
                     body(backgroundBackdrop)
                 }
@@ -327,6 +326,12 @@ fun LiquidGlassScaffold(
     }
 }
 
+/**
+ * Renders the app background with ZERO per-frame GPU blur cost:
+ * Custom images (and API <= 32 static wallpapers) use a static pre-blurred Bitmap computed once
+ * on a background thread by [UiBackgroundManager.loadDisplayBitmapSync], rendered opaque at 100%
+ * visibility under an optional color tint scrim.
+ */
 @Composable
 fun LiquidGlassBackgroundLayer(
     bgState: UiBackgroundState,
@@ -334,11 +339,7 @@ fun LiquidGlassBackgroundLayer(
 ) {
     val context = LocalContext.current
     val colorScheme = MaterialTheme.colorScheme
-
-    val opacityFraction = bgState.effectiveOpacity / 100f
     val tintAlpha = bgState.effectiveTintOpacity / 100f
-    val blurDp = bgState.effectiveBlurDp.dp
-    val blurPx = with(LocalDensity.current) { blurDp.toPx() }.coerceIn(0f, 150f)
 
     val tintColorInt = remember(bgState.tintMode, colorScheme.surface, colorScheme.primary) {
         UiBackgroundManager.resolveTintColorInt(
@@ -348,50 +349,29 @@ fun LiquidGlassBackgroundLayer(
         )
     }
 
-    val customBitmap = remember(bgState.backgroundSource, bgState.hasCustomImage, bgState.imageVersion) {
-        when {
-            bgState.isCustomImageActive -> UiBackgroundManager.loadCustomBitmapSync(context)
-            bgState.isWallpaperActive -> UiBackgroundManager.tryLoadWallpaperBitmap(context)
-            else -> null
-        }
+    val displayBitmap = remember(
+        bgState.backgroundSource,
+        bgState.hasCustomImage,
+        bgState.imageVersion,
+        bgState.blurredVersion,
+        bgState.effectiveBlurDp
+    ) {
+        UiBackgroundManager.loadDisplayBitmapSync(context, bgState)
     }
-    val useLiveWindowWallpaper = bgState.isWallpaperActive && customBitmap == null
+    val useLiveWindowWallpaper = bgState.isWallpaperActive && displayBitmap == null
 
     Box(modifier = modifier) {
         when {
-            customBitmap != null && !customBitmap.isRecycled -> {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(colorScheme.surface)
-                )
+            displayBitmap != null && !displayBitmap.isRecycled -> {
                 Image(
-                    bitmap = customBitmap.asImageBitmap(),
+                    bitmap = displayBitmap.asImageBitmap(),
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .graphicsLayer {
-                            alpha = opacityFraction
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && blurPx > 0.5f) {
-                                renderEffect = BlurEffect(blurPx, blurPx, TileMode.Clamp)
-                                clip = true
-                            } else {
-                                renderEffect = null
-                                clip = false
-                            }
-                        }
+                    modifier = Modifier.fillMaxSize()
                 )
             }
             useLiveWindowWallpaper -> {
-                val inverseScrim = (1f - opacityFraction).coerceIn(0f, 1f)
-                if (inverseScrim > 0.005f) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(colorScheme.surface.copy(alpha = inverseScrim))
-                    )
-                }
+                // Transparent hole so Android FLAG_SHOW_WALLPAPER renders cleanly behind the window
             }
             else -> {
                 AmbientThemeMeshBackground(
@@ -434,8 +414,6 @@ private fun AmbientThemeMeshBackground(
         val h = size.height
         val maxDim = maxOf(w, h)
 
-        // Luminous aurora orbs + diagonal specular light ribbon so lens refraction & RGB prism
-        // visibly bend high-contrast gradients even when no custom image is set.
         drawCircle(
             brush = Brush.radialGradient(
                 colors = listOf(
@@ -503,7 +481,8 @@ fun GlassIconButton(
     iconSize: Dp = 22.dp,
     backdrop: Backdrop = LocalContentBackdrop.current,
     level: GlassElevationLevel = GlassElevationLevel.CHROME,
-    iconTint: Color = MaterialTheme.colorScheme.onSurface
+    iconTint: Color = MaterialTheme.colorScheme.onSurface,
+    nestedInGlass: Boolean = false
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
@@ -514,6 +493,12 @@ fun GlassIconButton(
         label = "glassIconScale"
     )
 
+    val nestedFill = when {
+        level == GlassElevationLevel.ACCENT -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.52f)
+        isPressed -> Color.White.copy(alpha = 0.22f)
+        else -> Color.White.copy(alpha = 0.12f)
+    }
+
     Box(
         contentAlignment = Alignment.Center,
         modifier = modifier
@@ -522,11 +507,22 @@ fun GlassIconButton(
                 scaleX = scale
                 scaleY = scale
             }
-            .liquidGlassSurface(
-                backdrop = backdrop,
-                shape = CircleShape,
-                level = level,
-                isFocused = isFocused
+            .then(
+                if (nestedInGlass) {
+                    Modifier.nestedGlassSurface(
+                        shape = CircleShape,
+                        fillColor = nestedFill,
+                        isFocused = isFocused
+                    )
+                } else {
+                    Modifier.liquidGlassSurface(
+                        backdrop = backdrop,
+                        shape = CircleShape,
+                        level = level,
+                        isFocused = isFocused,
+                        enableShadow = true
+                    )
+                }
             )
             .focusable(interactionSource = interactionSource)
             .clickable(
@@ -569,7 +565,8 @@ fun GlassTopBar(
                 .liquidGlassSurface(
                     backdrop = backdrop,
                     shape = RoundedCornerShape(30.dp),
-                    level = GlassElevationLevel.CHROME
+                    level = GlassElevationLevel.CHROME,
+                    enableShadow = true
                 )
                 .padding(horizontal = 10.dp)
         ) {
@@ -623,7 +620,8 @@ fun GlassExtendedFab(
                 backdrop = backdrop,
                 shape = RoundedCornerShape(28.dp),
                 level = GlassElevationLevel.ACCENT,
-                isFocused = isFocused
+                isFocused = isFocused,
+                enableShadow = true
             )
             .focusable(interactionSource = interactionSource)
             .clickable(
@@ -649,78 +647,186 @@ fun GlassExtendedFab(
     }
 }
 
+/**
+ * Unified single-capsule Liquid Glass Tab Bar with 1:1 [pagerPosition]-synchronized sliding active
+ * lens pill. Replaces 7 independent per-tab `drawBackdrop` blur passes with 1 outer glass capsule
+ * + 1 single-pass refractive sliding lens that morphs width and glides in lockstep with page swipes
+ * and tab taps.
+ */
 @Composable
 fun GlassPillTabBar(
     tabs: List<String>,
-    selectedIndex: Int,
+    pagerPosition: Float,
     onTabSelected: (Int) -> Unit,
     backdrop: Backdrop = LocalContentBackdrop.current,
     modifier: Modifier = Modifier
 ) {
-    val listState = rememberLazyListState()
-    val tokens = LocalGlassTokens.current
+    if (tabs.isEmpty()) return
 
-    LaunchedEffect(selectedIndex) {
-        if (selectedIndex in tabs.indices) {
-            listState.animateScrollToItem(
-                index = (selectedIndex - 1).coerceAtLeast(0)
-            )
+    val tokensState = LocalGlassTokensState.current
+    val scrollState = rememberScrollState()
+    val density = LocalDensity.current
+    val tabBounds = remember(tabs) { mutableStateMapOf<Int, Pair<Float, Float>>() }
+    var viewportWidthPx by remember { mutableFloatStateOf(0f) }
+
+    val clampedPos = pagerPosition.coerceIn(0f, tabs.lastIndex.toFloat())
+    val floorIdx = floor(clampedPos).toInt().coerceIn(0, tabs.lastIndex)
+    val ceilIdx = (floorIdx + 1).coerceIn(0, tabs.lastIndex)
+    val frac = (clampedPos - floorIdx).coerceIn(0f, 1f)
+
+    val startBounds = tabBounds[floorIdx]
+    val endBounds = tabBounds[ceilIdx] ?: startBounds
+    val pillLeftPx = if (startBounds != null && endBounds != null) {
+        lerp(startBounds.first, endBounds.first, frac)
+    } else 0f
+    val pillWidthPx = if (startBounds != null && endBounds != null) {
+        lerp(startBounds.second, endBounds.second, frac)
+    } else 0f
+
+    // Continuously keep the sliding pill centered in lockstep with page transitions
+    LaunchedEffect(clampedPos, viewportWidthPx, startBounds, endBounds) {
+        val maxScroll = scrollState.maxValue
+        if (maxScroll > 0 && viewportWidthPx > 0f && pillWidthPx > 0f) {
+            val pillCenter = pillLeftPx + pillWidthPx / 2f
+            val targetScroll = (pillCenter - viewportWidthPx / 2f).roundToInt().coerceIn(0, maxScroll)
+            if (abs(targetScroll - scrollState.value) > 1) {
+                scrollState.scrollTo(targetScroll)
+            }
         }
     }
 
-    LazyRow(
-        state = listState,
-        contentPadding = PaddingValues(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = modifier.fillMaxWidth()
-    ) {
-        itemsIndexed(tabs) { index, title ->
-            val isSelected = index == selectedIndex
-            val interactionSource = remember { MutableInteractionSource() }
-            val isFocused by interactionSource.collectIsFocusedAsState()
-            val isPressed by interactionSource.collectIsPressedAsState()
-            val scale by animateFloatAsState(
-                targetValue = if (isPressed) 0.93f else if (isSelected) 1.03f else 1f,
-                animationSpec = spring(stiffness = Spring.StiffnessMediumLow, dampingRatio = Spring.DampingRatioMediumBouncy),
-                label = "glassTabScale"
-            )
+    val tabContentBackdrop = rememberLayerBackdrop()
+    val primaryColor = MaterialTheme.colorScheme.primary
+    val onPrimaryContainer = MaterialTheme.colorScheme.onPrimaryContainer
+    val onSurfaceVariant = MaterialTheme.colorScheme.onSurfaceVariant
 
-            Box(
-                contentAlignment = Alignment.Center,
-                modifier = Modifier
-                    .graphicsLayer {
-                        scaleX = scale
-                        scaleY = scale
-                    }
-                    .height(42.dp)
-                    .liquidGlassSurface(
-                        backdrop = backdrop,
-                        shape = RoundedCornerShape(21.dp),
-                        level = if (isSelected) GlassElevationLevel.ACCENT else GlassElevationLevel.CHROME,
-                        tintOverride = if (isSelected) tokens.pillTint else tokens.chromeTint.copy(alpha = tokens.chromeTint.alpha * 0.72f),
-                        isFocused = isFocused,
-                        enableLens = true,
-                        enableShadow = isSelected
-                    )
-                    .focusable(interactionSource = interactionSource)
-                    .clickable(
-                        interactionSource = interactionSource,
-                        indication = null
-                    ) { onTabSelected(index) }
-                    .padding(horizontal = 16.dp)
-            ) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.labelLarge.copy(
-                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
-                    ),
-                    color = if (isSelected) {
-                        MaterialTheme.colorScheme.onPrimaryContainer
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    },
-                    maxLines = 1
+    BoxWithConstraints(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(48.dp)
+                .liquidGlassSurface(
+                    backdrop = backdrop,
+                    shape = RoundedCornerShape(24.dp),
+                    level = GlassElevationLevel.CHROME,
+                    enableLens = true,
+                    enableShadow = true
                 )
+                .padding(horizontal = 5.dp, vertical = 4.dp)
+                .onGloballyPositioned { coords ->
+                    viewportWidthPx = coords.size.width.toFloat()
+                }
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .horizontalScroll(scrollState)
+            ) {
+                // Single sliding Liquid Glass active lens (single-pass lens over tab labels, zero double blur)
+                if (pillWidthPx > 1f) {
+                    val pillWidthDp = with(density) { pillWidthPx.toDp() }
+                    val pillShape = RoundedCornerShape(20.dp)
+                    val pillMod = Modifier
+                        .graphicsLayer {
+                            translationX = pillLeftPx
+                        }
+                        .width(pillWidthDp)
+                        .fillMaxHeight()
+                        .let { base ->
+                            if (isRenderEffectSupported()) {
+                                base.drawBackdrop(
+                                    backdrop = tabContentBackdrop,
+                                    shape = { pillShape },
+                                    effects = {
+                                        val t = tokensState.value
+                                        lens(
+                                            refractionHeight = 10.dp.toPx(),
+                                            refractionAmount = 18.dp.toPx(),
+                                            depthEffect = t.depthEffect,
+                                            chromaticAberration = t.chromaticAberration
+                                        )
+                                    },
+                                    highlight = {
+                                        val t = tokensState.value
+                                        Highlight(
+                                            width = 0.9.dp,
+                                            alpha = (t.highlightAlpha * 1.05f).coerceIn(0.38f, 1f)
+                                        )
+                                    },
+                                    shadow = null,
+                                    onDrawSurface = {
+                                        val t = tokensState.value
+                                        drawRect(t.pillTint.copy(alpha = (t.pillTint.alpha + 0.04f).coerceAtMost(0.55f)))
+                                    }
+                                )
+                            } else {
+                                base
+                                    .clip(pillShape)
+                                    .background(primaryColor.copy(alpha = 0.30f))
+                                    .border(0.9.dp, Color.White.copy(alpha = 0.30f), pillShape)
+                            }
+                        }
+                    Box(modifier = pillMod)
+                }
+
+                // Tab labels recorded into tabContentBackdrop
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .layerBackdrop(tabContentBackdrop)
+                ) {
+                    tabs.forEachIndexed { index, title ->
+                        val activeWeight = (1f - abs(clampedPos - index)).coerceIn(0f, 1f)
+                        val interactionSource = remember { MutableInteractionSource() }
+                        val isFocused by interactionSource.collectIsFocusedAsState()
+                        val labelColor = Color(
+                            red = lerp(onSurfaceVariant.red, onPrimaryContainer.red, activeWeight),
+                            green = lerp(onSurfaceVariant.green, onPrimaryContainer.green, activeWeight),
+                            blue = lerp(onSurfaceVariant.blue, onPrimaryContainer.blue, activeWeight),
+                            alpha = lerp(0.84f, 1f, activeWeight)
+                        )
+
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier
+                                .fillMaxHeight()
+                                .onGloballyPositioned { coords ->
+                                    val pos = coords.positionInParent().x
+                                    val w = coords.size.width.toFloat()
+                                    val prev = tabBounds[index]
+                                    if (prev == null || abs(prev.first - pos) > 0.5f || abs(prev.second - w) > 0.5f) {
+                                        tabBounds[index] = pos to w
+                                    }
+                                }
+                                .clip(RoundedCornerShape(20.dp))
+                                .then(
+                                    if (isFocused) Modifier.border(1.5.dp, primaryColor, RoundedCornerShape(20.dp))
+                                    else Modifier
+                                )
+                                .focusable(interactionSource = interactionSource)
+                                .clickable(
+                                    interactionSource = interactionSource,
+                                    indication = null
+                                ) { onTabSelected(index) }
+                                .padding(horizontal = 16.dp)
+                        ) {
+                            Text(
+                                text = title,
+                                style = MaterialTheme.typography.labelLarge.copy(
+                                    fontWeight = if (activeWeight >= 0.5f) FontWeight.Bold else FontWeight.Medium
+                                ),
+                                color = labelColor,
+                                maxLines = 1
+                            )
+                        }
+                    }
+                }
             }
         }
     }
@@ -787,7 +893,7 @@ fun GlassBottomSheetOverlay(
             contentAlignment = Alignment.BottomCenter,
             modifier = Modifier.fillMaxSize()
         ) {
-            Box(
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .widthIn(max = 560.dp)
@@ -796,37 +902,29 @@ fun GlassBottomSheetOverlay(
                         end = 12.dp,
                         bottom = navPadding.calculateBottomPadding() + 12.dp
                     )
+                    .liquidGlassSurface(
+                        backdrop = backdrop,
+                        shape = RoundedCornerShape(28.dp),
+                        level = GlassElevationLevel.SHEET,
+                        enableShadow = true
+                    )
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = {}
+                    )
+                    .padding(horizontal = 16.dp, vertical = 14.dp)
             ) {
                 Box(
                     modifier = Modifier
-                        .matchParentSize()
-                        .liquidGlassSurface(
-                            backdrop = backdrop,
-                            shape = RoundedCornerShape(28.dp),
-                            level = GlassElevationLevel.SHEET
-                        )
+                        .align(Alignment.CenterHorizontally)
+                        .width(38.dp)
+                        .height(4.dp)
+                        .clip(CircleShape)
+                        .background(Color.White.copy(alpha = 0.35f))
                 )
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null,
-                            onClick = {}
-                        )
-                        .padding(horizontal = 16.dp, vertical = 14.dp)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .align(Alignment.CenterHorizontally)
-                            .width(38.dp)
-                            .height(4.dp)
-                            .clip(CircleShape)
-                            .background(Color.White.copy(alpha = 0.35f))
-                    )
-                    Spacer(modifier = Modifier.height(14.dp))
-                    content()
-                }
+                Spacer(modifier = Modifier.height(14.dp))
+                content()
             }
         }
     }
@@ -876,32 +974,24 @@ fun GlassModalDialog(
             contentAlignment = Alignment.Center,
             modifier = Modifier.fillMaxSize()
         ) {
-            Box(
+            Column(
                 modifier = Modifier
                     .fillMaxWidth(0.90f)
                     .widthIn(max = 460.dp)
+                    .liquidGlassSurface(
+                        backdrop = backdrop,
+                        shape = RoundedCornerShape(28.dp),
+                        level = GlassElevationLevel.SHEET,
+                        enableShadow = true
+                    )
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = {}
+                    )
+                    .padding(22.dp)
             ) {
-                Box(
-                    modifier = Modifier
-                        .matchParentSize()
-                        .liquidGlassSurface(
-                            backdrop = backdrop,
-                            shape = RoundedCornerShape(28.dp),
-                            level = GlassElevationLevel.SHEET
-                        )
-                )
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null,
-                            onClick = {}
-                        )
-                        .padding(22.dp)
-                ) {
-                    content()
-                }
+                content()
             }
         }
     }
@@ -972,7 +1062,8 @@ fun GlassActionButton(
     modifier: Modifier = Modifier,
     primary: Boolean = false,
     destructive: Boolean = false,
-    backdrop: Backdrop = LocalContentBackdrop.current
+    backdrop: Backdrop = LocalContentBackdrop.current,
+    nestedInGlass: Boolean = false
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
@@ -988,6 +1079,11 @@ fun GlassActionButton(
         primary -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.62f)
         else -> null
     }
+    val nestedFill = when {
+        destructive -> MaterialTheme.colorScheme.errorContainer.copy(alpha = if (isPressed) 0.68f else 0.54f)
+        primary -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = if (isPressed) 0.72f else 0.58f)
+        else -> Color.White.copy(alpha = if (isPressed) 0.22f else 0.12f)
+    }
     val textColor = when {
         destructive -> MaterialTheme.colorScheme.onErrorContainer
         primary -> MaterialTheme.colorScheme.onPrimaryContainer
@@ -1002,14 +1098,24 @@ fun GlassActionButton(
                 scaleY = scale
             }
             .height(46.dp)
-            .liquidGlassSurface(
-                backdrop = backdrop,
-                shape = RoundedCornerShape(23.dp),
-                level = if (primary || destructive) GlassElevationLevel.ACCENT else GlassElevationLevel.CHROME,
-                tintOverride = tint,
-                isFocused = isFocused,
-                enableLens = true,
-                enableShadow = false
+            .then(
+                if (nestedInGlass) {
+                    Modifier.nestedGlassSurface(
+                        shape = RoundedCornerShape(23.dp),
+                        fillColor = nestedFill,
+                        isFocused = isFocused
+                    )
+                } else {
+                    Modifier.liquidGlassSurface(
+                        backdrop = backdrop,
+                        shape = RoundedCornerShape(23.dp),
+                        level = if (primary || destructive) GlassElevationLevel.ACCENT else GlassElevationLevel.CHROME,
+                        tintOverride = tint,
+                        isFocused = isFocused,
+                        enableLens = true,
+                        enableShadow = false
+                    )
+                }
             )
             .focusable(interactionSource = interactionSource)
             .clickable(
@@ -1032,275 +1138,4 @@ internal tailrec fun Context.findActivity(): Activity? = when (this) {
     is Activity -> this
     is ContextWrapper -> baseContext?.findActivity()
     else -> null
-}
-
-val LocalContentBackdropTick = androidx.compose.runtime.staticCompositionLocalOf<() -> Int> { { 0 } }
-
-/**
- * Frame-paced [Backdrop] recorder that lets users cap dynamic Liquid Glass refraction refresh rate
- * (15 / 30 / 60 / 90 / 120 / 144 / 144+ FPS) for battery & GPU savings while keeping scrolling and
- * touch interactions at full native display refresh rate.
- */
-@Stable
-class FramePacedLayerBackdrop(
-    val graphicsLayer: GraphicsLayer,
-    private val maxFpsProvider: () -> Int
-) : Backdrop {
-    override val isCoordinatesDependent: Boolean = true
-    internal var layerCoordinates: LayoutCoordinates? by mutableStateOf(null)
-    internal var catchUpTick by mutableIntStateOf(0)
-    internal var recordTick by mutableIntStateOf(0)
-
-    private var lastRecordNanos: Long = 0L
-    private var hasRecorded: Boolean = false
-    private var catchUpScheduled: Boolean = false
-    private val mainHandler = Handler(Looper.getMainLooper())
-    private val catchUpRunnable = Runnable {
-        catchUpScheduled = false
-        catchUpTick++
-    }
-
-    internal fun cancelPending() {
-        mainHandler.removeCallbacks(catchUpRunnable)
-        catchUpScheduled = false
-    }
-
-    internal fun shouldRecordNow(): Boolean {
-        val fps = maxFpsProvider()
-        val now = System.nanoTime()
-        val minIntervalNs = if (fps > 0) 1_000_000_000L / fps else 0L
-        if (!hasRecorded || minIntervalNs <= 0L || (now - lastRecordNanos) >= minIntervalNs) {
-            lastRecordNanos = now
-            hasRecorded = true
-            if (catchUpScheduled) {
-                mainHandler.removeCallbacks(catchUpRunnable)
-                catchUpScheduled = false
-            }
-            return true
-        }
-        if (!catchUpScheduled) {
-            catchUpScheduled = true
-            val delayMs = ((minIntervalNs - (now - lastRecordNanos)) / 1_000_000L).coerceIn(1L, 120L)
-            mainHandler.postDelayed(catchUpRunnable, delayMs)
-        }
-        return false
-    }
-
-    internal fun notifyRecorded() {
-        recordTick++
-    }
-
-    override fun DrawScope.drawBackdrop(
-        density: Density,
-        coordinates: LayoutCoordinates?,
-        layerBlock: (GraphicsLayerScope.() -> Unit)?
-    ) {
-        @Suppress("UNUSED_VARIABLE")
-        val tick = catchUpTick
-        if (!hasRecorded) return
-        val coords = coordinates ?: return
-        val layerCoords = layerCoordinates ?: return
-        if (!coords.isAttached || !layerCoords.isAttached) return
-        val offset = try {
-            layerCoords.localPositionOf(coords)
-        } catch (_: Exception) {
-            coords.positionInWindow() - layerCoords.positionInWindow()
-        }
-        withTransform({
-            translate(-offset.x, -offset.y)
-        }) {
-            drawLayer(graphicsLayer)
-        }
-    }
-}
-
-@Composable
-fun rememberFramePacedLayerBackdrop(): FramePacedLayerBackdrop {
-    val tokensState = LocalGlassTokensState.current
-    val graphicsLayer = rememberGraphicsLayer()
-    val backdrop = remember(graphicsLayer) {
-        FramePacedLayerBackdrop(graphicsLayer) { tokensState.value.glassMaxFps }
-    }
-    DisposableEffect(backdrop) {
-        onDispose {
-            backdrop.cancelPending()
-            backdrop.layerCoordinates = null
-        }
-    }
-    return backdrop
-}
-
-fun Modifier.framePacedLayerBackdrop(backdrop: FramePacedLayerBackdrop): Modifier =
-    this
-        .onGloballyPositioned { coords ->
-            if (coords.isAttached) {
-                backdrop.layerCoordinates = coords
-            }
-        }
-        .drawWithContent {
-            @Suppress("UNUSED_VARIABLE")
-            val tick = backdrop.catchUpTick
-            drawContent()
-            val w = size.width.toInt()
-            val h = size.height.toInt()
-            if (w > 0 && h > 0 && backdrop.shouldRecordNow()) {
-                backdrop.graphicsLayer.record(size = IntSize(w, h)) {
-                    this@drawWithContent.drawContent()
-                }
-                backdrop.notifyRecorded()
-            }
-        }
-
-/**
- * Genuine GPU-saving offscreen frame cache for Liquid Glass surfaces.
- *
- * When `glassMaxFps > 0` (`15`, `30`, `60`, `90`, `120`, `144` FPS):
- * - Executes `DrawBackdropNode` (and its expensive GPU AGSL blur / lens / vibrancy / highlight
- *   RenderEffect passes) strictly at most `glassMaxFps` times per second, caching the rasterized
- *   output into an offscreen GPU texture (`CompositingStrategy.Offscreen`).
- * - On all intermediate display frames, skips `drawContent()` / `DrawBackdropNode.draw()` completely
- *   and simply blits the cached GPU texture (saving up to 75%–87.5% GPU glass shader work on 120Hz
- *   displays) while layout, scrolling, and touch remain at full native display refresh rate.
- * - Schedules a single trailing settle tick when motion pauses so the glass always lands in exact
- *   1:1 alignment, and immediately refreshes on any optical parameter or size change.
- * - When `glassMaxFps == 0` (`144+ Unlimited`), bypasses the cache with zero extra VRAM or blit cost.
- */
-@Stable
-internal class GlassFrameCacheState(
-    val layer: GraphicsLayer,
-    private val maxFpsProvider: () -> Int
-) {
-    internal var cacheTick by mutableIntStateOf(0)
-
-    private var hasCached: Boolean = false
-    private var lastRecordNanos: Long = 0L
-    private var lastSize: IntSize = IntSize.Zero
-    private var lastKey: Int = 0
-    private var lastWinPos: Offset = Offset.Unspecified
-    private var catchUpScheduled: Boolean = false
-
-    private val mainHandler = Handler(Looper.getMainLooper())
-    private val catchUpRunnable = Runnable {
-        catchUpScheduled = false
-        cacheTick++
-    }
-
-    internal fun cancelPending() {
-        mainHandler.removeCallbacks(catchUpRunnable)
-        catchUpScheduled = false
-    }
-
-    internal fun onPositioned(winPos: Offset) {
-        val fps = maxFpsProvider()
-        if (fps <= 0) return
-        if (lastWinPos == Offset.Unspecified) {
-            lastWinPos = winPos
-            return
-        }
-        if (winPos == lastWinPos) return
-        lastWinPos = winPos
-        val minIntervalNs = 1_000_000_000L / fps
-        val elapsed = System.nanoTime() - lastRecordNanos
-        if (elapsed >= minIntervalNs) {
-            if (catchUpScheduled) {
-                mainHandler.removeCallbacks(catchUpRunnable)
-                catchUpScheduled = false
-            }
-            cacheTick++
-        } else if (!catchUpScheduled) {
-            catchUpScheduled = true
-            val delayMs = ((minIntervalNs - elapsed) / 1_000_000L).coerceIn(1L, 120L)
-            mainHandler.postDelayed(catchUpRunnable, delayMs)
-        }
-    }
-
-    internal fun shouldRecordNow(size: IntSize, keyHash: Int): Boolean {
-        val fps = maxFpsProvider()
-        if (fps <= 0) {
-            hasCached = false
-            cancelPending()
-            return true
-        }
-        val minIntervalNs = 1_000_000_000L / fps
-        val now = System.nanoTime()
-        val keyOrSizeChanged = (size != lastSize) || (keyHash != lastKey)
-        if (!hasCached || keyOrSizeChanged || (now - lastRecordNanos) >= minIntervalNs) {
-            lastRecordNanos = now
-            lastSize = size
-            lastKey = keyHash
-            hasCached = true
-            if (catchUpScheduled) {
-                mainHandler.removeCallbacks(catchUpRunnable)
-                catchUpScheduled = false
-            }
-            return true
-        }
-        if (!catchUpScheduled) {
-            catchUpScheduled = true
-            val delayMs = ((minIntervalNs - (now - lastRecordNanos)) / 1_000_000L).coerceIn(1L, 120L)
-            mainHandler.postDelayed(catchUpRunnable, delayMs)
-        }
-        return false
-    }
-}
-
-@Composable
-fun Modifier.framePacedGlassCache(
-    cacheKey: Any? = null,
-    padDp: Dp = 4.dp,
-    trackContentBackdropTick: Boolean = false
-): Modifier {
-    val tokensState = LocalGlassTokensState.current
-    val contentTickProvider = LocalContentBackdropTick.current
-    val layer = rememberGraphicsLayer()
-    val state = remember(layer) {
-        layer.compositingStrategy = androidx.compose.ui.graphics.layer.CompositingStrategy.Offscreen
-        GlassFrameCacheState(layer) { tokensState.value.glassMaxFps }
-    }
-    DisposableEffect(state) {
-        onDispose { state.cancelPending() }
-    }
-    return this
-        .onGloballyPositioned { coords ->
-            if (coords.isAttached) {
-                state.onPositioned(coords.positionInWindow())
-            }
-        }
-        .drawWithContent {
-            val fps = tokensState.value.glassMaxFps
-            if (fps <= 0) {
-                drawContent()
-                return@drawWithContent
-            }
-            @Suppress("UNUSED_VARIABLE")
-            val tick = state.cacheTick
-            val contentTick = if (trackContentBackdropTick) contentTickProvider() else 0
-            val w = size.width.toInt()
-            val h = size.height.toInt()
-            if (w <= 0 || h <= 0) {
-                drawContent()
-                return@drawWithContent
-            }
-            val padPx = padDp.toPx().toInt().coerceAtLeast(0)
-            val recordSize = IntSize(w + padPx * 2, h + padPx * 2)
-            val fullKeyHash = (tokensState.value.hashCode() * 31 + (cacheKey?.hashCode() ?: 0)) * 31 + contentTick
-            if (state.shouldRecordNow(recordSize, fullKeyHash)) {
-                state.layer.record(size = recordSize) {
-                    if (padPx > 0) {
-                        withTransform({ translate(padPx.toFloat(), padPx.toFloat()) }) {
-                            this@drawWithContent.drawContent()
-                        }
-                    } else {
-                        this@drawWithContent.drawContent()
-                    }
-                }
-            }
-            if (padPx > 0) {
-                withTransform({ translate(-padPx.toFloat(), -padPx.toFloat()) }) {
-                    drawLayer(state.layer)
-                }
-            } else {
-                drawLayer(state.layer)
-            }
-        }
 }

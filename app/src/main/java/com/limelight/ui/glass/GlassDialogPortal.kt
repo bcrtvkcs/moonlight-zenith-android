@@ -382,7 +382,7 @@ private fun StandaloneLiquidGlassDialogContent(
 
     MoonlightLiquidGlassTheme(bgState = bgState) {
         val colorScheme = MaterialTheme.colorScheme
-        val standaloneBackdrop = rememberFramePacedLayerBackdrop()
+        val standaloneBackdrop = rememberLayerBackdrop()
 
         Box(modifier = Modifier.fillMaxSize()) {
             // Subtle luminous ambient layer so standalone dialogs over black streaming screens still
@@ -390,7 +390,7 @@ private fun StandaloneLiquidGlassDialogContent(
             Canvas(
                 modifier = Modifier
                     .fillMaxSize()
-                    .framePacedLayerBackdrop(standaloneBackdrop)
+                    .layerBackdrop(standaloneBackdrop)
             ) {
                 val w = size.width
                 val h = size.height
@@ -483,6 +483,7 @@ private fun GlassDialogRequestBody(
                         request.onNegative?.run()
                     },
                     backdrop = backdrop,
+                    nestedInGlass = true,
                     modifier = Modifier.weight(1f)
                 )
                 GlassActionButton(
@@ -494,6 +495,7 @@ private fun GlassDialogRequestBody(
                     primary = !request.destructive,
                     destructive = request.destructive,
                     backdrop = backdrop,
+                    nestedInGlass = true,
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -526,6 +528,7 @@ private fun GlassDialogRequestBody(
                             request.onHelp?.run()
                         },
                         backdrop = backdrop,
+                        nestedInGlass = true,
                         modifier = Modifier.weight(1f)
                     )
                 }
@@ -537,6 +540,7 @@ private fun GlassDialogRequestBody(
                     },
                     primary = true,
                     backdrop = backdrop,
+                    nestedInGlass = true,
                     modifier = Modifier.weight(1f)
                 )
             }

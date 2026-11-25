@@ -167,7 +167,8 @@ fun AppViewGlassScreen(
                             onClick = callbacks::onBackClicked,
                             size = 42.dp,
                             iconSize = 20.dp,
-                            backdrop = combinedBackdrop
+                            backdrop = combinedBackdrop,
+                            nestedInGlass = true
                         )
                     }
                 )

@@ -367,8 +367,6 @@
     <string name="ui_background_image_saved">Background image updated</string>
     <string name="ui_background_image_failed">Could not load the selected image</string>
     <string name="ui_background_image_cleared">Custom background image removed</string>
-    <string name="title_ui_background_opacity">Background opacity</string>
-    <string name="summary_ui_background_opacity">Adjust how visible the custom image or wallpaper is behind the interface</string>
     <string name="title_ui_background_tint_mode">Background color tint</string>
     <string name="summary_ui_background_tint_mode">Apply a color tint overlay over the background image or wallpaper for visual harmony and readability</string>
     <string name="ui_background_tint_theme_surface">Theme Surface (Adaptive)</string>
@@ -383,7 +381,7 @@
     <string name="title_ui_background_tint_opacity">Tint intensity</string>
     <string name="summary_ui_background_tint_opacity">Control the strength of the color tint over the background</string>
     <string name="title_ui_background_blur">Background blur</string>
-    <string name="summary_ui_background_blur">Soften busy background photos for clearer text legibility (Android 12+)</string>
+    <string name="summary_ui_background_blur">Soften busy background photos for clearer text legibility</string>
     <string name="suffix_dp">dp</string>
     <string name="title_settings_nav_style">Settings navigation style</string>
     <string name="summary_settings_nav_style">Choose between top tabs or a floating bottom navigation bar in Settings</string>
@@ -399,9 +397,6 @@
     <string name="glass_live_preview_title">Live Liquid Glass Preview</string>
     <string name="glass_live_preview_subtitle">Drag the lens or adjust parameters below to inspect refraction, blur, and prism dispersion in real time</string>
     <string name="glass_wallpaper_refraction_notice">Use Custom Image for full optical refraction on cards</string>
-    <string name="title_glass_fps">Liquid Glass refresh rate</string>
-    <string name="summary_glass_fps">Limits how often dynamic Liquid Glass backdrop refraction updates to balance smoothness and battery</string>
-    <string name="glass_fps_unlimited">144+ FPS (Unlimited)</string>
     <string name="title_audio_output">Audio output</string>
     <string name="summary_audio_output">Choose where stream audio is played</string>
     <string name="audio_output_client">This device (Client)</string>
