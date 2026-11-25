@@ -1,6 +1,6 @@
 # Moonlight Zenith
 
-**Moonlight Zenith** is a modernized fork of [Moonlight Android](https://github.com/moonlight-stream/moonlight-android) featuring **Material You** and **Liquid Glass** interfaces, customizable tinted backgrounds, a floating bottom navigation bar, flexible Client/Host audio routing, multi-language & smart keyboard input, in-stream quick actions, and sensor-driven landscape rotation.
+**Moonlight Zenith** is a modernized fork of [Moonlight Android](https://github.com/moonlight-stream/moonlight-android) featuring **Liquid Glass** and **Material You** interfaces, customizable tinted backgrounds, a floating bottom navigation bar, flexible Client/Host audio routing, multi-language & smart keyboard input, in-stream quick actions, and sensor-driven landscape rotation.
 
 ## 📸 Screenshots
 
