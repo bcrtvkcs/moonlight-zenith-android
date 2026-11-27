@@ -2,7 +2,7 @@
 <resources>
     <!-- API 21+ Material 3 theme customizations -->
     <style name="AppTheme" parent="AppBaseTheme">
-        <item name="android:statusBarColor">@color/m3_background</item>
-        <item name="android:navigationBarColor">@color/m3_background</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
     </style>
 </resources>

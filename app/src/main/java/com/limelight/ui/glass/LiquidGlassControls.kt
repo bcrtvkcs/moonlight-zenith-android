@@ -1,11 +1,13 @@
 package com.limelight.ui.glass
 
 import androidx.annotation.DrawableRes
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.MutatorMutex
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -36,6 +38,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -44,64 +47,238 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.lerp as lerpGraphicsColor
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerInputChange
+import androidx.compose.ui.input.pointer.PointerInputScope
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.positionChange
+import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.util.fastCoerceIn
 import androidx.compose.ui.util.lerp
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.backdrops.layerBackdrop
+import com.kyant.backdrop.backdrops.rememberBackdrop
 import com.kyant.backdrop.backdrops.rememberCombinedBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.kyant.backdrop.drawBackdrop
+import com.kyant.backdrop.effects.blur
 import com.kyant.backdrop.effects.lens
 import com.kyant.backdrop.highlight.Highlight
 import com.kyant.backdrop.isRenderEffectSupported
+import com.kyant.backdrop.shadow.InnerShadow
+import com.kyant.backdrop.shadow.Shadow
 import com.limelight.R
 import com.limelight.ui.background.UiBackgroundManager
 import com.limelight.ui.background.UiBackgroundState
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
 /**
- * Authentic Kyant0/AndroidLiquidGlass-powered Switch (`LiquidToggle` architecture).
- *
- * Performance optimization:
- * - While completely idle (e.g., scrolling past 10 toggles in Settings), renders a crisp glossy
- *   capsule thumb with ZERO `LayerBackdrop` recording, ZERO AGSL shaders, and ZERO shadow FBOs.
- * - The instant the user touches, drags, or toggles the switch, activates the full refractive
- *   Liquid Glass magnifying capsule over the glowing switch track strictly until finger lift and
- *   spring settle.
+ * Exact damped drag physics engine from `Kyant0/AndroidLiquidGlass` (`DampedDragAnimation.kt`).
+ * Drives press swell (`1f -> 1.5f`), asymmetric squash-and-stretch springs (`scaleX` / `scaleY`),
+ * velocity-coupled horizontal jelly deformation, and deferred release settle.
+ */
+private class DampedDragAnimation(
+    private val animationScope: CoroutineScope,
+    val initialValue: Float,
+    val valueRange: ClosedRange<Float>,
+    val visibilityThreshold: Float,
+    val initialScale: Float,
+    val pressedScale: Float,
+    val onDragStarted: DampedDragAnimation.(position: Offset) -> Unit,
+    val onDragStopped: DampedDragAnimation.() -> Unit,
+    val onDrag: DampedDragAnimation.(size: IntSize, dragAmount: Offset) -> Unit,
+) {
+    private val valueAnimationSpec = spring(1f, 1000f, visibilityThreshold)
+    private val velocityAnimationSpec = spring(0.5f, 300f, visibilityThreshold * 10f)
+    private val pressProgressAnimationSpec = spring(1f, 1000f, 0.001f)
+    private val scaleXAnimationSpec = spring(0.6f, 250f, 0.001f)
+    private val scaleYAnimationSpec = spring(0.7f, 250f, 0.001f)
+
+    private val valueAnimation = Animatable(initialValue, visibilityThreshold)
+    private val velocityAnimation = Animatable(0f, 5f)
+    private val pressProgressAnimation = Animatable(0f, 0.001f)
+    private val scaleXAnimation = Animatable(initialScale, 0.001f)
+    private val scaleYAnimation = Animatable(initialScale, 0.001f)
+
+    private val mutatorMutex = MutatorMutex()
+    private val velocityTracker = VelocityTracker()
+
+    val value: Float get() = valueAnimation.value
+    val progress: Float get() = (value - valueRange.start) / (valueRange.endInclusive - valueRange.start)
+    val targetValue: Float get() = valueAnimation.targetValue
+    val pressProgress: Float get() = pressProgressAnimation.value
+    val scaleX: Float get() = scaleXAnimation.value
+    val scaleY: Float get() = scaleYAnimation.value
+    val velocity: Float get() = velocityAnimation.value
+
+    val modifier: Modifier = Modifier.pointerInput(Unit) {
+        inspectDragGestures(
+            onDragStart = { down ->
+                onDragStarted(down.position)
+                press()
+            },
+            onDragEnd = {
+                onDragStopped()
+                release()
+            },
+            onDragCancel = {
+                onDragStopped()
+                release()
+            }
+        ) { _, dragAmount ->
+            onDrag(size, dragAmount)
+        }
+    }
+
+    fun press() {
+        velocityTracker.resetTracking()
+        animationScope.launch {
+            launch { pressProgressAnimation.animateTo(1f, pressProgressAnimationSpec) }
+            launch { scaleXAnimation.animateTo(pressedScale, scaleXAnimationSpec) }
+            launch { scaleYAnimation.animateTo(pressedScale, scaleYAnimationSpec) }
+        }
+    }
+
+    fun release() {
+        animationScope.launch {
+            withFrameNanos { }
+            if (value != targetValue) {
+                val threshold = (valueRange.endInclusive - valueRange.start) * 0.025f
+                snapshotFlow { valueAnimation.value }
+                    .filter { abs(it - valueAnimation.targetValue) < threshold }
+                    .first()
+            }
+            launch { pressProgressAnimation.animateTo(0f, pressProgressAnimationSpec) }
+            launch { scaleXAnimation.animateTo(initialScale, scaleXAnimationSpec) }
+            launch { scaleYAnimation.animateTo(initialScale, scaleYAnimationSpec) }
+        }
+    }
+
+    fun updateValue(value: Float) {
+        val targetValue = value.coerceIn(valueRange)
+        animationScope.launch {
+            launch { valueAnimation.animateTo(targetValue, valueAnimationSpec) { updateVelocity() } }
+        }
+    }
+
+    fun animateToValue(value: Float) {
+        animationScope.launch {
+            mutatorMutex.mutate {
+                press()
+                val targetValue = value.coerceIn(valueRange)
+                launch { valueAnimation.animateTo(targetValue, valueAnimationSpec) }
+                if (velocity != 0f) {
+                    launch { velocityAnimation.animateTo(0f, velocityAnimationSpec) }
+                }
+                release()
+            }
+        }
+    }
+
+    private fun updateVelocity() {
+        velocityTracker.addPosition(
+            System.currentTimeMillis(),
+            Offset(value, 0f)
+        )
+        val targetVelocity =
+            velocityTracker.calculateVelocity().x / (valueRange.endInclusive - valueRange.start)
+        animationScope.launch { velocityAnimation.animateTo(targetVelocity, velocityAnimationSpec) }
+    }
+}
+
+private suspend fun PointerInputScope.inspectDragGestures(
+    onDragStart: (down: PointerInputChange) -> Unit = {},
+    onDragEnd: (change: PointerInputChange) -> Unit = {},
+    onDragCancel: () -> Unit = {},
+    onDrag: (change: PointerInputChange, dragAmount: Offset) -> Unit
+) {
+    awaitEachGesture {
+        val initialDown = awaitFirstDown(requireUnconsumed = false)
+        initialDown.consume()
+        onDragStart(initialDown)
+
+        val pointerId = initialDown.id
+        var lastChange = initialDown
+        var completed = false
+        try {
+            while (true) {
+                val event = awaitPointerEvent()
+                val change = event.changes.firstOrNull { it.id == pointerId } ?: break
+                lastChange = change
+                if (!change.pressed) {
+                    change.consume()
+                    completed = true
+                    break
+                }
+                val dragAmount = change.positionChange()
+                if (dragAmount != Offset.Zero) {
+                    change.consume()
+                    onDrag(change, dragAmount)
+                }
+            }
+        } finally {
+            if (completed) {
+                onDragEnd(lastChange)
+            } else {
+                onDragCancel()
+            }
+        }
+    }
+}
+
+/**
+ * Exact `Kyant0/AndroidLiquidGlass` `LiquidToggle` implementation, customized only with
+ * an exact neutral gray (`#808080`) active track color.
  */
 @Composable
 fun LiquidGlassSwitch(
@@ -110,156 +287,167 @@ fun LiquidGlassSwitch(
     backdrop: Backdrop = LocalContentBackdrop.current,
     onCheckedChange: (Boolean) -> Unit
 ) {
-    val tokensState = LocalGlassTokensState.current
+    val accentColor = Color(0xFF808080)
+    val trackColor = Color(0xFF787880).copy(alpha = 0.36f)
+
     val density = LocalDensity.current
-    val trackWidthDp = 58.dp
-    val trackHeightDp = 32.dp
-    val thumbWidthDp = 32.dp
-    val thumbHeightDp = 24.dp
-    val padDp = 4.dp
-    val travelPx = with(density) { (trackWidthDp - thumbWidthDp - padDp * 2).toPx() }
-
-    var isPressedOrDragging by remember { mutableStateOf(false) }
-    var dragFraction by remember { mutableFloatStateOf(if (checked) 1f else 0f) }
-
-    LaunchedEffect(checked, isPressedOrDragging) {
-        if (!isPressedOrDragging) {
-            dragFraction = if (checked) 1f else 0f
-        }
-    }
-
-    val animatedFraction by animateFloatAsState(
-        targetValue = if (isPressedOrDragging) dragFraction else if (checked) 1f else 0f,
-        animationSpec = spring(stiffness = Spring.StiffnessMediumLow, dampingRatio = 0.72f),
-        label = "liquidToggleFraction"
-    )
-    val pressProgress by animateFloatAsState(
-        targetValue = if (isPressedOrDragging) 1f else 0f,
-        animationSpec = spring(stiffness = Spring.StiffnessMedium, dampingRatio = 0.68f),
-        label = "liquidTogglePress"
-    )
-
-    val isGlassActive = isRenderEffectSupported() && (
-        isPressedOrDragging ||
-            pressProgress > 0.01f ||
-            (animatedFraction > 0.01f && animatedFraction < 0.99f)
-        )
-
-    val trackBackdrop = rememberLayerBackdrop()
-    val thumbBackdrop = rememberCombinedBackdrop(backdrop, trackBackdrop)
-    val primaryColor = MaterialTheme.colorScheme.primary
-    val inactiveTrackColor = Color.White.copy(alpha = 0.18f)
+    val isLtr = LocalLayoutDirection.current == LayoutDirection.Ltr
+    val dragWidth = with(density) { 20f.dp.toPx() }
+    val dragSlopPx = with(density) { 3f.dp.toPx() }
+    val animationScope = rememberCoroutineScope()
 
     val currentChecked by rememberUpdatedState(checked)
     val currentOnCheckedChange by rememberUpdatedState(onCheckedChange)
 
+    var didDrag by remember { mutableStateOf(false) }
+    var cumulativeDragX by remember { mutableFloatStateOf(0f) }
+    var fraction by remember { mutableFloatStateOf(if (checked) 1f else 0f) }
+
+    val dampedDragAnimation = remember(animationScope, dragWidth, isLtr) {
+        DampedDragAnimation(
+            animationScope = animationScope,
+            initialValue = fraction,
+            valueRange = 0f..1f,
+            visibilityThreshold = 0.001f,
+            initialScale = 1f,
+            pressedScale = 1.5f,
+            onDragStarted = {
+                didDrag = false
+                cumulativeDragX = 0f
+            },
+            onDragStopped = {
+                val nextSelected = if (didDrag) {
+                    didDrag = false
+                    targetValue >= 0.5f
+                } else {
+                    !currentChecked
+                }
+                fraction = if (nextSelected) 1f else 0f
+                if (nextSelected != currentChecked) {
+                    currentOnCheckedChange(nextSelected)
+                }
+            },
+            onDrag = { _, dragAmount ->
+                cumulativeDragX += dragAmount.x
+                if (!didDrag && abs(cumulativeDragX) >= dragSlopPx) {
+                    didDrag = true
+                }
+                if (didDrag) {
+                    val delta = dragAmount.x / dragWidth
+                    fraction =
+                        if (isLtr) (fraction + delta).fastCoerceIn(0f, 1f)
+                        else (fraction - delta).fastCoerceIn(0f, 1f)
+                }
+            }
+        )
+    }
+
+    LaunchedEffect(dampedDragAnimation) {
+        snapshotFlow { fraction }
+            .collectLatest { value ->
+                dampedDragAnimation.updateValue(value)
+            }
+    }
+
+    LaunchedEffect(dampedDragAnimation) {
+        snapshotFlow { currentChecked }
+            .collectLatest { isSelected ->
+                val target = if (isSelected) 1f else 0f
+                if (target != fraction) {
+                    fraction = target
+                    dampedDragAnimation.animateToValue(target)
+                }
+            }
+    }
+
+    val trackBackdrop = rememberLayerBackdrop()
+
     Box(
         contentAlignment = Alignment.CenterStart,
         modifier = Modifier
-            .size(width = trackWidthDp, height = trackHeightDp)
             .alpha(if (enabled) 1f else 0.40f)
-            .pointerInput(enabled, travelPx) {
-                if (!enabled) return@pointerInput
-                awaitEachGesture {
-                    val down = awaitFirstDown(requireUnconsumed = false)
-                    down.consume()
-                    val startChecked = currentChecked
-                    val startX = down.position.x
-                    val startFraction = if (startChecked) 1f else 0f
-                    var moved = false
-                    dragFraction = startFraction
-                    isPressedOrDragging = true
-
-                    val pointerId = down.id
-                    try {
-                        while (true) {
-                            val event = awaitPointerEvent()
-                            val change = event.changes.firstOrNull { it.id == pointerId } ?: break
-                            if (!change.pressed) {
-                                change.consume()
-                                break
-                            }
-                            change.consume()
-                            val dx = change.position.x - startX
-                            if (abs(dx) > 6f) {
-                                moved = true
-                            }
-                            if (travelPx > 0f && moved) {
-                                dragFraction = (startFraction + dx / travelPx).coerceIn(0f, 1f)
-                            }
-                        }
-                        val nextChecked = if (moved) dragFraction >= 0.5f else !startChecked
-                        if (nextChecked != startChecked) {
-                            currentOnCheckedChange(nextChecked)
-                        }
-                    } finally {
-                        isPressedOrDragging = false
-                    }
-                }
+            .semantics {
+                role = Role.Switch
             }
+            .then(if (enabled) dampedDragAnimation.modifier else Modifier)
     ) {
-        val activeColor = lerpColor(inactiveTrackColor, primaryColor.copy(alpha = 0.88f), animatedFraction)
         Box(
             modifier = Modifier
-                .fillMaxSize()
-                .then(if (isGlassActive) Modifier.layerBackdrop(trackBackdrop) else Modifier)
-                .clip(RoundedCornerShape(16.dp))
-                .background(activeColor)
-                .border(
-                    width = 0.85.dp,
-                    color = Color.White.copy(alpha = lerp(0.22f, 0.45f, animatedFraction)),
-                    shape = RoundedCornerShape(16.dp)
-                )
+                .layerBackdrop(trackBackdrop)
+                .clip(CircleShape)
+                .drawBehind {
+                    val value = dampedDragAnimation.value
+                    drawRect(lerpGraphicsColor(trackColor, accentColor, value))
+                }
+                .size(64f.dp, 28f.dp)
         )
 
-        val thumbShape = RoundedCornerShape(12.dp)
-        val thumbModifier = Modifier
-            .padding(start = padDp)
-            .graphicsLayer {
-                translationX = animatedFraction * travelPx
-                scaleX = lerp(1f, 1.24f, pressProgress)
-                scaleY = lerp(1f, 1.18f, pressProgress)
-            }
-            .size(width = thumbWidthDp, height = thumbHeightDp)
-            .let { base ->
-                if (isGlassActive) {
-                    base.drawBackdrop(
-                        backdrop = thumbBackdrop,
-                        shape = { thumbShape },
-                        effects = {
-                            val t = tokensState.value
-                            val refH = lerp(6f, 12f, pressProgress).dp.toPx()
-                            val refA = lerp(12f, 26f, pressProgress).dp.toPx()
-                            lens(
-                                refractionHeight = refH,
-                                refractionAmount = refA,
-                                depthEffect = true,
-                                chromaticAberration = t.chromaticAberration
-                            )
-                        },
-                        highlight = {
-                            val t = tokensState.value
-                            Highlight(
-                                width = 1.dp,
-                                alpha = (t.highlightAlpha * 1.15f).coerceIn(0.45f, 1f)
-                            )
-                        },
-                        shadow = null,
-                        onDrawSurface = {
-                            val t = tokensState.value
-                            val fillAlpha = lerp(0.84f, 0.18f, pressProgress)
-                            drawRect(Color.White.copy(alpha = fillAlpha + (t.highlightAlpha * 0.0001f)))
-                        }
-                    )
-                } else {
-                    base
-                        .clip(thumbShape)
-                        .background(Color.White.copy(alpha = 0.94f))
-                        .border(0.75.dp, Color.White.copy(alpha = 0.55f), thumbShape)
+        Box(
+            modifier = Modifier
+                .graphicsLayer {
+                    val value = dampedDragAnimation.value
+                    val padding = 2f.dp.toPx()
+                    translationX =
+                        if (isLtr) lerp(padding, padding + dragWidth, value)
+                        else lerp(-padding, -(padding + dragWidth), value)
                 }
-            }
-
-        Box(modifier = thumbModifier)
+                .drawBackdrop(
+                    backdrop = rememberCombinedBackdrop(
+                        backdrop,
+                        rememberBackdrop(trackBackdrop) { drawBackdrop ->
+                            val progress = dampedDragAnimation.pressProgress
+                            val scaleX = lerp(2f / 3f, 0.75f, progress)
+                            val scaleY = lerp(0f, 0.75f, progress)
+                            scale(scaleX, scaleY) {
+                                drawBackdrop()
+                            }
+                        }
+                    ),
+                    shape = { CircleShape },
+                    effects = {
+                        val progress = dampedDragAnimation.pressProgress
+                        blur(8f.dp.toPx() * (1f - progress))
+                        lens(
+                            5f.dp.toPx() * progress,
+                            10f.dp.toPx() * progress,
+                            chromaticAberration = true
+                        )
+                    },
+                    highlight = {
+                        val progress = dampedDragAnimation.pressProgress
+                        Highlight.Ambient.copy(
+                            width = Highlight.Ambient.width / 1.5f,
+                            blurRadius = Highlight.Ambient.blurRadius / 1.5f,
+                            alpha = progress
+                        )
+                    },
+                    shadow = {
+                        Shadow(
+                            radius = 4f.dp,
+                            color = Color.Black.copy(alpha = 0.05f)
+                        )
+                    },
+                    innerShadow = {
+                        val progress = dampedDragAnimation.pressProgress
+                        InnerShadow(
+                            radius = 4f.dp * progress,
+                            alpha = progress
+                        )
+                    },
+                    layerBlock = {
+                        scaleX = dampedDragAnimation.scaleX
+                        scaleY = dampedDragAnimation.scaleY
+                        val velocity = dampedDragAnimation.velocity / 50f
+                        scaleX /= 1f - (velocity * 0.75f).fastCoerceIn(-0.2f, 0.2f)
+                        scaleY *= 1f - (velocity * 0.25f).fastCoerceIn(-0.2f, 0.2f)
+                    },
+                    onDrawSurface = {
+                        val progress = dampedDragAnimation.pressProgress
+                        drawRect(Color.White.copy(alpha = 1f - progress))
+                    }
+                )
+                .size(40f.dp, 24f.dp)
+        )
     }
 }
 
@@ -567,6 +755,8 @@ fun LiquidFloatingBottomBar(
 
     var isHoldingActiveTab by remember { mutableStateOf(false) }
     var scrubIndexFloat by remember { mutableFloatStateOf(pagerState.currentPage.toFloat()) }
+    var hasPendingDragSnap by remember { mutableStateOf(false) }
+    var pendingDragSnapTarget by remember { mutableIntStateOf(pagerState.currentPage) }
     var targetDockShiftPx by remember { mutableFloatStateOf(0f) }
     var lastPointerLocalX by remember { mutableFloatStateOf(0f) }
     var dockLeftInScreenPx by remember { mutableFloatStateOf(0f) }
@@ -596,16 +786,50 @@ fun LiquidFloatingBottomBar(
         label = "glassDockHoldShiftX"
     )
 
-    // Single conflated sequential collector: drives HorizontalPager 1:1 during active-tab drag
-    // with ZERO cancelled animations and ZERO stalls!
+    // Single sequential owner of BOTH active-tab drag scrolling AND post-release snap animation.
+    // Because Compose cancels the active branch before entering the release branch, `scrollToPage`
+    // and `animateScrollToPage` can NEVER race or leave the pager stranded halfway between pages.
     LaunchedEffect(isHoldingActiveTab, pagerState, tabs.size) {
-        if (!isHoldingActiveTab) return@LaunchedEffect
-        snapshotFlow { scrubIndexFloat.coerceIn(0f, tabs.lastIndex.toFloat()) }
-            .collect { pos ->
-                val page = pos.roundToInt().coerceIn(0, tabs.lastIndex)
-                val offsetFrac = (pos - page).coerceIn(-0.5f, 0.5f)
-                pagerState.scrollToPage(page = page, pageOffsetFraction = offsetFrac)
+        if (isHoldingActiveTab) {
+            snapshotFlow { scrubIndexFloat.coerceIn(0f, tabs.lastIndex.toFloat()) }
+                .collect { pos ->
+                    val page = pos.roundToInt().coerceIn(0, tabs.lastIndex)
+                    val offsetFrac = (pos - page).coerceIn(-0.5f, 0.5f)
+                    pagerState.scrollToPage(page = page, pageOffsetFraction = offsetFrac)
+                }
+        } else if (hasPendingDragSnap) {
+            val target = pendingDragSnapTarget.coerceIn(0, tabs.lastIndex)
+            hasPendingDragSnap = false
+            if (pagerState.currentPage != target || abs(pagerState.currentPageOffsetFraction) > 0.001f) {
+                pagerState.animateScrollToPage(
+                    page = target,
+                    pageOffsetFraction = 0f,
+                    animationSpec = spring(
+                        stiffness = Spring.StiffnessMediumLow,
+                        dampingRatio = 0.86f
+                    )
+                )
             }
+        }
+    }
+
+    // Secondary safety net: whenever no drag or scroll is in progress, guarantee the pager never
+    // rests at a fractional mid-page offset — always smoothly animate to whichever page is closest.
+    LaunchedEffect(pagerState.isScrollInProgress, isHoldingActiveTab, tabs.size) {
+        if (!isHoldingActiveTab && !pagerState.isScrollInProgress && abs(pagerState.currentPageOffsetFraction) > 0.001f) {
+            val nearest = (pagerState.currentPage + pagerState.currentPageOffsetFraction)
+                .coerceIn(0f, tabs.lastIndex.toFloat())
+                .roundToInt()
+                .coerceIn(0, tabs.lastIndex)
+            pagerState.animateScrollToPage(
+                page = nearest,
+                pageOffsetFraction = 0f,
+                animationSpec = spring(
+                    stiffness = Spring.StiffnessMediumLow,
+                    dampingRatio = 0.86f
+                )
+            )
+        }
     }
 
     // Continuously keep the active lens centered inside the scrollable dock in 1:1 sync with pager
@@ -733,10 +957,10 @@ fun LiquidFloatingBottomBar(
                                     .coerceIn(0f, tabs.lastIndex.toFloat())
                             }
                         } finally {
-                            val finalTarget = scrubIndexFloat.roundToInt().coerceIn(0, tabs.lastIndex)
+                            pendingDragSnapTarget = scrubIndexFloat.roundToInt().coerceIn(0, tabs.lastIndex)
+                            hasPendingDragSnap = true
                             isHoldingActiveTab = false
                             targetDockShiftPx = 0f
-                            currentOnTabSelected(finalTarget)
                         }
                     }
                 }

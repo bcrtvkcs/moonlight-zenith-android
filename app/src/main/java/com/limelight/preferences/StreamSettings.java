@@ -717,7 +717,7 @@ public class StreamSettings extends AppCompatActivity {
                     && ((StreamSettings) getActivity()).isFloatingBottomBarNav();
             int hPad = (int) (16 * density + 0.5f);
             int tPad = (int) (4 * density + 0.5f);
-            int bPad = (int) ((floatingBottomBar ? 114 : 24) * density + 0.5f);
+            int bPad = (int) ((floatingBottomBar ? 126 : 24) * density + 0.5f);
             list.setDivider(null);
             list.setDividerHeight(0);
             list.setSelector(android.R.color.transparent);

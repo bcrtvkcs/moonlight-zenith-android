@@ -16,6 +16,7 @@ import android.os.Build;
 import android.os.LocaleList;
 import android.util.TypedValue;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.WindowInsets;
 import android.view.WindowManager;
 
@@ -79,10 +80,15 @@ public class UiHelper {
         if (activity.getWindow() != null) {
             UiBackgroundManager.applyWindowWallpaperFlags(activity, surfaceColor);
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                activity.getWindow().clearFlags(
+                        WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS
+                                | WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION);
+                activity.getWindow().addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
                 activity.getWindow().setStatusBarColor(Color.TRANSPARENT);
                 activity.getWindow().setNavigationBarColor(Color.TRANSPARENT);
             }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                activity.getWindow().setStatusBarContrastEnforced(false);
                 activity.getWindow().setNavigationBarContrastEnforced(false);
             }
         }
@@ -232,33 +238,82 @@ public class UiHelper {
             rootView.setPadding(horizontalPaddingPixels, verticalPaddingPixels,
                     horizontalPaddingPixels, verticalPaddingPixels);
         }
-        else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            // Draw under the status bar on Android Q devices
+        else {
+            // True edge-to-edge in Material You Expressive as well: draw nothing over/behind
+            // the status bar so custom images, wallpapers, or solid theme backgrounds extend
+            // seamlessly behind both system bars while content children respect safe insets.
+            rootView.setPadding(0, 0, 0, 0);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                activity.getWindow().setDecorFitsSystemWindows(false);
+            } else {
+                activity.getWindow().getDecorView().setSystemUiVisibility(
+                        View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                                | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                                | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION);
+            }
 
-            // Using getDecorView() here breaks the translucent status/navigation bar when gestures are disabled
-            activity.findViewById(android.R.id.content).setOnApplyWindowInsetsListener(new View.OnApplyWindowInsetsListener() {
+            rootView.setOnApplyWindowInsetsListener(new View.OnApplyWindowInsetsListener() {
                 @Override
                 public WindowInsets onApplyWindowInsets(View view, WindowInsets windowInsets) {
-                    // Use the tappable insets so we can draw under the status bar in gesture mode
-                    Insets tappableInsets = windowInsets.getTappableElementInsets();
-                    view.setPadding(tappableInsets.left,
-                            tappableInsets.top,
-                            tappableInsets.right,
-                            0);
+                    view.setPadding(0, 0, 0, 0);
 
-                    // Show a translucent navigation bar if we can't tap there
-                    if (tappableInsets.bottom != 0) {
-                        activity.getWindow().addFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION);
+                    int leftInset;
+                    int topInset;
+                    int rightInset;
+                    int navBottomInset;
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                        Insets topBars = windowInsets.getInsets(
+                                WindowInsets.Type.statusBars() | WindowInsets.Type.displayCutout());
+                        Insets navBars = windowInsets.getInsets(WindowInsets.Type.navigationBars());
+                        leftInset = Math.max(topBars.left, navBars.left);
+                        topInset = topBars.top;
+                        rightInset = Math.max(topBars.right, navBars.right);
+                        navBottomInset = navBars.bottom;
+                    } else {
+                        leftInset = windowInsets.getSystemWindowInsetLeft();
+                        topInset = windowInsets.getSystemWindowInsetTop();
+                        rightInset = windowInsets.getSystemWindowInsetRight();
+                        navBottomInset = windowInsets.getSystemWindowInsetBottom();
                     }
-                    else {
-                        activity.getWindow().clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION);
+
+                    if (view instanceof ViewGroup) {
+                        ViewGroup contentGroup = (ViewGroup) view;
+                        for (int i = 0; i < contentGroup.getChildCount(); i++) {
+                            View child = contentGroup.getChildAt(i);
+                            if ("moonlight_zenith_bg_layer".equals(child.getTag())) {
+                                child.setPadding(0, 0, 0, 0);
+                            } else {
+                                child.setPadding(leftInset, topInset, rightInset, 0);
+                            }
+                        }
+                    }
+
+                    float density = activity.getResources().getDisplayMetrics().density;
+                    View floatingNav = activity.findViewById(R.id.m3FloatingBottomBarCard);
+                    if (floatingNav != null && floatingNav.getLayoutParams() instanceof ViewGroup.MarginLayoutParams) {
+                        ViewGroup.MarginLayoutParams lp =
+                                (ViewGroup.MarginLayoutParams) floatingNav.getLayoutParams();
+                        int targetBottom = navBottomInset + (int) (14 * density + 0.5f);
+                        if (lp.bottomMargin != targetBottom) {
+                            lp.bottomMargin = targetBottom;
+                            floatingNav.setLayoutParams(lp);
+                        }
+                    }
+                    View addPcFab = activity.findViewById(R.id.manuallyAddPc);
+                    if (addPcFab != null && addPcFab.getLayoutParams() instanceof ViewGroup.MarginLayoutParams) {
+                        ViewGroup.MarginLayoutParams lp =
+                                (ViewGroup.MarginLayoutParams) addPcFab.getLayoutParams();
+                        int targetBottom = navBottomInset + (int) (16 * density + 0.5f);
+                        if (lp.bottomMargin != targetBottom) {
+                            lp.bottomMargin = targetBottom;
+                            addPcFab.setLayoutParams(lp);
+                        }
                     }
 
                     return windowInsets;
                 }
             });
-
-            activity.getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_STABLE | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION);
+            rootView.requestApplyInsets();
         }
     }
 

@@ -4,6 +4,20 @@ All notable changes to **Moonlight Zenith Android** are documented in this file.
 
 ---
 
+## [v3.1.1-zenith] - 2026-11-27
+
+### 🐛 Liquid Glass Toggle Parity, Bottom Bar Snap Fix & Seamless Status Bar Edge-to-Edge
+- **Fix (Floating Bottom Bar Release Snap in `LiquidFloatingBottomBar`):**
+  - Eliminated the coroutine race condition between active-tab drag scrolling (`scrollToPage`) and post-release settling (`animateScrollToPage`) by sequencing both inside a single `LaunchedEffect` owner, backed by a secondary idle safety-net effect so lifting a finger always smoothly animates to the nearest page and never leaves Settings paused halfway between tabs.
+- **Fix (Transparent Edge-to-Edge Status Bar in Material You Expressive):**
+  - Enabled true edge-to-edge layout (`setDecorFitsSystemWindows(false)` / `LAYOUT_FULLSCREEN | LAYOUT_HIDE_NAVIGATION`), transparent system bars (`Color.TRANSPARENT`), and disabled system contrast scrims (`setStatusBarContrastEnforced(false)` / `setNavigationBarContrastEnforced(false)` + `values-v21` & `values-v29` style updates) in Material You Expressive as well (`UiHelper.java`).
+  - Kept `android.R.id.content` and the custom background layer (`moonlight_zenith_bg_layer`) unpadded while applying status bar / display cutout insets only to foreground layouts, ensuring nothing is drawn over or behind the status bar regardless of whether a custom photo, phone wallpaper, or solid theme surface is active.
+  - Added navigation bar bottom inset clearance for the Material You Expressive floating bottom bar and Add PC FAB (`StreamSettings.java`, `UiHelper.java`).
+- **Polish (Exact `Kyant0/AndroidLiquidGlass` `LiquidToggle` Parity):**
+  - Replaced `LiquidGlassSwitch` with an exact port of `Kyant0/AndroidLiquidGlass`'s `LiquidToggle` + `DampedDragAnimation` (`64×28 dp` capsule track, `40×24 dp` thumb, `1.5x` press swell, asymmetric squash-and-stretch springs, velocity-coupled horizontal jelly physics, `rememberBackdrop` scaled track refraction, dynamic `blur` + chromatic `lens`, `Highlight.Ambient`, `Shadow`, and `InnerShadow`), customized with a neutral gray **`#808080`** active track color.
+
+---
+
 ## [v3.1.0-zenith] - 2026-11-26
 
 ### ⚡ Liquid Glass Performance Overhaul, Static Pre-Blurred Backgrounds & 1:1 Synchronized Tab Animations
